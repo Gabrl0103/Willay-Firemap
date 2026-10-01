@@ -1,0 +1,37 @@
+<div class="map-canvas">
+  <div class="terrain-lines"></div>
+  <div #mapElement class="map-element"></div>
+</div>
+
+<header class="map-header">
+  <div class="brand-row">
+    <span class="brand-mark"><app-icon name="flame" [size]="20" /></span>
+    <div>
+      <h1>WILLAY</h1>
+      <p>Nariño, Colombia</p>
+    </div>
+    <span class="update-status"><span class="status-dot"></span>{{ updatedLabel() }}</span>
+  </div>
+  <app-search-box [zones]="store.zones()" (selected)="selectZone($event)" />
+</header>
+
+<span class="department-label">NARIÑO <small>COLOMBIA</small></span>
+
+<button type="button" class="location-button" (click)="locateMe()">
+  <app-icon name="crosshair" [size]="16" /><span>Mi ubicación</span>
+</button>
+
+<app-risk-legend class="legend-slot" />
+
+<p class="map-note"><app-icon name="alert" [size]="11" />Estimación de riesgo, no predicción exacta</p>
+
+@if (store.error(); as message) {
+  <div class="error-banner" role="alert">
+    <span>{{ message }}</span>
+    <button type="button" (click)="store.load(); store.dismissError()">Reintentar</button>
+  </div>
+}
+
+@if (store.detail(); as detail) {
+  <app-zone-sheet [detail]="detail" (closed)="closeSheet()" (historyRequested)="openHistory(detail.id)" />
+}

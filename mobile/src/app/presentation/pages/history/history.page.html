@@ -1,0 +1,43 @@
+<header class="history-header">
+  <span class="brand-mark"><app-icon name="flame" [size]="20" /></span>
+  <div>
+    <span class="eyebrow">Registros 2023–2026</span>
+    <h1>Historial</h1>
+    <p>Incendios reportados en Nariño</p>
+  </div>
+</header>
+
+<div class="filter-row">
+  <button type="button" [class]="!zoneId() ? 'filter-active' : 'filter-idle'" (click)="filterBy()">Todos</button>
+  @for (zone of zones(); track zone.id) {
+    <button type="button" [class]="zoneId() === zone.id ? 'filter-active' : 'filter-idle'" (click)="filterBy(zone.id)">
+      {{ zone.name }}
+    </button>
+  }
+</div>
+
+<section class="summary-grid" aria-label="Resumen">
+  <div><app-icon name="flame" [size]="15" /><strong>{{ summary().count }}</strong><span>Incendios</span></div>
+  <div><app-icon name="map" [size]="15" /><strong>{{ summary().hectares }}</strong><span>Hectáreas</span></div>
+  <div><app-icon name="calendar" [size]="15" /><strong>{{ summary().last }}</strong><span>Último registro</span></div>
+</section>
+
+@if (store.error(); as message) {
+  <div class="state error">
+    <span>{{ message }}</span>
+    <button type="button" (click)="store.load(zoneId())">Reintentar</button>
+  </div>
+} @else if (store.loading() && !store.history()) {
+  <div class="state">Cargando registros…</div>
+} @else {
+  <div class="list-heading"><span>Registros</span><b>{{ summary().count }}</b></div>
+  @if (store.history()?.events?.length) {
+    <div class="event-list">
+      @for (event of store.history()?.events; track event.id) {
+        <app-fire-event-tile [event]="event" />
+      }
+    </div>
+  } @else {
+    <div class="state">No hay incendios registrados para este municipio.</div>
+  }
+}

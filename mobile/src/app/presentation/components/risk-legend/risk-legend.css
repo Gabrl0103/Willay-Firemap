@@ -1,0 +1,16 @@
+.legend {
+  width: 136px;
+  padding: 11px;
+  border-radius: 10px;
+  background: rgba(254, 253, 252, 0.94);
+  color: var(--foreground);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(14px);
+}
+p { margin: 0 0 7px; font-size: 9px; text-transform: uppercase; color: var(--muted-foreground); font-weight: 700; }
+div { min-height: 18px; display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 6px; }
+b, small { font-size: 9px; }
+small { color: var(--muted-foreground); }
+.swatch { width: 9px; height: 9px; border-radius: 2px; background: var(--risk); }
+.legend-hotspot { margin-top: 4px; padding-top: 5px; border-top: 1px solid var(--border); grid-template-columns: 10px 1fr; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }

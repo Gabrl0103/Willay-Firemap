@@ -1,0 +1,45 @@
+* { box-sizing: border-box; border-color: var(--border); }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+  overflow: hidden;
+}
+button, input { font: inherit; letter-spacing: 0; }
+button { cursor: pointer; border: 0; background: none; color: inherit; padding: 0; }
+
+.app-stage {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 10%, #f4f8f6, var(--background) 55%);
+}
+.phone-shell {
+  position: relative;
+  width: min(100vw, 390px);
+  height: min(100dvh, 844px);
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: 0 30px 80px rgba(20, 30, 34, 0.18);
+}
+@media (min-width: 600px) {
+  .phone-shell { border-radius: 24px; outline: 8px solid #12191c; }
+}
+
+/* Colores de riesgo reutilizables */
+.risk-low { --risk: var(--risk-low); }
+.risk-medium { --risk: var(--risk-medium); }
+.risk-high { --risk: var(--risk-high); }
+.risk-extreme { --risk: var(--risk-extreme); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

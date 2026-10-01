@@ -1,0 +1,30 @@
+/* Design tokens de Willay (tomados del prototipo de Lovable, convertidos a hex). */
+:root {
+  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-display: "Archivo", "Segoe UI", sans-serif;
+
+  --background: #f5f3ef;
+  --foreground: #0e1518;
+  --card: #fefdfc;
+  --card-foreground: #0e1518;
+  --primary: #9c3f26;
+  --primary-foreground: #fdfcf9;
+  --secondary: #f2f0ec;
+  --secondary-foreground: #182a2f;
+  --muted-foreground: #536064;
+  --accent: #f1dec9;
+  --accent-foreground: #492517;
+  --border: #becfd1;
+
+  --map: #2c474e;
+  --map-deep: #09232a;
+  --map-line: rgba(191, 213, 208, 0.28);
+  --map-foreground: #f9f9f4;
+
+  --risk-low: #2e8f5b;
+  --risk-medium: #d59800;
+  --risk-high: #dd5400;
+  --risk-extreme: #c21725;
+
+  --shadow-soft: 0 10px 28px rgba(14, 21, 24, 0.18);
+}

@@ -1,0 +1,19 @@
+:host { display: block; }
+.event-item {
+  position: relative;
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 11px;
+  padding: 12px 10px;
+  background: var(--card);
+}
+.event-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 7px; background: var(--accent); color: var(--primary); }
+.event-copy { min-width: 0; padding-right: 58px; }
+h2 { margin: 0; font-size: 12px; font-weight: 500; line-height: 1.25; }
+p { margin: 4px 0 0; font-size: 9px; color: var(--muted-foreground); }
+.event-copy span { display: block; margin-top: 2px; font-size: 9px; font-weight: 600; }
+.source-tag { position: absolute; right: 10px; top: 12px; padding: 3px 5px; border-radius: 4px; font-size: 8px; font-weight: 700; }
+.source-news { background: var(--accent); color: var(--accent-foreground); }
+.source-official { background: var(--secondary); color: var(--secondary-foreground); }
