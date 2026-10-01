@@ -9,3 +9,8 @@ export interface WeatherProvider {
   /** Current conditions for each zone (same order is not guaranteed). */
   fetchCurrent(zones: readonly Zone[]): Promise<WeatherSnapshot[]>;
 }
+
+export interface HotspotProvider {
+  /** Hotspots detected over Nariño in the last days. */
+  fetchRecent(): Promise<NewHotspot[]>;
+}

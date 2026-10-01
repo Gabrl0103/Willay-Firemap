@@ -229,6 +229,7 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 | Bloqueo | Qué falta | Qué ya está hecho |
 |---|---|---|
 | **Neon sin credenciales** | No hay `backend/.env` con `DATABASE_URL`, así que `database/schema.sql` y el seed **no se han ejecutado** en Neon, y el SQL de los repositorios no se ha probado contra una base real. Pasos: crear el proyecto en Neon, pegar la cadena en `backend/.env` y correr `npm run db:schema` y `npm run db:seed`. | Repositorios PostgreSQL/PostGIS (`infrastructure/persistence/PostgresRepositories.ts`), scripts de esquema y seed, y `container.ts` con fallback a memoria si no hay `DATABASE_URL`. |
+| **NASA FIRMS sin `MAP_KEY`** | Pedir la clave gratis en https://firms.modaps.eosdis.nasa.gov/api/map_key/ y ponerla en `backend/.env` como `MAP_KEY`. La API real **no se ha probado** (sin clave; además, desde el equipo de desarrollo el host de FIRMS no resolvió DNS). Mientras tanto se muestran los focos del seed. | Cliente `FirmsHotspotProvider` (VIIRS SNPP + NOAA-20, 2 días, bbox de Nariño), caso de uso y tarea programada cada 3 h que solo se activa si hay `MAP_KEY`. |
 
 ## 13. Registro de cambios
 

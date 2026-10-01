@@ -39,6 +39,7 @@ Para correrla una vez a mano: `npm run ingest` (todas) o `npm run ingest weather
 | Tarea | Fuente | Frecuencia |
 |---|---|---|
 | `weather` | Open-Meteo (sin API key) → `weather_snapshot` | cada hora |
+| `hotspots` | NASA FIRMS, VIIRS últimos 2 días → `hotspot` (solo si hay `MAP_KEY`) | cada 3 h |
 
 ### 2. App en el navegador
 En otra terminal:
@@ -68,6 +69,7 @@ Para generar el APK: Android Studio → Build → Build APK(s).
 
 ## Qué falta
 - Crear el proyecto en Neon y poner `DATABASE_URL` en `backend/.env` (el código ya está listo).
-- NASA FIRMS y el scraper de incendios.
+- Pedir la `MAP_KEY` de NASA FIRMS y ponerla en `backend/.env`.
+- El scraper de incendios.
 - GeoJSON de Nariño (IGAC/DANE) para dibujar los límites.
 - Desplegar el backend (Render/Railway) y cambiar `API_BASE_URL` en `mobile/src/app/core/config/api-config.ts`.

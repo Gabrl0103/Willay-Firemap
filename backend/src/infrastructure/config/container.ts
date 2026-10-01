@@ -3,6 +3,7 @@ import { GetFireHistoryUseCase } from '../../application/useCase/GetFireHistoryU
 import { GetHotspotsUseCase } from '../../application/useCase/GetHotspotsUseCase.js';
 import { GetZoneDetailUseCase } from '../../application/useCase/GetZoneDetailUseCase.js';
 import { GetZonesRiskUseCase } from '../../application/useCase/GetZonesRiskUseCase.js';
+import { IngestHotspotsUseCase } from '../../application/useCase/IngestHotspotsUseCase.js';
 import { IngestWeatherUseCase } from '../../application/useCase/IngestWeatherUseCase.js';
 import type {
   FireEventRepository,
@@ -11,6 +12,7 @@ import type {
   ZoneRepository,
 } from '../../domain/port/Repositories.js';
 import { RiskScoringService } from '../../domain/service/RiskScoringService.js';
+import { FirmsHotspotProvider } from '../external/FirmsHotspotProvider.js';
 import { OpenMeteoWeatherProvider } from '../external/OpenMeteoWeatherProvider.js';
 import {
   InMemoryFireEventRepository,
@@ -82,14 +84,14 @@ export function buildContainer(config: Env = env): Container {
     getZoneDetail: new GetZoneDetailUseCase(repositories.zones, riskCalculator),
     getFireHistory: new GetFireHistoryUseCase(repositories.fireEvents, repositories.zones),
     getHotspots: new GetHotspotsUseCase(repositories.hotspots),
-    ingestionJobs: buildIngestionJobs(repositories),
+    ingestionJobs: buildIngestionJobs(repositories, config),
   };
 }
 
-function buildIngestionJobs(repositories: RepositorySet): IngestionJob[] {
+function buildIngestionJobs(repositories: RepositorySet, config: Env): IngestionJob[] {
   const ingestWeather = new IngestWeatherUseCase(repositories.zones, new OpenMeteoWeatherProvider(), repositories.weather);
 
-  return [
+  const jobs: IngestionJob[] = [
     {
       name: 'weather',
       schedule: '0 * * * *', // every hour
@@ -97,4 +99,18 @@ function buildIngestionJobs(repositories: RepositorySet): IngestionJob[] {
       run: async () => `${await ingestWeather.execute()} weather snapshots saved`,
     },
   ];
+
+  if (config.firmsMapKey) {
+    const ingestHotspots = new IngestHotspotsUseCase(new FirmsHotspotProvider(config.firmsMapKey), repositories.hotspots);
+    jobs.push({
+      name: 'hotspots',
+      schedule: '15 */3 * * *', // every 3 hours
+      runOnStart: true,
+      run: async () => `${await ingestHotspots.execute()} hotspots stored`,
+    });
+  } else {
+    console.log('Hotspots: MAP_KEY is not set, NASA FIRMS ingestion is off');
+  }
+
+  return jobs;
 }
