@@ -16,8 +16,9 @@ import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 /** Center of Nariño (approx.) and starting zoom. The real department outline arrives with the IGAC/DANE GeoJSON. */
 const NARINO_CENTER: L.LatLngTuple = [1.3, -77.7];
 const NARINO_ZOOM = 8;
-const TILES_URL = 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-const TILES_ATTRIBUTION = '&copy; OpenStreetMap &copy; CARTO';
+/** Standard OpenStreetMap tiles (no API key). The dark look comes from a CSS filter in theme/map-markers.css. */
+const TILES_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILES_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 @Component({
   selector: 'app-map-page',
@@ -64,7 +65,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
       zoomSnap: 0.25,
       attributionControl: true,
     });
-    L.tileLayer(TILES_URL, { attribution: TILES_ATTRIBUTION, subdomains: 'abcd', maxZoom: 14 }).addTo(this.map);
+    L.tileLayer(TILES_URL, { attribution: TILES_ATTRIBUTION, maxZoom: 14 }).addTo(this.map);
     this.zoneLayer.addTo(this.map);
     this.hotspotLayer.addTo(this.map);
     this.map.attributionControl.setPrefix(false);

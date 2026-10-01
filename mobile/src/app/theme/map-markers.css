@@ -1,6 +1,11 @@
 /* Elementos que Leaflet crea por fuera de Angular (por eso son globales). */
 .leaflet-container { background: transparent; font-family: var(--font-sans); }
-.leaflet-tile-pane { mix-blend-mode: screen; opacity: 0.55; }
+/* Los tiles de OSM son claros: se invierten y se apagan para mantener el mapa oscuro. */
+.leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.6) saturate(0.3);
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
 .leaflet-control-attribution {
   background: transparent !important;
   color: rgba(233, 240, 238, 0.55) !important;
