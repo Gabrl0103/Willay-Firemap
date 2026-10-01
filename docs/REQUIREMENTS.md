@@ -3,7 +3,7 @@
 *(Antes llamado FIREMAP. **Willay** viene del quechua/kichwa: "avisar, contar, anunciar" — la app avisa dónde hay riesgo de incendio. Confirmar el significado y la escritura con un hablante o una fuente local.)*
 
 > Documento vivo. Se actualiza al cierre de cada sesión. Al iniciar una sesión nueva, pega este archivo (o léelo del proyecto) para retomar el contexto.
-> **Última actualización:** 2026-09-30 · **Versión:** 0.9 (sesión de planning #1)
+> **Última actualización:** 2026-09-30 · **Versión:** 0.10 (Neon e ingesta de datos)
 
 ---
 
@@ -224,7 +224,15 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 - ¿Cómo conseguir el GeoJSON de Nariño (IGAC/DANE)?
 - ¿Angular se mantiene o se cambia a React si la curva pesa?
 
-## 12. Registro de cambios
+## 12. Bloqueos (credenciales o verificación pendiente)
+
+| Bloqueo | Qué falta | Qué ya está hecho |
+|---|---|---|
+| **Neon sin credenciales** | No hay `backend/.env` con `DATABASE_URL`, así que `database/schema.sql` y el seed **no se han ejecutado** en Neon, y el SQL de los repositorios no se ha probado contra una base real. Pasos: crear el proyecto en Neon, pegar la cadena en `backend/.env` y correr `npm run db:schema` y `npm run db:seed`. | Repositorios PostgreSQL/PostGIS (`infrastructure/persistence/PostgresRepositories.ts`), scripts de esquema y seed, y `container.ts` con fallback a memoria si no hay `DATABASE_URL`. |
+
+## 13. Registro de cambios
+
+- **2026-09-30 (v0.10):** el mapa usa tiles de OpenStreetMap con filtro CSS oscuro (CARTO pasó a exigir API key). Backend: repositorios PostgreSQL/PostGIS para Neon, `npm run db:schema` y `npm run db:seed`, `DATABASE_URL` en `.env` y fallback a datos en memoria.
 
 - **2026-09-30 (v0.9):** el proyecto cambia de nombre: FIREMAP pasa a **Willay** (quechua/kichwa: avisar, anunciar). Se renombran la app, Android (`co.willay.app`), paquetes y documentos.
 - **2026-09-30 (v0.8):** primera versión del proyecto `willay/`: backend Express + TypeScript con Clean Architecture y datos de prueba (API, riesgo ponderado y pruebas), y app Ionic + Angular con las 3 pantallas del prototipo (Mapa con Leaflet, Detalle y Historial). Falta: Neon, scraping, Open-Meteo/FIRMS, GeoJSON de Nariño y despliegue.

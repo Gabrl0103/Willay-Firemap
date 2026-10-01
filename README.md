@@ -2,9 +2,9 @@
 
 App móvil que muestra el riesgo de incendio forestal por municipio en Nariño, Colombia.
 
-- `backend/` — API en Express + TypeScript (Clean Architecture). Por ahora usa **datos de prueba**.
+- `backend/` — API en Express + TypeScript (Clean Architecture). Usa Neon si hay `DATABASE_URL`; si no, **datos de prueba** en memoria.
 - `mobile/` — App Ionic + Angular + Capacitor (Android).
-- `database/` — `schema.sql` para Neon (PostGIS). Aún no se usa.
+- `database/` — `schema.sql` para Neon (PostGIS).
 - `docs/` — `REQUIREMENTS.md` (requisitos y decisiones).
 
 ## Cómo correrlo (Windows)
@@ -21,6 +21,16 @@ Debe decir `Willay API listening on http://localhost:3000/api`.
 Pruébalo en el navegador: http://localhost:3000/api/zones
 
 Pruebas del cálculo de riesgo: `npm test`.
+
+#### Base de datos (Neon)
+Sin `DATABASE_URL` el backend usa los datos de prueba en memoria. Para usar Neon:
+```
+cd backend
+copy .env.example .env      # pega la cadena de conexión de Neon en DATABASE_URL
+npm run db:schema           # crea PostGIS y las tablas (database/schema.sql)
+npm run db:seed             # carga los mismos datos de prueba de seedData.ts
+npm run dev                 # debe decir "Persistence: PostgreSQL (Neon)"
+```
 
 ### 2. App en el navegador
 En otra terminal:
@@ -49,7 +59,7 @@ Para generar el APK: Android Studio → Build → Build APK(s).
 - `GET /api/hotspots` — focos de calor.
 
 ## Qué falta
-- Conectar Neon (reemplazar los repositorios en memoria en `backend/src/infrastructure/config/container.ts`).
+- Crear el proyecto en Neon y poner `DATABASE_URL` en `backend/.env` (el código ya está listo).
 - Ingesta de Open-Meteo y NASA FIRMS, y el scraper de incendios.
 - GeoJSON de Nariño (IGAC/DANE) para dibujar los límites.
 - Desplegar el backend (Render/Railway) y cambiar `API_BASE_URL` en `mobile/src/app/core/config/api-config.ts`.

@@ -5,3 +5,6 @@ export interface Hotspot {
   /** ISO date-time */
   readonly detectedAt: string;
 }
+
+/** A hotspot that is not stored yet (the database gives it an id). */
+export type NewHotspot = Omit<Hotspot, 'id'>;

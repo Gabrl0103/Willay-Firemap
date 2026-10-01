@@ -1,6 +1,6 @@
 -- Willay: esquema para Neon (PostgreSQL + PostGIS).
--- Todavía NO lo usa el backend (hoy trabaja con datos de prueba en memoria).
--- Se ejecuta en el SQL Editor de Neon cuando pasemos a la base real.
+-- Lo usa el backend cuando DATABASE_URL está definido (backend/.env).
+-- Se aplica con `npm run db:schema` (o pegándolo en el SQL Editor de Neon). Es idempotente.
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 
