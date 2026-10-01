@@ -3,6 +3,7 @@ import { GetFireHistoryUseCase } from '../../application/useCase/GetFireHistoryU
 import { GetHotspotsUseCase } from '../../application/useCase/GetHotspotsUseCase.js';
 import { GetZoneDetailUseCase } from '../../application/useCase/GetZoneDetailUseCase.js';
 import { GetZonesRiskUseCase } from '../../application/useCase/GetZonesRiskUseCase.js';
+import { IngestFireEventsUseCase } from '../../application/useCase/IngestFireEventsUseCase.js';
 import { IngestHotspotsUseCase } from '../../application/useCase/IngestHotspotsUseCase.js';
 import { IngestWeatherUseCase } from '../../application/useCase/IngestWeatherUseCase.js';
 import type {
@@ -28,6 +29,7 @@ import {
 } from '../persistence/PostgresRepositories.js';
 import { getPool } from '../persistence/postgresPool.js';
 import { fireEvents, hotspots, weatherSnapshots, zones } from '../persistence/seedData.js';
+import { createFireReportSources } from '../scraping/FireReportSourceFactory.js';
 import type { IngestionJob } from '../scraping/IngestionScheduler.js';
 import { env, type Env } from './env.js';
 
@@ -111,6 +113,22 @@ function buildIngestionJobs(repositories: RepositorySet, config: Env): Ingestion
   } else {
     console.log('Hotspots: MAP_KEY is not set, NASA FIRMS ingestion is off');
   }
+
+  const ingestFires = new IngestFireEventsUseCase(repositories.zones, createFireReportSources(), repositories.fireEvents);
+  jobs.push({
+    name: 'fires',
+    schedule: '30 3 * * *', // once a day, at night: scraping is slow on purpose
+    runOnStart: false,
+    run: async () => {
+      const results = await ingestFires.execute();
+      if (results.every((result) => result.error)) {
+        throw new Error(results.map((result) => `${result.source}: ${result.error}`).join('; '));
+      }
+      return results
+        .map((r) => (r.error ? `${r.source}: failed (${r.error})` : `${r.source}: ${r.found} found, ${r.inserted} new`))
+        .join('; ');
+    },
+  });
 
   return jobs;
 }

@@ -1,0 +1,153 @@
+import * as cheerio from 'cheerio';
+import type { NewFireEvent } from '../../domain/model/FireEvent.js';
+import type { Zone } from '../../domain/model/Zone.js';
+import type { FireReportSource } from '../../domain/port/DataSources.js';
+import { findMentionedZone } from '../../domain/service/zoneMatching.js';
+import type { PoliteHttpClient } from './PoliteHttpClient.js';
+
+export interface NewsSiteConfig {
+  readonly name: string;
+  /** Pages with lists of articles (home, section, search). */
+  readonly listUrls: readonly string[];
+  /** Articles read per run, to keep the load on the site low. */
+  readonly maxArticlesPerRun: number;
+}
+
+export interface NewsArticle {
+  readonly title: string;
+  /** ISO date-time as published by the site, if found. */
+  readonly publishedAt?: string;
+  readonly text: string;
+}
+
+const FIRE_WORD = /incendi/i;
+/** Wildfire vocabulary, to leave out house and vehicle fires. */
+const VEGETATION_WORDS = /forestal|cobertura vegetal|vegetaci[oó]n|bosque|hect[aá]rea|p[aá]ramo|monte|pastizal|rastrojo|quema/i;
+
+/** Links on a list page that look like fire news (same site only, without #fragment). */
+export function extractFireArticleLinks(html: string, pageUrl: string): string[] {
+  const $ = cheerio.load(html);
+  const host = new URL(pageUrl).host;
+  const links = new Set<string>();
+  $('a[href]').each((_, element) => {
+    const anchor = $(element);
+    const href = anchor.attr('href') ?? '';
+    if (!FIRE_WORD.test(anchor.text()) && !FIRE_WORD.test(href)) return;
+    try {
+      const url = new URL(href, pageUrl);
+      url.hash = '';
+      if (url.host === host && url.pathname !== '/') links.add(url.toString());
+    } catch {
+      // Malformed href: ignore it.
+    }
+  });
+  return [...links];
+}
+
+/** Title, date and body of an article page, from standard meta tags with HTML fallbacks. */
+export function parseArticle(html: string): NewsArticle {
+  const $ = cheerio.load(html);
+  const meta = (selector: string): string | undefined => $(selector).attr('content')?.trim() || undefined;
+
+  const title = meta('meta[property="og:title"]') ?? ($('h1').first().text().trim() || $('title').text().trim());
+  const publishedAt =
+    meta('meta[property="article:published_time"]') ??
+    ($('time[datetime]').first().attr('datetime') || undefined) ??
+    /"datePublished"\s*:\s*"([^"]+)"/.exec(html)?.[1];
+
+  const paragraphs = $('article p').length > 0 ? $('article p') : $('p');
+  const body = paragraphs
+    .map((_, element) => $(element).text().trim())
+    .get()
+    .join(' ');
+  const description = meta('meta[name="description"]') ?? meta('meta[property="og:description"]') ?? '';
+  return { title, publishedAt, text: `${description} ${body}`.replace(/\s+/g, ' ').trim() };
+}
+
+/** Spanish number: "1.200" -> 1200, "2,5" -> 2.5, "2.5" -> 2.5. */
+function parseSpanishNumber(raw: string): number {
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(raw)) return Number(raw.replace(/\./g, '').replace(',', '.'));
+  return Number(raw.replace(',', '.'));
+}
+
+/** First "N hectáreas" in the text. ("ha" is skipped: it is also a common Spanish verb.) */
+export function extractHectares(text: string): number | undefined {
+  const match = /(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+[.,]\d+|\d+)\s*hect[aá]reas?\b/i.exec(text);
+  if (!match?.[1]) return undefined;
+  const value = parseSpanishNumber(match[1]);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/** "vereda El Motilón", "corregimiento de Jongovito", "sector La Cañada" -> the proper name. */
+export function extractLocality(text: string): string | undefined {
+  const match =
+    /\b(?:[Vv]ereda|[Cc]orregimiento|[Ss]ector)\s+(?:de\s+)?(\p{Lu}\p{L}+(?:\s+(?:(?:de|del|la|las|los|el)\s+)?\p{Lu}\p{L}+){0,2})/u.exec(
+      text,
+    );
+  return match?.[1];
+}
+
+/** Turns an article into a fire event, or undefined when it is not a wildfire in a known zone. */
+export function articleToFireEvent(
+  article: NewsArticle,
+  url: string,
+  zones: readonly Zone[],
+): NewFireEvent | undefined {
+  const fullText = `${article.title}. ${article.text}`;
+  if (!FIRE_WORD.test(article.title) || !VEGETATION_WORDS.test(fullText)) return undefined;
+
+  const zone = findMentionedZone(article.title, zones) ?? findMentionedZone(article.text, zones);
+  const date = article.publishedAt?.slice(0, 10);
+  if (!zone || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return undefined;
+
+  const locality = extractLocality(fullText);
+  return {
+    zoneId: zone.id,
+    place: locality && locality !== zone.name ? `${locality}, ${zone.name}` : zone.name,
+    date,
+    hectares: extractHectares(fullText) ?? 0,
+    source: 'news',
+    sourceUrl: url,
+  };
+}
+
+/** Generic news scraper (axios + cheerio): list pages -> fire articles -> events. */
+export class NewsFireReportSource implements FireReportSource {
+  /** Cache: an article is read only once while the process lives. */
+  private readonly visited = new Set<string>();
+
+  constructor(
+    private readonly site: NewsSiteConfig,
+    private readonly http: PoliteHttpClient,
+  ) {}
+
+  get name(): string {
+    return this.site.name;
+  }
+
+  async fetchReports(zones: readonly Zone[]): Promise<NewFireEvent[]> {
+    const links = new Set<string>();
+    const listErrors: string[] = [];
+    for (const listUrl of this.site.listUrls) {
+      try {
+        for (const link of extractFireArticleLinks(await this.http.getText(listUrl), listUrl)) links.add(link);
+      } catch (error) {
+        listErrors.push(`${listUrl}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    if (listErrors.length === this.site.listUrls.length) throw new Error(listErrors.join('; '));
+
+    const pending = [...links].filter((link) => !this.visited.has(link)).slice(0, this.site.maxArticlesPerRun);
+    const events: NewFireEvent[] = [];
+    for (const link of pending) {
+      this.visited.add(link);
+      try {
+        const event = articleToFireEvent(parseArticle(await this.http.getText(link)), link, zones);
+        if (event) events.push(event);
+      } catch (error) {
+        console.warn(`[${this.name}] skipped ${link}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    return events;
+  }
+}

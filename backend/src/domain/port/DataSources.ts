@@ -14,3 +14,9 @@ export interface HotspotProvider {
   /** Hotspots detected over Nariño in the last days. */
   fetchRecent(): Promise<NewHotspot[]>;
 }
+
+/** A site or dataset with past fires (scraping). Events must point to one of the given zones. */
+export interface FireReportSource {
+  readonly name: string;
+  fetchReports(zones: readonly Zone[]): Promise<NewFireEvent[]>;
+}
