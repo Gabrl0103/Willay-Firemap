@@ -3,6 +3,7 @@ import { GetFireHistoryUseCase } from '../../application/useCase/GetFireHistoryU
 import { GetHotspotsUseCase } from '../../application/useCase/GetHotspotsUseCase.js';
 import { GetZoneDetailUseCase } from '../../application/useCase/GetZoneDetailUseCase.js';
 import { GetZonesRiskUseCase } from '../../application/useCase/GetZonesRiskUseCase.js';
+import { IngestWeatherUseCase } from '../../application/useCase/IngestWeatherUseCase.js';
 import type {
   FireEventRepository,
   HotspotRepository,
@@ -10,6 +11,7 @@ import type {
   ZoneRepository,
 } from '../../domain/port/Repositories.js';
 import { RiskScoringService } from '../../domain/service/RiskScoringService.js';
+import { OpenMeteoWeatherProvider } from '../external/OpenMeteoWeatherProvider.js';
 import {
   InMemoryFireEventRepository,
   InMemoryHotspotRepository,
@@ -24,6 +26,7 @@ import {
 } from '../persistence/PostgresRepositories.js';
 import { getPool } from '../persistence/postgresPool.js';
 import { fireEvents, hotspots, weatherSnapshots, zones } from '../persistence/seedData.js';
+import type { IngestionJob } from '../scraping/IngestionScheduler.js';
 import { env, type Env } from './env.js';
 
 export interface Container {
@@ -31,6 +34,8 @@ export interface Container {
   readonly getZoneDetail: GetZoneDetailUseCase;
   readonly getFireHistory: GetFireHistoryUseCase;
   readonly getHotspots: GetHotspotsUseCase;
+  /** Scheduled by the server (node-cron) and runnable once with `npm run ingest`. */
+  readonly ingestionJobs: readonly IngestionJob[];
 }
 
 interface RepositorySet {
@@ -77,5 +82,19 @@ export function buildContainer(config: Env = env): Container {
     getZoneDetail: new GetZoneDetailUseCase(repositories.zones, riskCalculator),
     getFireHistory: new GetFireHistoryUseCase(repositories.fireEvents, repositories.zones),
     getHotspots: new GetHotspotsUseCase(repositories.hotspots),
+    ingestionJobs: buildIngestionJobs(repositories),
   };
+}
+
+function buildIngestionJobs(repositories: RepositorySet): IngestionJob[] {
+  const ingestWeather = new IngestWeatherUseCase(repositories.zones, new OpenMeteoWeatherProvider(), repositories.weather);
+
+  return [
+    {
+      name: 'weather',
+      schedule: '0 * * * *', // every hour
+      runOnStart: true,
+      run: async () => `${await ingestWeather.execute()} weather snapshots saved`,
+    },
+  ];
 }
