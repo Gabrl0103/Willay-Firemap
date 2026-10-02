@@ -2,26 +2,22 @@ import type { FireEvent } from '../../domain/model/FireEvent.js';
 import type { Hotspot } from '../../domain/model/Hotspot.js';
 import type { WeatherSnapshot } from '../../domain/model/WeatherSnapshot.js';
 import type { Zone } from '../../domain/model/Zone.js';
+import { NARINO_MUNICIPALITIES } from './narinoMunicipalities.js';
 
 /**
- * DATOS DE PRUEBA (simulados). Se reemplazan por Neon/PostGIS y por lo que
- * salga del scraping y de las APIs (Open-Meteo, NASA FIRMS).
- * Las coordenadas son aproximadas (centro de cada municipio).
+ * DATOS DE PRUEBA (simulados) para clima, incendios y focos. Se reemplazan por Neon/PostGIS y por
+ * lo que salga del scraping y de las APIs (Open-Meteo, NASA FIRMS). Solo 12 municipios tienen clima
+ * de prueba; los demás aparecen en la API cuando la ingesta de clima les da datos.
  */
-export const zones: Zone[] = [
-  { id: 'pasto', name: 'Pasto', latitude: 1.2136, longitude: -77.2811 },
-  { id: 'ipiales', name: 'Ipiales', latitude: 0.8303, longitude: -77.6439 },
-  { id: 'tumaco', name: 'Tumaco', latitude: 1.7986, longitude: -78.8156 },
-  { id: 'tuquerres', name: 'Túquerres', latitude: 1.0864, longitude: -77.6178 },
-  { id: 'la-cruz', name: 'La Cruz', latitude: 1.6008, longitude: -76.9722 },
-  { id: 'samaniego', name: 'Samaniego', latitude: 1.3372, longitude: -77.5961 },
-  { id: 'sandona', name: 'Sandoná', latitude: 1.2847, longitude: -77.4719 },
-  { id: 'chachagui', name: 'Chachagüí', latitude: 1.3631, longitude: -77.2842 },
-  { id: 'tangua', name: 'Tangua', latitude: 1.0953, longitude: -77.3961 },
-  { id: 'yacuanquer', name: 'Yacuanquer', latitude: 1.1186, longitude: -77.405 },
-  { id: 'guachucal', name: 'Guachucal', latitude: 0.9619, longitude: -77.7311 },
-  { id: 'barbacoas', name: 'Barbacoas', latitude: 1.6767, longitude: -78.1403 },
-];
+
+/** Las zonas sí son reales: los 64 municipios de Nariño (DIVIPOLA, DANE). */
+export const zones: Zone[] = NARINO_MUNICIPALITIES.map(({ id, name, latitude, longitude, aliases }) => ({
+  id,
+  name,
+  latitude,
+  longitude,
+  aliases,
+}));
 
 const weather = (
   zoneId: string,

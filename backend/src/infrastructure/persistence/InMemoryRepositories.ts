@@ -1,4 +1,4 @@
-import type { FireEvent, NewFireEvent } from '../../domain/model/FireEvent.js';
+import type { FireEvent, FireSource, NewFireEvent } from '../../domain/model/FireEvent.js';
 import type { Hotspot, NewHotspot } from '../../domain/model/Hotspot.js';
 import type { WeatherSnapshot } from '../../domain/model/WeatherSnapshot.js';
 import type { Zone } from '../../domain/model/Zone.js';
@@ -36,6 +36,8 @@ const fireKey = (event: NewFireEvent): string => `${event.zoneId}|${event.place}
 
 export class InMemoryFireEventRepository implements FireEventRepository {
   private readonly events: FireEvent[];
+  /** "source|url" of the stored events; the domain FireEvent does not carry the URL. */
+  private readonly sourceUrls = new Set<string>();
   private nextId: number;
   constructor(initial: readonly FireEvent[]) {
     this.events = [...initial];
@@ -47,14 +49,20 @@ export class InMemoryFireEventRepository implements FireEventRepository {
   async saveMany(events: readonly NewFireEvent[]): Promise<number> {
     const known = new Set(this.events.map(fireKey));
     let inserted = 0;
-    for (const { sourceUrl: _sourceUrl, ...event } of events) {
+    for (const { sourceUrl, ...event } of events) {
       const key = fireKey(event);
-      if (known.has(key)) continue;
+      const urlKey = event.source === 'news' && sourceUrl ? `news|${sourceUrl}` : undefined;
+      if (known.has(key) || (urlKey && this.sourceUrls.has(urlKey))) continue;
       known.add(key);
+      if (sourceUrl) this.sourceUrls.add(`${event.source}|${sourceUrl}`);
       this.events.push({ ...event, id: `mem-${this.nextId++}` });
       inserted++;
     }
     return inserted;
+  }
+  async findSourceUrls(source: FireSource): Promise<Set<string>> {
+    const prefix = `${source}|`;
+    return new Set([...this.sourceUrls].filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length)));
   }
 }
 

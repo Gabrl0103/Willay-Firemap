@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS zone (
   boundary   GEOGRAPHY(MultiPolygon, 4326)
 );
 CREATE INDEX IF NOT EXISTS zone_boundary_gix ON zone USING GIST (boundary);
+-- Otros nombres del municipio ("Tumaco", "Magüí Payán") para reconocerlo en noticias y datasets.
+ALTER TABLE zone ADD COLUMN IF NOT EXISTS aliases TEXT[] NOT NULL DEFAULT '{}';
 
 -- Clima más reciente por zona (Open-Meteo).
 CREATE TABLE IF NOT EXISTS weather_snapshot (
@@ -38,6 +40,8 @@ CREATE TABLE IF NOT EXISTS fire_event (
   UNIQUE (zone_id, place, event_date)          -- evita duplicados al volver a scrapear
 );
 CREATE INDEX IF NOT EXISTS fire_event_zone_date_idx ON fire_event (zone_id, event_date DESC);
+-- Una noticia se guarda una sola vez (UNGRD comparte la misma URL del dataset en todas sus filas).
+CREATE UNIQUE INDEX IF NOT EXISTS fire_event_news_url_key ON fire_event (source_url) WHERE source = 'news';
 
 -- Focos de calor (NASA FIRMS).
 CREATE TABLE IF NOT EXISTS hotspot (

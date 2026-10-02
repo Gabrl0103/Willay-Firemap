@@ -10,6 +10,7 @@
     "test": "tsx --test test/*.test.ts",
     "db:schema": "tsx src/infrastructure/persistence/scripts/applySchema.ts",
     "db:seed": "tsx src/infrastructure/persistence/scripts/seedDatabase.ts",
+    "db:zones": "tsx src/infrastructure/persistence/scripts/loadZones.ts",
     "ingest": "tsx src/infrastructure/scraping/runIngestion.ts"
   },
   "dependencies": {

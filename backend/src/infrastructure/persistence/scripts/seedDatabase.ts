@@ -1,6 +1,8 @@
+import { NARINO_MUNICIPALITIES } from '../narinoMunicipalities.js';
 import { PostgresFireEventRepository, PostgresHotspotRepository } from '../PostgresRepositories.js';
 import { closePool, getPool } from '../postgresPool.js';
-import { fireEvents, hotspots, weatherSnapshots, zones } from '../seedData.js';
+import { fireEvents, hotspots, weatherSnapshots } from '../seedData.js';
+import { upsertZones } from '../upsertZones.js';
 import { requireDatabaseUrl } from './requireDatabaseUrl.js';
 
 /**
@@ -9,14 +11,7 @@ import { requireDatabaseUrl } from './requireDatabaseUrl.js';
  */
 const pool = getPool(requireDatabaseUrl());
 try {
-  for (const zone of zones) {
-    await pool.query(
-      `INSERT INTO zone (id, name, centroid)
-       VALUES ($1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography)
-       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, centroid = EXCLUDED.centroid`,
-      [zone.id, zone.name, zone.latitude, zone.longitude],
-    );
-  }
+  await upsertZones(pool, NARINO_MUNICIPALITIES);
 
   for (const w of weatherSnapshots) {
     await pool.query(
@@ -34,7 +29,7 @@ try {
   if (seedHotspots) await new PostgresHotspotRepository(pool).replaceAll(hotspots);
 
   console.log(
-    `Seed done: ${zones.length} zones, ${insertedFires} new fire events, ` +
+    `Seed done: ${NARINO_MUNICIPALITIES.length} zones, ${insertedFires} new fire events, ` +
       `hotspots ${seedHotspots ? 'added' : 'kept (table not empty)'}.`,
   );
 } finally {

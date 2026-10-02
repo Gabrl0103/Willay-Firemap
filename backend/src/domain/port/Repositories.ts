@@ -1,4 +1,4 @@
-import type { FireEvent, NewFireEvent } from '../model/FireEvent.js';
+import type { FireEvent, FireSource, NewFireEvent } from '../model/FireEvent.js';
 import type { Hotspot, NewHotspot } from '../model/Hotspot.js';
 import type { WeatherSnapshot } from '../model/WeatherSnapshot.js';
 import type { Zone } from '../model/Zone.js';
@@ -16,8 +16,10 @@ export interface WeatherRepository {
 
 export interface FireEventRepository {
   findAll(): Promise<FireEvent[]>;
-  /** Skips duplicates (same zone, place and date). Returns how many events were new. */
+  /** Skips duplicates (same zone, place and date, or a news page already stored). Returns how many were new. */
   saveMany(events: readonly NewFireEvent[]): Promise<number>;
+  /** Source URLs already stored for a source (to skip news pages read before). */
+  findSourceUrls(source: FireSource): Promise<Set<string>>;
 }
 
 export interface HotspotRepository {

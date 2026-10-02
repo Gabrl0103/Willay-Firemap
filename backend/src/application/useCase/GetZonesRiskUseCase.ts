@@ -1,3 +1,4 @@
+import { NotFoundError } from '../../domain/error/DomainErrors.js';
 import type { RiskLevel } from '../../domain/model/RiskLevel.js';
 import type { ZoneRepository } from '../../domain/port/Repositories.js';
 import type { ZoneRiskCalculator } from '../service/ZoneRiskCalculator.js';
@@ -17,11 +18,18 @@ export class GetZonesRiskUseCase {
     private readonly riskCalculator: ZoneRiskCalculator,
   ) {}
 
+  /** Zones without weather yet (a new municipality before the first ingestion) are left out, not an error. */
   async execute(): Promise<ZoneRiskSummary[]> {
     const zones = await this.zoneRepository.findAll();
     const summaries = await Promise.all(
-      zones.map(async (zone) => {
-        const { assessment } = await this.riskCalculator.calculate(zone);
+      zones.map(async (zone): Promise<ZoneRiskSummary | undefined> => {
+        let assessment;
+        try {
+          ({ assessment } = await this.riskCalculator.calculate(zone));
+        } catch (error) {
+          if (error instanceof NotFoundError) return undefined;
+          throw error;
+        }
         return {
           id: zone.id,
           name: zone.name,
@@ -32,6 +40,6 @@ export class GetZonesRiskUseCase {
         };
       }),
     );
-    return summaries.sort((a, b) => b.score - a.score);
+    return summaries.filter((summary) => summary !== undefined).sort((a, b) => b.score - a.score);
   }
 }

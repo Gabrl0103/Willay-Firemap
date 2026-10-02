@@ -17,10 +17,11 @@ interface ZoneRow {
   name: string;
   latitude: number;
   longitude: number;
+  aliases: string[];
 }
 
 const SELECT_ZONE = `
-  SELECT id, name, ST_Y(centroid::geometry) AS latitude, ST_X(centroid::geometry) AS longitude
+  SELECT id, name, ST_Y(centroid::geometry) AS latitude, ST_X(centroid::geometry) AS longitude, aliases
   FROM zone`;
 
 export class PostgresZoneRepository implements ZoneRepository {
@@ -107,7 +108,7 @@ export class PostgresFireEventRepository implements FireEventRepository {
     const result = await this.pool.query(
       `INSERT INTO fire_event (zone_id, place, event_date, hectares, source, source_url)
        SELECT * FROM unnest($1::text[], $2::text[], $3::date[], $4::real[], $5::text[], $6::text[])
-       ON CONFLICT (zone_id, place, event_date) DO NOTHING`,
+       ON CONFLICT DO NOTHING`, // same (zone_id, place, event_date), or a news source_url already stored
       [
         events.map((e) => e.zoneId),
         events.map((e) => e.place),
@@ -118,6 +119,14 @@ export class PostgresFireEventRepository implements FireEventRepository {
       ],
     );
     return result.rowCount ?? 0;
+  }
+
+  async findSourceUrls(source: FireSource): Promise<Set<string>> {
+    const { rows } = await this.pool.query<{ source_url: string }>(
+      'SELECT DISTINCT source_url FROM fire_event WHERE source = $1 AND source_url IS NOT NULL',
+      [source],
+    );
+    return new Set(rows.map((row) => row.source_url));
   }
 }
 

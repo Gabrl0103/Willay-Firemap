@@ -28,9 +28,16 @@ Sin `DATABASE_URL` el backend usa los datos de prueba en memoria. Para usar Neon
 cd backend
 copy .env.example .env      # pega la cadena de conexión de Neon en DATABASE_URL
 npm run db:schema           # crea PostGIS y las tablas (database/schema.sql)
-npm run db:seed             # carga los mismos datos de prueba de seedData.ts
+npm run db:zones            # carga los 64 municipios de Nariño (DIVIPOLA del DANE)
+npm run db:seed             # opcional: clima, incendios y focos de prueba
 npm run dev                 # debe decir "Persistence: PostgreSQL (Neon)"
 ```
+
+`npm run db:zones` se puede correr las veces que quieras (upsert por `id`). Los datos están en
+`backend/src/infrastructure/persistence/narinoMunicipalities.ts`: nombre, código DIVIPOLA y coordenadas
+de la cabecera municipal tal como los publica el DANE (datos.gov.co, dataset `gdxc-w37w`), más alias
+("Tumaco", "Magüí Payán") para reconocer el municipio en noticias y en el dataset de la UNGRD.
+Los 12 ids originales (`pasto`, `ipiales`, `tumaco`…) se conservan.
 
 #### Ingesta de datos
 Con `npm run dev` el backend programa la ingesta (node-cron, hora de Colombia) y trae el clima al arrancar.
@@ -38,11 +45,11 @@ Para correrla una vez a mano: `npm run ingest` (todas) o `npm run ingest weather
 
 | Tarea | Fuente | Frecuencia |
 |---|---|---|
-| `weather` | Open-Meteo (sin API key) → `weather_snapshot` | cada hora |
+| `weather` | Open-Meteo (sin API key), una sola petición para los 64 municipios → `weather_snapshot` | cada hora |
 | `hotspots` | NASA FIRMS, VIIRS últimos 2 días → `hotspot` (solo si hay `MAP_KEY`) | cada 3 h |
-| `fires` | Scraping: dataset UNGRD (datos.gov.co `wwkg-r6te`) y noticias de Diario del Sur → `fire_event` | diario, 03:30 |
+| `fires` | Scraping: dataset UNGRD (datos.gov.co `wwkg-r6te`) y feed RSS de noticias de la Gobernación de Nariño → `fire_event` | diario, 03:30 |
 
-El scraping revisa `robots.txt` antes de cada URL (caché 24 h), deja al menos 5 s entre peticiones al mismo sitio (o el `Crawl-delay` si es mayor) y lee máximo 15 artículos por corrida.
+El scraping revisa `robots.txt` antes de cada URL (caché 24 h), deja al menos 5 s entre peticiones al mismo sitio (o el `Crawl-delay` si es mayor) y no vuelve a guardar una noticia ya guardada (`source_url`).
 
 ### 2. App en el navegador
 En otra terminal:
@@ -71,8 +78,7 @@ Para generar el APK: Android Studio → Build → Build APK(s).
 - `GET /api/hotspots` — focos de calor.
 
 ## Qué falta
-- Crear el proyecto en Neon y poner `DATABASE_URL` en `backend/.env` (el código ya está listo).
 - Pedir la `MAP_KEY` de NASA FIRMS y ponerla en `backend/.env`.
-- Verificar el scraper de noticias contra Diario del Sur (`npm run ingest fires`) y ajustar sus URLs de listado.
-- GeoJSON de Nariño (IGAC/DANE) para dibujar los límites.
+- Varias noticias sobre el mismo incendio cuentan como eventos distintos (p. ej. cerro Aminda).
+- Polígonos de los municipios (GeoJSON IGAC/DANE) para dibujar los límites.
 - Desplegar el backend (Render/Railway) y cambiar `API_BASE_URL` en `mobile/src/app/core/config/api-config.ts`.

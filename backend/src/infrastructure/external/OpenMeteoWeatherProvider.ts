@@ -43,12 +43,15 @@ export function toWeatherSnapshot(zoneId: string, location: OpenMeteoLocation): 
   };
 }
 
-/** Open-Meteo (free, no API key). One request for all zones: the API accepts lists of coordinates. */
+/**
+ * Open-Meteo (free, no API key). One request for all zones (64 municipalities): the API accepts
+ * lists of coordinates and answers one location per pair, in the same order.
+ */
 export class OpenMeteoWeatherProvider implements WeatherProvider {
   async fetchCurrent(zones: readonly Zone[]): Promise<WeatherSnapshot[]> {
     if (zones.length === 0) return [];
     const { data } = await axios.get<OpenMeteoLocation | OpenMeteoLocation[]>(OPEN_METEO_URL, {
-      timeout: 15_000,
+      timeout: 30_000, // 64 locations with 14 past days take longer than one
       params: {
         latitude: zones.map((zone) => zone.latitude).join(','),
         longitude: zones.map((zone) => zone.longitude).join(','),

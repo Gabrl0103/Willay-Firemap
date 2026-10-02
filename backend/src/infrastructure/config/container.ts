@@ -125,7 +125,11 @@ function buildIngestionJobs(repositories: RepositorySet, config: Env): Ingestion
         throw new Error(results.map((result) => `${result.source}: ${result.error}`).join('; '));
       }
       return results
-        .map((r) => (r.error ? `${r.source}: failed (${r.error})` : `${r.source}: ${r.found} found, ${r.inserted} new`))
+        .map((r) =>
+          r.error
+            ? `${r.source}: failed (${r.error})`
+            : `${r.source}: ${r.read} read, ${r.wildfires} wildfires, ${r.found} in known zones, ${r.inserted} saved`,
+        )
         .join('; ');
     },
   });

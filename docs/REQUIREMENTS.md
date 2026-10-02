@@ -3,7 +3,7 @@
 *(Antes llamado FIREMAP. **Willay** viene del quechua/kichwa: "avisar, contar, anunciar" — la app avisa dónde hay riesgo de incendio. Confirmar el significado y la escritura con un hablante o una fuente local.)*
 
 > Documento vivo. Se actualiza al cierre de cada sesión. Al iniciar una sesión nueva, pega este archivo (o léelo del proyecto) para retomar el contexto.
-> **Última actualización:** 2026-09-30 · **Versión:** 0.10 (Neon e ingesta de datos)
+> **Última actualización:** 2026-10-01 · **Versión:** 0.12 (64 municipios de Nariño)
 
 ---
 
@@ -81,8 +81,8 @@ willay/
 
 | Fuente | Qué aporta | Estado |
 |---|---|---|
-| Noticias locales: Diario del Sur, HSB Noticias | Incendios recientes (2023–hoy): fecha, lugar, a veces hectáreas | `robots.txt` revisado (2026-09-30). **Diario del Sur:** `User-agent: *` → `Allow: /` con `Content-Signal: search=yes, ai-train=no, use=reference`; solo bloquea por nombre a crawlers de IA. Scraper implementado, sin verificar contra el sitio (ver sección 12). **HSB Noticias:** el dominio `hsbnoticias.com` no resolvió DNS; queda fuera. |
-| Datos abiertos UNGRD: "Emergencias UNGRD" (datos.gov.co, CC BY-SA 4.0) | Histórico 2019–2022 con municipio, DIVIPOLA, evento y hectáreas | Implementado y probado. `robots.txt` de datos.gov.co permite `/resource/` (Crawl-delay 1). 266 incendios de cobertura vegetal en Nariño; 76 caen en los 12 municipios actuales (52 únicos por la llave zona+lugar+fecha). |
+| Noticias locales: boletines de la Gobernación de Nariño (narino.gov.co) | Incendios recientes (2024–hoy): fecha, municipio, vereda, a veces hectáreas | `robots.txt` revisado (2026-10-01): `User-agent: *` → `Allow: /`, `Crawl-delay: 3`. Se lee el feed RSS de su buscador (`/search/incendio/feed/rss2/`, 5 páginas de 10 noticias con el texto completo): 5 peticiones por corrida. **Diario del Sur** dio 0 resultados y se quitó. **HSB Noticias** ya resuelve DNS y su `robots.txt` permite `*`, pero bloquea por nombre a agentes de IA (`Claude-User`, `ClaudeBot`), así que el asistente no revisó su HTML; queda como candidata. |
+| Datos abiertos UNGRD: "Emergencias UNGRD" (datos.gov.co, CC BY-SA 4.0) | Histórico 2019–2022 con municipio, DIVIPOLA, evento y hectáreas | Implementado y probado. `robots.txt` de datos.gov.co permite `/resource/` (Crawl-delay 1). 266 incendios de cobertura vegetal en Nariño, todos en alguno de los 64 municipios (184 únicos por la llave zona+lugar+fecha, 2026-10-01). |
 | IDEAM: puntos de calor y estadísticas de incendios | Focos y estadísticas | Candidato, sin verificar si hay datos descargables. |
 
 **APIs abiertas (tiempo real):** NASA FIRMS (focos de calor), Open-Meteo (clima, sin API key).
@@ -219,7 +219,7 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 11. Preguntas abiertas
 
-- ¿Diario del Sur responde al scraper (Cloudflare bloqueó una prueba anterior)? Su `robots.txt` lo permite; HSB Noticias no resolvió DNS. Si falla, buscar otra fuente local.
+- Varias noticias sobre el mismo incendio (p. ej. 7 del cerro Aminda, entre Cumbitara y Los Andes) se guardan como eventos distintos e inflan la frecuencia histórica de esas zonas. Falta agruparlas (misma zona, pocos días de diferencia).
 - ¿Fecha exacta de entrega/sustentación?
 - ¿Cómo conseguir el GeoJSON de Nariño (IGAC/DANE)?
 - ¿Angular se mantiene o se cambia a React si la curva pesa?
@@ -228,13 +228,12 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 | Bloqueo | Qué falta | Qué ya está hecho |
 |---|---|---|
-| **Neon sin credenciales** | No hay `backend/.env` con `DATABASE_URL`, así que `database/schema.sql` y el seed **no se han ejecutado** en Neon, y el SQL de los repositorios no se ha probado contra una base real. Pasos: crear el proyecto en Neon, pegar la cadena en `backend/.env` y correr `npm run db:schema` y `npm run db:seed`. | Repositorios PostgreSQL/PostGIS (`infrastructure/persistence/PostgresRepositories.ts`), scripts de esquema y seed, y `container.ts` con fallback a memoria si no hay `DATABASE_URL`. |
 | **NASA FIRMS sin `MAP_KEY`** | Pedir la clave gratis en https://firms.modaps.eosdis.nasa.gov/api/map_key/ y ponerla en `backend/.env` como `MAP_KEY`. La API real **no se ha probado** (sin clave; además, desde el equipo de desarrollo el host de FIRMS no resolvió DNS). Mientras tanto se muestran los focos del seed. | Cliente `FirmsHotspotProvider` (VIIRS SNPP + NOAA-20, 2 días, bbox de Nariño), caso de uso y tarea programada cada 3 h que solo se activa si hay `MAP_KEY`. |
-| **Scraper de noticias sin verificar** | No se ha ejecutado contra Diario del Sur: su `robots.txt` bloquea a agentes de IA (`Claude-User`, `ClaudeBot`), así que el asistente que lo programó no abrió las páginas del sitio. Las URLs de listado (`/` y `/?s=incendio`) son una suposición. Pasos: correr `npm run ingest fires`, revisar el log y, si hace falta, cambiar `listUrls` en `infrastructure/scraping/FireReportSourceFactory.ts`. | `NewsFireReportSource` genérico (cheerio): busca enlaces con "incendio", lee título/fecha de metadatos estándar (`og:title`, `article:published_time`, `time[datetime]`, JSON-LD), filtra incendios de vegetación, detecta municipio, vereda/corregimiento y hectáreas. Probado con HTML de ejemplo. |
-| **Municipios fuera del seed** | Los incendios de municipios que no están en `zone` se descartan (llave foránea). UNGRD tiene 46 municipios de Nariño con incendios; el seed solo 12. Se resuelve al cargar el GeoJSON de IGAC/DANE. | — |
 
 ## 13. Registro de cambios
 
+- **2026-10-01 (v0.12):** la tabla `zone` tiene los 64 municipios de Nariño (DIVIPOLA del DANE en datos.gov.co `gdxc-w37w`: nombre, código y coordenadas de la cabecera) con `npm run db:zones` (upsert); se conservan los 12 ids anteriores. Columna `zone.aliases` para nombres alternos ("Tumaco", "Magüí Payán", "El Contadero"). El clima de los 64 llega en una sola petición a Open-Meteo. Los scrapers reconocen los 64 nombres con y sin tildes ("Nariño" suelto se toma como el departamento). `GET /api/zones` omite las zonas que aún no tienen clima en vez de fallar.
+- **2026-10-01 (v0.11):** scraping de noticias: se reemplaza Diario del Sur (0 resultados) por el feed RSS del buscador de la Gobernación de Nariño. Reglas más estrictas para el municipio (evitan atribuir boletines departamentales a una zona), conteo de noticias leídas / incendios / en zonas / guardados en el log de `npm run ingest`, y duplicados por `source_url` evitados en la base (`fire_event_news_url_key`) y en memoria.
 - **2026-09-30 (v0.10):** el mapa usa tiles de OpenStreetMap con filtro CSS oscuro (CARTO pasó a exigir API key). Backend: repositorios PostgreSQL/PostGIS para Neon, `npm run db:schema` y `npm run db:seed`, `DATABASE_URL` en `.env` y fallback a datos en memoria. Ingesta programada con node-cron: clima de Open-Meteo (cada hora), focos de NASA FIRMS (cada 3 h, si hay `MAP_KEY`) y scraping diario de incendios (UNGRD + Diario del Sur) respetando `robots.txt` y con límite de peticiones. El modelo de riesgo (pesos 0.5/0.3/0.2) no cambia.
 
 - **2026-09-30 (v0.9):** el proyecto cambia de nombre: FIREMAP pasa a **Willay** (quechua/kichwa: avisar, anunciar). Se renombran la app, Android (`co.willay.app`), paquetes y documentos.
