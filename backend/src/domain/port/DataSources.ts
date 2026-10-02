@@ -15,8 +15,19 @@ export interface HotspotProvider {
   fetchRecent(): Promise<NewHotspot[]>;
 }
 
+/** What a fire source collected in one run. */
+export interface FireReportBatch {
+  /** Items the source looked at (news items about fires, dataset rows). */
+  readonly itemsRead: number;
+  /** Items about a wildfire, wherever it was (many happen outside the known zones). */
+  readonly wildfireItems: number;
+  /** Items that became events in one of the given zones. */
+  readonly events: NewFireEvent[];
+}
+
 /** A site or dataset with past fires (scraping). Events must point to one of the given zones. */
 export interface FireReportSource {
   readonly name: string;
-  fetchReports(zones: readonly Zone[]): Promise<NewFireEvent[]>;
+  /** `knownSourceUrls`: pages already stored, so the source can skip them. */
+  fetchReports(zones: readonly Zone[], knownSourceUrls: ReadonlySet<string>): Promise<FireReportBatch>;
 }

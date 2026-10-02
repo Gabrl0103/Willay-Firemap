@@ -1,8 +1,8 @@
 import * as cheerio from 'cheerio';
 import type { NewFireEvent } from '../../domain/model/FireEvent.js';
 import type { Zone } from '../../domain/model/Zone.js';
-import type { FireReportSource } from '../../domain/port/DataSources.js';
-import { findMentionedZone } from '../../domain/service/zoneMatching.js';
+import type { FireReportBatch, FireReportSource } from '../../domain/port/DataSources.js';
+import { findMentionedZone, findZoneByName } from '../../domain/service/zoneMatching.js';
 import type { PoliteHttpClient } from './PoliteHttpClient.js';
 
 export interface NewsSiteConfig {
@@ -21,6 +21,11 @@ export interface NewsArticle {
 }
 
 const FIRE_WORD = /incendi/i;
+/**
+ * "incendio" in singular: the article reports one fire. Titles such as "medidas ante los incendios"
+ * or "tres incendios activos" are bulletins whose towns and hectares do not belong to one event.
+ */
+const ONE_FIRE = /\bincendio\b/i;
 /** Wildfire vocabulary, to leave out house and vehicle fires. */
 const VEGETATION_WORDS = /forestal|cobertura vegetal|vegetaci[oó]n|bosque|hect[aá]rea|p[aá]ramo|monte|pastizal|rastrojo|quema/i;
 
@@ -87,16 +92,38 @@ export function extractLocality(text: string): string | undefined {
   return match?.[1];
 }
 
+/** "municipio de La Unión", "Distrito de Tumaco" (singular: "Municipios de A, B y C" is a list, not the place). */
+const MUNICIPALITY_PHRASE =
+  /\b(?:[Mm]unicipio|[Dd]istrito)\s+(?:de\s+|del\s+)?(\p{Lu}\p{L}+(?:\s+(?:(?:de|del|la|las|los|el)\s+)?\p{Lu}\p{L}+){0,3})/u;
+
+/**
+ * Municipality where the fire happened, if it is one of the zones: the zone named in the title,
+ * otherwise the first "municipio de X" of the text. Other mentions are ignored on purpose:
+ * department-wide bulletins list many towns (aid, equipment) that did not burn.
+ */
+export function findArticleZone(title: string, text: string, zones: readonly Zone[]): Zone | undefined {
+  const inTitle = findMentionedZone(title, zones);
+  if (inTitle) return inTitle;
+  const municipality = MUNICIPALITY_PHRASE.exec(text)?.[1];
+  if (!municipality) return undefined;
+  return findZoneByName(municipality, zones) ?? findMentionedZone(municipality, zones);
+}
+
+/** The title reports one fire, and the article says it burned vegetation (not a house or a car). */
+export function isWildfireArticle(article: NewsArticle): boolean {
+  return ONE_FIRE.test(article.title) && VEGETATION_WORDS.test(`${article.title}. ${article.text}`);
+}
+
 /** Turns an article into a fire event, or undefined when it is not a wildfire in a known zone. */
 export function articleToFireEvent(
   article: NewsArticle,
   url: string,
   zones: readonly Zone[],
 ): NewFireEvent | undefined {
+  if (!isWildfireArticle(article)) return undefined;
   const fullText = `${article.title}. ${article.text}`;
-  if (!FIRE_WORD.test(article.title) || !VEGETATION_WORDS.test(fullText)) return undefined;
 
-  const zone = findMentionedZone(article.title, zones) ?? findMentionedZone(article.text, zones);
+  const zone = findArticleZone(article.title, article.text, zones);
   const date = article.publishedAt?.slice(0, 10);
   if (!zone || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return undefined;
 
@@ -125,7 +152,7 @@ export class NewsFireReportSource implements FireReportSource {
     return this.site.name;
   }
 
-  async fetchReports(zones: readonly Zone[]): Promise<NewFireEvent[]> {
+  async fetchReports(zones: readonly Zone[], knownSourceUrls: ReadonlySet<string>): Promise<FireReportBatch> {
     const links = new Set<string>();
     const listErrors: string[] = [];
     for (const listUrl of this.site.listUrls) {
@@ -137,17 +164,22 @@ export class NewsFireReportSource implements FireReportSource {
     }
     if (listErrors.length === this.site.listUrls.length) throw new Error(listErrors.join('; '));
 
-    const pending = [...links].filter((link) => !this.visited.has(link)).slice(0, this.site.maxArticlesPerRun);
+    const pending = [...links]
+      .filter((link) => !this.visited.has(link) && !knownSourceUrls.has(link))
+      .slice(0, this.site.maxArticlesPerRun);
+    let wildfireItems = 0;
     const events: NewFireEvent[] = [];
     for (const link of pending) {
       this.visited.add(link);
       try {
-        const event = articleToFireEvent(parseArticle(await this.http.getText(link)), link, zones);
+        const article = parseArticle(await this.http.getText(link));
+        if (isWildfireArticle(article)) wildfireItems++;
+        const event = articleToFireEvent(article, link, zones);
         if (event) events.push(event);
       } catch (error) {
         console.warn(`[${this.name}] skipped ${link}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    return events;
+    return { itemsRead: pending.length, wildfireItems, events };
   }
 }

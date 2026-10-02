@@ -1,6 +1,6 @@
 import type { NewFireEvent } from '../../domain/model/FireEvent.js';
 import type { Zone } from '../../domain/model/Zone.js';
-import type { FireReportSource } from '../../domain/port/DataSources.js';
+import type { FireReportBatch, FireReportSource } from '../../domain/port/DataSources.js';
 import { findZoneByName } from '../../domain/service/zoneMatching.js';
 import type { PoliteHttpClient } from './PoliteHttpClient.js';
 
@@ -40,7 +40,7 @@ export class UngrdFireReportSource implements FireReportSource {
 
   constructor(private readonly http: PoliteHttpClient) {}
 
-  async fetchReports(zones: readonly Zone[]): Promise<NewFireEvent[]> {
+  async fetchReports(zones: readonly Zone[]): Promise<FireReportBatch> {
     const query = new URLSearchParams({
       $select: 'fecha,municipio,hectareas',
       // LIKE avoids depending on how "Ñ" is encoded in the department name.
@@ -49,6 +49,7 @@ export class UngrdFireReportSource implements FireReportSource {
       $limit: '5000',
     });
     const rows = await this.http.getJson<UngrdRow[]>(`${DATASET_API}?${query.toString()}`);
-    return ungrdRowsToFireEvents(rows, zones);
+    // Every row is a vegetation fire in Nariño (see $where).
+    return { itemsRead: rows.length, wildfireItems: rows.length, events: ungrdRowsToFireEvents(rows, zones) };
   }
 }

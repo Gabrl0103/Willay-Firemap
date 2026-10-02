@@ -1,21 +1,26 @@
 import type { FireReportSource } from '../../domain/port/DataSources.js';
 import { NewsFireReportSource, type NewsSiteConfig } from './NewsFireReportSource.js';
 import { PoliteHttpClient } from './PoliteHttpClient.js';
+import { RssFireReportSource, type RssFeedConfig } from './RssFireReportSource.js';
 import { UngrdFireReportSource } from './UngrdFireReportSource.js';
 
 /**
- * News sites checked against their robots.txt on 2026-09-30:
- * - Diario del Sur: "User-agent: *" -> Allow: / (it only blocks AI crawlers by name).
- *   The list URLs are not verified yet (see docs/REQUIREMENTS.md, section 12).
- * - HSB Noticias: the domain did not resolve, so it is left out.
+ * Local news with an RSS feed. robots.txt checked on 2026-10-01:
+ * - Gobernación de Nariño (narino.gov.co): "User-agent: *" -> Allow: /, Crawl-delay: 3.
+ *   Its WordPress search feed returns whole press releases (the Gestión del Riesgo office reports
+ *   every wildfire it attends), 10 per page.
  */
-const NEWS_SITES: readonly NewsSiteConfig[] = [
-  {
-    name: 'diario-del-sur',
-    listUrls: ['https://diariodelsur.com.co/', 'https://diariodelsur.com.co/?s=incendio'],
-    maxArticlesPerRun: 15,
-  },
+const NEWS_FEEDS: readonly RssFeedConfig[] = [
+  { name: 'gobernacion-narino', feedUrl: 'https://narino.gov.co/search/incendio/feed/rss2/', maxPages: 5 },
 ];
+
+/**
+ * News sites without a feed (list pages + one request per article). Empty for now:
+ * - Diario del Sur gave 0 results (removed 2026-10-01).
+ * - HSB Noticias resolves again and its robots.txt allows "*", but it blocks AI agents by name
+ *   (Claude-User, ClaudeBot), so its HTML was not inspected and no list URL is verified.
+ */
+const NEWS_SITES: readonly NewsSiteConfig[] = [];
 
 /** Factory: builds every fire source with one shared, rate-limited HTTP client. */
 export function createFireReportSources(): FireReportSource[] {
@@ -25,5 +30,9 @@ export function createFireReportSources(): FireReportSource[] {
     minDelayMs: 5_000,
     timeoutMs: 20_000,
   });
-  return [new UngrdFireReportSource(http), ...NEWS_SITES.map((site) => new NewsFireReportSource(site, http))];
+  return [
+    new UngrdFireReportSource(http),
+    ...NEWS_FEEDS.map((feed) => new RssFireReportSource(feed, http)),
+    ...NEWS_SITES.map((site) => new NewsFireReportSource(site, http)),
+  ];
 }
