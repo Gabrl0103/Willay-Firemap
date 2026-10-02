@@ -11,6 +11,7 @@
     "db:schema": "tsx src/infrastructure/persistence/scripts/applySchema.ts",
     "db:seed": "tsx src/infrastructure/persistence/scripts/seedDatabase.ts",
     "db:zones": "tsx src/infrastructure/persistence/scripts/loadZones.ts",
+    "db:merge-news": "tsx src/infrastructure/persistence/scripts/mergeNewsDuplicates.ts",
     "ingest": "tsx src/infrastructure/scraping/runIngestion.ts"
   },
   "dependencies": {

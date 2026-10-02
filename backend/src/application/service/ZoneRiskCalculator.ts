@@ -7,6 +7,7 @@ import type {
   HotspotRepository,
   WeatherRepository,
 } from '../../domain/port/Repositories.js';
+import { firesPerYear } from '../../domain/service/fireFrequency.js';
 import { distanceKm } from '../../domain/service/geo.js';
 import type { RiskScoringService } from '../../domain/service/RiskScoringService.js';
 
@@ -16,8 +17,8 @@ export interface ZoneRisk {
 }
 
 const HOTSPOT_RADIUS_KM = 25;
-const FIRE_WINDOW_DAYS = 730;
-const DAY_MS = 24 * 60 * 60 * 1000;
+/** First day of the fire records (the UNGRD dataset starts on 2019-01-02). */
+export const FIRE_RECORD_START = '2019-01-01';
 
 /** Gathers the data of one zone and asks the domain for its risk (shared by use cases). */
 export class ZoneRiskCalculator {
@@ -41,12 +42,12 @@ export class ZoneRiskCalculator {
       (h) => distanceKm(zone.latitude, zone.longitude, h.latitude, h.longitude) <= HOTSPOT_RADIUS_KM,
     ).length;
 
-    const since = now.getTime() - FIRE_WINDOW_DAYS * DAY_MS;
-    const recentFireCount = fires.filter(
-      (f) => f.zoneId === zone.id && new Date(f.date).getTime() >= since,
-    ).length;
-
-    const assessment = this.scoringService.assess({ weather, nearbyHotspotCount, recentFireCount });
+    const zoneFireDates = fires.filter((f) => f.zoneId === zone.id).map((f) => f.date);
+    const assessment = this.scoringService.assess({
+      weather,
+      nearbyHotspotCount,
+      firesPerYear: firesPerYear(zoneFireDates, FIRE_RECORD_START, now),
+    });
     return { weather, assessment };
   }
 }

@@ -1,4 +1,4 @@
-import type { FireEvent, FireSource, NewFireEvent } from '../../domain/model/FireEvent.js';
+import type { FireEvent, FireSource, NewFireEvent, StoredFireEvent } from '../../domain/model/FireEvent.js';
 import type { Hotspot, NewHotspot } from '../../domain/model/Hotspot.js';
 import type { WeatherSnapshot } from '../../domain/model/WeatherSnapshot.js';
 import type { Zone } from '../../domain/model/Zone.js';
@@ -35,34 +35,43 @@ export class InMemoryWeatherRepository implements WeatherRepository {
 const fireKey = (event: NewFireEvent): string => `${event.zoneId}|${event.place}|${event.date}`;
 
 export class InMemoryFireEventRepository implements FireEventRepository {
-  private readonly events: FireEvent[];
-  /** "source|url" of the stored events; the domain FireEvent does not carry the URL. */
-  private readonly sourceUrls = new Set<string>();
+  /** Stored with their links; findAll strips them (the API does not serve them). */
+  private events: StoredFireEvent[];
   private nextId: number;
   constructor(initial: readonly FireEvent[]) {
     this.events = [...initial];
     this.nextId = initial.length + 1;
   }
   async findAll(): Promise<FireEvent[]> {
-    return [...this.events];
+    return this.events.map(({ sourceUrl: _sourceUrl, relatedUrls: _relatedUrls, ...event }) => event);
   }
   async saveMany(events: readonly NewFireEvent[]): Promise<number> {
     const known = new Set(this.events.map(fireKey));
+    const newsUrls = await this.findSourceUrls('news');
     let inserted = 0;
-    for (const { sourceUrl, ...event } of events) {
-      const key = fireKey(event);
-      const urlKey = event.source === 'news' && sourceUrl ? `news|${sourceUrl}` : undefined;
-      if (known.has(key) || (urlKey && this.sourceUrls.has(urlKey))) continue;
-      known.add(key);
-      if (sourceUrl) this.sourceUrls.add(`${event.source}|${sourceUrl}`);
+    for (const event of events) {
+      const isKnownNews = event.source === 'news' && !!event.sourceUrl && newsUrls.has(event.sourceUrl);
+      if (known.has(fireKey(event)) || isKnownNews) continue;
+      known.add(fireKey(event));
+      if (event.source === 'news' && event.sourceUrl) newsUrls.add(event.sourceUrl);
       this.events.push({ ...event, id: `mem-${this.nextId++}` });
       inserted++;
     }
     return inserted;
   }
   async findSourceUrls(source: FireSource): Promise<Set<string>> {
-    const prefix = `${source}|`;
-    return new Set([...this.sourceUrls].filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length)));
+    const urls = this.events
+      .filter((event) => event.source === source)
+      .flatMap((event) => [event.sourceUrl, ...(event.relatedUrls ?? [])]);
+    return new Set(urls.filter((url): url is string => !!url));
+  }
+  async findNewsEvents(): Promise<StoredFireEvent[]> {
+    return this.events.filter((event) => event.source === 'news');
+  }
+  async replaceSameFire(keepId: string, fire: NewFireEvent, duplicateIds: readonly string[]): Promise<void> {
+    this.events = this.events
+      .filter((event) => !duplicateIds.includes(event.id))
+      .map((event) => (event.id === keepId ? { ...fire, id: keepId } : event));
   }
 }
 

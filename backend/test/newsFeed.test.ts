@@ -127,10 +127,10 @@ describe('findArticleZone', () => {
 });
 
 describe('IngestFireEventsUseCase', () => {
-  const event = (place: string, sourceUrl: string): NewFireEvent => ({
+  const event = (place: string, sourceUrl: string, date = '2026-08-01'): NewFireEvent => ({
     zoneId: 'pasto',
     place,
-    date: '2026-08-01',
+    date,
     hectares: 1,
     source: 'news',
     sourceUrl,
@@ -143,16 +143,16 @@ describe('IngestFireEventsUseCase', () => {
       fetchReports: async (_zones, known) => ({
         itemsRead: 10,
         wildfireItems: 3,
-        events: [event('Jongovito, Pasto', 'https://n.test/a'), event('Pasto', 'https://n.test/a'), event('Obonuco, Pasto', 'https://n.test/b')].filter(
+        events: [event('Jongovito, Pasto', 'https://n.test/a'), event('Pasto', 'https://n.test/a'), event('Obonuco, Pasto', 'https://n.test/b', '2026-08-20')].filter(
           (e) => !known.has(e.sourceUrl ?? ''),
         ),
       }),
     };
     const ingest = new IngestFireEventsUseCase(new InMemoryZoneRepository(zones), [source], fireEvents);
 
-    assert.deepEqual(await ingest.execute(), [{ source: 'fake-news', read: 10, wildfires: 3, found: 2, inserted: 2 }]);
+    assert.deepEqual(await ingest.execute(), [{ source: 'fake-news', read: 10, wildfires: 3, found: 2, grouped: 0, inserted: 2 }]);
     assert.deepEqual(await fireEvents.findSourceUrls('news'), new Set(['https://n.test/a', 'https://n.test/b']));
-    assert.deepEqual(await ingest.execute(), [{ source: 'fake-news', read: 10, wildfires: 3, found: 0, inserted: 0 }]);
+    assert.deepEqual(await ingest.execute(), [{ source: 'fake-news', read: 10, wildfires: 3, found: 0, grouped: 0, inserted: 0 }]);
     assert.equal((await fireEvents.findAll()).length, 2);
   });
 

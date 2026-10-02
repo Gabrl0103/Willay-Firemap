@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS fire_event (
 CREATE INDEX IF NOT EXISTS fire_event_zone_date_idx ON fire_event (zone_id, event_date DESC);
 -- Una noticia se guarda una sola vez (UNGRD comparte la misma URL del dataset en todas sus filas).
 CREATE UNIQUE INDEX IF NOT EXISTS fire_event_news_url_key ON fire_event (source_url) WHERE source = 'news';
+-- Otras noticias del mismo incendio (misma zona, <= 3 días): solo como referencia.
+ALTER TABLE fire_event ADD COLUMN IF NOT EXISTS related_urls TEXT[] NOT NULL DEFAULT '{}';
 
 -- Focos de calor (NASA FIRMS).
 CREATE TABLE IF NOT EXISTS hotspot (

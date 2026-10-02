@@ -26,8 +26,16 @@ const FIRE_WORD = /incendi/i;
  * or "tres incendios activos" are bulletins whose towns and hectares do not belong to one event.
  */
 const ONE_FIRE = /\bincendio\b/i;
-/** Wildfire vocabulary, to leave out house and vehicle fires. */
-const VEGETATION_WORDS = /forestal|cobertura vegetal|vegetaci[oó]n|bosque|hect[aá]rea|p[aá]ramo|monte|pastizal|rastrojo|quema/i;
+/**
+ * Wildfire vocabulary, to leave out house and vehicle fires. Whole words only: "esquema" is not
+ * "quema" (a press release about burned houses got through that way).
+ */
+const VEGETATION_WORDS =
+  /\b(?:forestal(?:es)?|cobertura vegetal|vegetaci[oó]n|bosques?|hect[aá]reas?|p[aá]ramos?|montes?|pastizal(?:es)?|rastrojos?|quemas?)\b/i;
+/** Buildings: a fire that mentions them is urban unless it also names vegetation (STRONG_WILDFIRE_WORDS). */
+const BUILDING_WORDS = /\b(?:viviendas?|casas?|local(?:es)?|bodegas?|establecimientos?)\b/i;
+/** Words that only fit a wildfire ("hectáreas" does not: houses and crops are counted in hectares too). */
+const STRONG_WILDFIRE_WORDS = /\b(?:forestal(?:es)?|bosques?|montes?|p[aá]ramos?|cobertura vegetal|quemas?)\b/i;
 
 /** Links on a list page that look like fire news (same site only, without #fragment). */
 export function extractFireArticleLinks(html: string, pageUrl: string): string[] {
@@ -109,9 +117,14 @@ export function findArticleZone(title: string, text: string, zones: readonly Zon
   return findZoneByName(municipality, zones) ?? findMentionedZone(municipality, zones);
 }
 
-/** The title reports one fire, and the article says it burned vegetation (not a house or a car). */
+/**
+ * The title reports one fire and the article says it burned vegetation. Fires of houses, shops or
+ * warehouses are left out unless the article also talks about forest, páramo or vegetation cover.
+ */
 export function isWildfireArticle(article: NewsArticle): boolean {
-  return ONE_FIRE.test(article.title) && VEGETATION_WORDS.test(`${article.title}. ${article.text}`);
+  const fullText = `${article.title}. ${article.text}`;
+  if (!ONE_FIRE.test(article.title) || !VEGETATION_WORDS.test(fullText)) return false;
+  return !BUILDING_WORDS.test(fullText) || STRONG_WILDFIRE_WORDS.test(fullText);
 }
 
 /** Turns an article into a fire event, or undefined when it is not a wildfire in a known zone. */

@@ -1,37 +1,18 @@
 import { NARINO_MUNICIPALITIES } from '../narinoMunicipalities.js';
-import { PostgresFireEventRepository, PostgresHotspotRepository } from '../PostgresRepositories.js';
 import { closePool, getPool } from '../postgresPool.js';
-import { fireEvents, hotspots, weatherSnapshots } from '../seedData.js';
 import { upsertZones } from '../upsertZones.js';
 import { requireDatabaseUrl } from './requireDatabaseUrl.js';
 
 /**
- * npm run db:seed — loads the same test data as seedData.ts. Safe to run again:
- * zones are upserted, and weather/hotspots are only added where there is no real data yet.
+ * npm run db:seed — loads only the zones (the 64 municipalities, same as `npm run db:zones`).
+ * Weather, fires and hotspots in the database come only from the ingestion: the test values of
+ * seedData.ts are for the in-memory mode (no DATABASE_URL) and are never written here.
+ * Safe to run again: zones are upserted by id.
  */
 const pool = getPool(requireDatabaseUrl());
 try {
-  await upsertZones(pool, NARINO_MUNICIPALITIES);
-
-  for (const w of weatherSnapshots) {
-    await pool.query(
-      `INSERT INTO weather_snapshot (zone_id, temperature_c, humidity_pct, wind_kmh, days_without_rain)
-       SELECT $1, $2, $3, $4, $5
-       WHERE NOT EXISTS (SELECT 1 FROM weather_snapshot WHERE zone_id = $1)`,
-      [w.zoneId, w.temperatureC, w.humidityPct, w.windKmh, w.daysWithoutRain],
-    );
-  }
-
-  const insertedFires = await new PostgresFireEventRepository(pool).saveMany(fireEvents);
-
-  const { rows } = await pool.query<{ count: string }>('SELECT count(*) FROM hotspot');
-  const seedHotspots = rows[0]?.count === '0';
-  if (seedHotspots) await new PostgresHotspotRepository(pool).replaceAll(hotspots);
-
-  console.log(
-    `Seed done: ${NARINO_MUNICIPALITIES.length} zones, ${insertedFires} new fire events, ` +
-      `hotspots ${seedHotspots ? 'added' : 'kept (table not empty)'}.`,
-  );
+  const written = await upsertZones(pool, NARINO_MUNICIPALITIES);
+  console.log(`Seed done: ${written} zones upserted (no test weather, fires or hotspots).`);
 } finally {
   await closePool();
 }

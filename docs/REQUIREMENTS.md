@@ -3,7 +3,7 @@
 *(Antes llamado FIREMAP. **Willay** viene del quechua/kichwa: "avisar, contar, anunciar" — la app avisa dónde hay riesgo de incendio. Confirmar el significado y la escritura con un hablante o una fuente local.)*
 
 > Documento vivo. Se actualiza al cierre de cada sesión. Al iniciar una sesión nueva, pega este archivo (o léelo del proyecto) para retomar el contexto.
-> **Última actualización:** 2026-10-01 · **Versión:** 0.12 (64 municipios de Nariño)
+> **Última actualización:** 2026-10-01 · **Versión:** 0.15 (historial = incendios por año)
 
 ---
 
@@ -95,8 +95,14 @@ willay/
 
 ## 7. Modelo de riesgo
 
-- **V1:** puntaje ponderado por zona (0–100) → nivel Bajo / Medio / Alto / Extremo.
-- **Variables:** temperatura, humedad, viento, días sin lluvia (Open-Meteo); focos FIRMS cercanos; frecuencia histórica (scraping).
+- **V1:** puntaje ponderado por zona (0–100) → nivel Bajo 0–24 / Medio 25–49 / Alto 50–74 / Extremo 75–100.
+- **Puntaje** = 0,5 × clima seco + 0,3 × focos cercanos + 0,2 × historial. Cada factor va de 0 a 100:
+  - **Clima seco** (Open-Meteo): 0,3 × temperatura (10→32 °C) + 0,35 × sequedad (humedad 80→20 %) + 0,15 × viento (0→40 km/h) + 0,2 × días sin lluvia (0→14).
+  - **Focos cercanos** (NASA FIRMS, últimos 2 días): focos a 25 km o menos del municipio; 3 o más = 100.
+  - **Historial** (scraping: UNGRD + noticias): **incendios por año** de la zona en todo el registro, desde el 2019-01-01 hasta hoy; **1 incendio por año = 100** (tope). No usa una ventana reciente porque las fuentes cubren años distintos (UNGRD 2019–2022, noticias desde 2026): con la ventana anterior de 730 días solo 4 de 64 zonas tenían historial. Con la tasa anual, 46 zonas tienen historial > 0 y 5 llegan a 100 (Albán, Buesaco, Cumbal, Ipiales, La Cruz), así que suma de 0 a 20 puntos (2026-10-01).
+- **Limitaciones del historial:**
+  - UNGRD pierde reportes del mismo día en un municipio: la regla anti-duplicados (zona, lugar, fecha) usa como lugar el nombre del municipio, así que las 266 filas del dataset quedan en 177 eventos.
+  - Las noticias subestiman los años recientes: solo hay una fuente (boletines de la Gobernación), que no reporta todos los incendios, frente a un dataset oficial completo para 2019–2022. Entre 2023 y 2025 no hay datos.
 - **Salida:** riesgo estimado para 24–72 h y los factores que más pesaron.
 - **Mejora opcional:** regresión logística con el histórico si sobra tiempo. Deep learning descartado.
 
@@ -219,7 +225,7 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 11. Preguntas abiertas
 
-- Varias noticias sobre el mismo incendio (p. ej. 7 del cerro Aminda, entre Cumbitara y Los Andes) se guardan como eventos distintos e inflan la frecuencia histórica de esas zonas. Falta agruparlas (misma zona, pocos días de diferencia).
+- La fecha de un incendio de noticias es la de publicación, no la del incendio (una nota puede salir días después).
 - ¿Fecha exacta de entrega/sustentación?
 - ¿Cómo conseguir el GeoJSON de Nariño (IGAC/DANE)?
 - ¿Angular se mantiene o se cambia a React si la curva pesa?
@@ -232,6 +238,9 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-01 (v0.15):** factor de historial: incendios por año de la zona desde el 2019-01-01 (1 por año = 100) en vez del conteo de los últimos 730 días / 5. Pesos sin cambio (0,5 / 0,3 / 0,2). Con los datos de hoy: 46 zonas con historial > 0 (antes 4), puntajes 0–20, todas en nivel Bajo (clima húmedo y sin focos porque falta `MAP_KEY`). Se documentan las limitaciones del historial (sección 7).
+- **2026-10-01 (v0.14):** `npm run db:seed` solo carga las 64 zonas; el clima, los incendios y los focos de `seedData.ts` quedan solo para el modo en memoria y las pruebas. Borrados en Neon todos los datos de prueba que había cargado el seed: 8 noticias, 7 filas `ungrd` sin enlace y 7 focos de calor.
+- **2026-10-01 (v0.13):** noticias del mismo incendio: la ingesta agrupa, antes de insertar, las noticias de una zona separadas por 3 días o menos (en cadena) con las ya guardadas; queda la más antigua (fecha y enlace), el mayor número de hectáreas y los demás enlaces en `fire_event.related_urls`. Limpieza única en Neon con `npm run db:merge-news` (idempotente): 5 duplicados del cerro Aminda fusionados. Filtro de incendios forestales: palabras completas ("esquema" ya no cuenta como "quema") y se descartan los que mencionan vivienda/casa/local/bodega/establecimiento sin forestal/bosque/monte/páramo/cobertura vegetal/quema. Olaya Herrera (La Isla, 2026-09-29) era un incendio urbano de 15 viviendas: borrado.
 - **2026-10-01 (v0.12):** la tabla `zone` tiene los 64 municipios de Nariño (DIVIPOLA del DANE en datos.gov.co `gdxc-w37w`: nombre, código y coordenadas de la cabecera) con `npm run db:zones` (upsert); se conservan los 12 ids anteriores. Columna `zone.aliases` para nombres alternos ("Tumaco", "Magüí Payán", "El Contadero"). El clima de los 64 llega en una sola petición a Open-Meteo. Los scrapers reconocen los 64 nombres con y sin tildes ("Nariño" suelto se toma como el departamento). `GET /api/zones` omite las zonas que aún no tienen clima en vez de fallar.
 - **2026-10-01 (v0.11):** scraping de noticias: se reemplaza Diario del Sur (0 resultados) por el feed RSS del buscador de la Gobernación de Nariño. Reglas más estrictas para el municipio (evitan atribuir boletines departamentales a una zona), conteo de noticias leídas / incendios / en zonas / guardados en el log de `npm run ingest`, y duplicados por `source_url` evitados en la base (`fire_event_news_url_key`) y en memoria.
 - **2026-09-30 (v0.10):** el mapa usa tiles de OpenStreetMap con filtro CSS oscuro (CARTO pasó a exigir API key). Backend: repositorios PostgreSQL/PostGIS para Neon, `npm run db:schema` y `npm run db:seed`, `DATABASE_URL` en `.env` y fallback a datos en memoria. Ingesta programada con node-cron: clima de Open-Meteo (cada hora), focos de NASA FIRMS (cada 3 h, si hay `MAP_KEY`) y scraping diario de incendios (UNGRD + Diario del Sur) respetando `robots.txt` y con límite de peticiones. El modelo de riesgo (pesos 0.5/0.3/0.2) no cambia.

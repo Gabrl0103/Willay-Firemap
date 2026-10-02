@@ -1,5 +1,5 @@
 import type pg from 'pg';
-import type { FireEvent, FireSource, NewFireEvent } from '../../domain/model/FireEvent.js';
+import type { FireEvent, FireSource, NewFireEvent, StoredFireEvent } from '../../domain/model/FireEvent.js';
 import type { Hotspot, NewHotspot } from '../../domain/model/Hotspot.js';
 import type { WeatherSnapshot } from '../../domain/model/WeatherSnapshot.js';
 import type { Zone } from '../../domain/model/Zone.js';
@@ -105,9 +105,12 @@ export class PostgresFireEventRepository implements FireEventRepository {
 
   async saveMany(events: readonly NewFireEvent[]): Promise<number> {
     if (events.length === 0) return 0;
+    // related_urls travel as one text per event, joined by newlines (a URL never has one).
     const result = await this.pool.query(
-      `INSERT INTO fire_event (zone_id, place, event_date, hectares, source, source_url)
-       SELECT * FROM unnest($1::text[], $2::text[], $3::date[], $4::real[], $5::text[], $6::text[])
+      `INSERT INTO fire_event (zone_id, place, event_date, hectares, source, source_url, related_urls)
+       SELECT zone_id, place, event_date, hectares, source, source_url, string_to_array(related, chr(10))
+       FROM unnest($1::text[], $2::text[], $3::date[], $4::real[], $5::text[], $6::text[], $7::text[])
+            AS e(zone_id, place, event_date, hectares, source, source_url, related)
        ON CONFLICT DO NOTHING`, // same (zone_id, place, event_date), or a news source_url already stored
       [
         events.map((e) => e.zoneId),
@@ -116,17 +119,59 @@ export class PostgresFireEventRepository implements FireEventRepository {
         events.map((e) => e.hectares),
         events.map((e) => e.source),
         events.map((e) => e.sourceUrl ?? null),
+        events.map((e) => (e.relatedUrls ?? []).join('\n')),
       ],
     );
     return result.rowCount ?? 0;
   }
 
   async findSourceUrls(source: FireSource): Promise<Set<string>> {
-    const { rows } = await this.pool.query<{ source_url: string }>(
-      'SELECT DISTINCT source_url FROM fire_event WHERE source = $1 AND source_url IS NOT NULL',
+    const { rows } = await this.pool.query<{ url: string }>(
+      `SELECT source_url AS url FROM fire_event WHERE source = $1 AND source_url IS NOT NULL
+       UNION
+       SELECT unnest(related_urls) FROM fire_event WHERE source = $1`,
       [source],
     );
-    return new Set(rows.map((row) => row.source_url));
+    return new Set(rows.map((row) => row.url));
+  }
+
+  async findNewsEvents(): Promise<StoredFireEvent[]> {
+    const { rows } = await this.pool.query<FireEventRow & { source_url: string | null; related_urls: string[] }>(
+      `SELECT id::text AS id, zone_id, place, to_char(event_date, 'YYYY-MM-DD') AS date, hectares, source,
+              source_url, related_urls
+       FROM fire_event WHERE source = 'news'`,
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      zoneId: row.zone_id,
+      place: row.place,
+      date: row.date,
+      hectares: row.hectares,
+      source: row.source,
+      sourceUrl: row.source_url ?? undefined,
+      relatedUrls: row.related_urls,
+    }));
+  }
+
+  async replaceSameFire(keepId: string, fire: NewFireEvent, duplicateIds: readonly string[]): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Delete first: the kept row may take the source_url (unique for news) of a duplicate.
+      await client.query('DELETE FROM fire_event WHERE id = ANY($1::bigint[])', [duplicateIds]);
+      await client.query(
+        `UPDATE fire_event
+         SET zone_id = $2, place = $3, event_date = $4, hectares = $5, source = $6, source_url = $7, related_urls = $8
+         WHERE id = $1`,
+        [keepId, fire.zoneId, fire.place, fire.date, fire.hectares, fire.source, fire.sourceUrl ?? null, fire.relatedUrls ?? []],
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 

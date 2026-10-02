@@ -5,9 +5,9 @@ import type { Zone } from '../../domain/model/Zone.js';
 import { NARINO_MUNICIPALITIES } from './narinoMunicipalities.js';
 
 /**
- * DATOS DE PRUEBA (simulados) para clima, incendios y focos. Se reemplazan por Neon/PostGIS y por
- * lo que salga del scraping y de las APIs (Open-Meteo, NASA FIRMS). Solo 12 municipios tienen clima
- * de prueba; los demás aparecen en la API cuando la ingesta de clima les da datos.
+ * DATOS DE PRUEBA (simulados) para clima, incendios y focos, solo para el modo en memoria (sin
+ * DATABASE_URL) y las pruebas. Nunca se escriben en Neon: allí llegan solo por la ingesta.
+ * Solo 12 municipios tienen clima de prueba; los demás no aparecen en la API en este modo.
  */
 
 /** Las zonas sí son reales: los 64 municipios de Nariño (DIVIPOLA, DANE). */

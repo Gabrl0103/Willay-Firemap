@@ -128,7 +128,7 @@ function buildIngestionJobs(repositories: RepositorySet, config: Env): Ingestion
         .map((r) =>
           r.error
             ? `${r.source}: failed (${r.error})`
-            : `${r.source}: ${r.read} read, ${r.wildfires} wildfires, ${r.found} in known zones, ${r.inserted} saved`,
+            : `${r.source}: ${r.read} read, ${r.wildfires} wildfires, ${r.found} in known zones, ${r.grouped} grouped into the same fire, ${r.inserted} saved`,
         )
         .join('; ');
     },
