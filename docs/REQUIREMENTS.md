@@ -3,7 +3,7 @@
 *(Antes llamado FIREMAP. **Willay** viene del quechua/kichwa: "avisar, contar, anunciar" — la app avisa dónde hay riesgo de incendio. Confirmar el significado y la escritura con un hablante o una fuente local.)*
 
 > Documento vivo. Se actualiza al cierre de cada sesión. Al iniciar una sesión nueva, pega este archivo (o léelo del proyecto) para retomar el contexto.
-> **Última actualización:** 2026-10-01 · **Versión:** 0.15 (historial = incendios por año)
+> **Última actualización:** 2026-10-03 · **Versión:** 0.16 (modelo ML: fases 1–3)
 
 ---
 
@@ -104,7 +104,23 @@ willay/
   - UNGRD pierde reportes del mismo día en un municipio: la regla anti-duplicados (zona, lugar, fecha) usa como lugar el nombre del municipio, así que las 266 filas del dataset quedan en 177 eventos.
   - Las noticias subestiman los años recientes: solo hay una fuente (boletines de la Gobernación), que no reporta todos los incendios, frente a un dataset oficial completo para 2019–2022. Entre 2023 y 2025 no hay datos.
 - **Salida:** riesgo estimado para 24–72 h y los factores que más pesaron.
-- **Mejora opcional:** regresión logística con el histórico si sobra tiempo. Deep learning descartado.
+- **V2 (machine learning, en evaluación; la app sigue usando V1):** probabilidad de al menos un foco de calor
+  VIIRS a ≤ 25 km de la cabecera en las próximas 72 h. Detalle completo en [`docs/ML.md`](ML.md), código
+  en `ml/` (Python).
+  - Datos: NASA FIRMS VIIRS (SNPP + NOAA-20) desde 2015 y clima diario de NASA POWER (MERRA-2) desde
+    2019 (Open-Meteo se descartó por su cuota diaria). Dataset: 181 056 días-zona (2019-01-01 a
+    2026-09-29), 16,1 % positivos.
+  - 25 variables sin fuga de información: lluvia acumulada, días sin lluvia, temperatura, humedad,
+    viento, evapotranspiración, focos en la zona y en los vecinos (7/30 días), estacionalidad y
+    propensión 2015–2018.
+  - División temporal: entrenamiento 2019–2023, validación 2024, prueba 2025–2026.
+  - En prueba, la **regresión logística** supera al modelo de pesos (ROC-AUC 0,85 frente a 0,68; PR-AUC
+    0,51 frente a 0,33; Brier 0,100 frente a 0,120; precisión@5 32 % frente a 25 %). El gradient boosting
+    no la mejora.
+  - Pero la mayor parte de la señal viene de la propensión de la zona y la época del año. El clima de
+    POWER (10 celdas para 64 municipios) aporta poco.
+  - Fase 4 (integración en el backend con respaldo al modelo de pesos) pendiente de aprobación. Deep
+    learning descartado.
 
 ## 8. Requisitos funcionales
 
@@ -237,6 +253,17 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 | **NASA FIRMS sin `MAP_KEY`** | Pedir la clave gratis en https://firms.modaps.eosdis.nasa.gov/api/map_key/ y ponerla en `backend/.env` como `MAP_KEY`. La API real **no se ha probado** (sin clave; además, desde el equipo de desarrollo el host de FIRMS no resolvió DNS). Mientras tanto se muestran los focos del seed. | Cliente `FirmsHotspotProvider` (VIIRS SNPP + NOAA-20, 2 días, bbox de Nariño), caso de uso y tarea programada cada 3 h que solo se activa si hay `MAP_KEY`. |
 
 ## 13. Registro de cambios
+
+- **2026-10-03 (v0.16):** modelo de machine learning, fases 1–3, en la carpeta nueva `ml/` (Python, rama
+  `feat/ml`).
+  - Descarga reanudable del historial de NASA FIRMS (tramos de 5 días, presupuesto de transacciones).
+  - Clima de NASA POWER: Open-Meteo se detuvo por su cuota de 10 000 llamadas/día y queda en caché sin
+    usarse.
+  - Dataset diario por zona con etiqueta a 72 h (radios de 10/25/50 km), 25 variables con prueba de fuga
+    de información, y entrenamiento con división temporal.
+  - Resultado: la regresión logística supera al modelo de pesos en prueba (2025–2026), pero no al baseline
+    simple en el ranking diario de municipios.
+  - Documentado en `docs/ML.md`. El modelo de pesos (0,5/0,3/0,2) no cambia y la app sigue usándolo.
 
 - **2026-10-01 (v0.15):** factor de historial: incendios por año de la zona desde el 2019-01-01 (1 por año = 100) en vez del conteo de los últimos 730 días / 5. Pesos sin cambio (0,5 / 0,3 / 0,2). Con los datos de hoy: 46 zonas con historial > 0 (antes 4), puntajes 0–20, todas en nivel Bajo (clima húmedo y sin focos porque falta `MAP_KEY`). Se documentan las limitaciones del historial (sección 7).
 - **2026-10-01 (v0.14):** `npm run db:seed` solo carga las 64 zonas; el clima, los incendios y los focos de `seedData.ts` quedan solo para el modo en memoria y las pruebas. Borrados en Neon todos los datos de prueba que había cargado el seed: 8 noticias, 7 filas `ungrd` sin enlace y 7 focos de calor.

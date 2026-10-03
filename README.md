@@ -5,7 +5,8 @@ App móvil que muestra el riesgo de incendio forestal por municipio en Nariño, 
 - `backend/` — API en Express + TypeScript (Clean Architecture). Usa Neon si hay `DATABASE_URL`; si no, **datos de prueba** en memoria.
 - `mobile/` — App Ionic + Angular + Capacitor (Android).
 - `database/` — `schema.sql` para Neon (PostGIS).
-- `docs/` — `REQUIREMENTS.md` (requisitos y decisiones).
+- `ml/` — Machine learning en Python: datos históricos (NASA FIRMS, NASA POWER), variables, entrenamiento y evaluación. Ver `ml/README.md`.
+- `docs/` — `REQUIREMENTS.md` (requisitos y decisiones) y `ML.md` (modelo de machine learning).
 
 ## Cómo correrlo (Windows)
 
@@ -78,6 +79,9 @@ Puntaje 0–100 por municipio = **0,5 × clima seco + 0,3 × focos cercanos + 0,
 - **Historial:** incendios por año del municipio desde el 2019-01-01 (UNGRD + noticias); 1 incendio por año = 100.
 
 Niveles: Bajo 0–24, Medio 25–49, Alto 50–74, Extremo 75–100. Detalle y limitaciones en `docs/REQUIREMENTS.md` (sección 7).
+
+### Modelo de machine learning (en evaluación)
+En `ml/` hay un modelo que estima la probabilidad de focos de calor a ≤ 25 km en las próximas 72 h. Se entrenó con NASA FIRMS (VIIRS) y clima de NASA POWER. En el periodo de prueba (2025–2026), la regresión logística supera al modelo de pesos: ROC-AUC 0,85 frente a 0,68. Aún **no está integrado en el backend**. Resultados y limitaciones en `docs/ML.md`; cómo reproducirlo en `ml/README.md`.
 
 ## Endpoints
 - `GET /api/zones` — municipios con puntaje y nivel de riesgo.
