@@ -34,7 +34,14 @@ from sklearn.preprocessing import StandardScaler
 
 from .config import ML_DIR, PROCESSED_DIR, RADIUS_KM, REPO_DIR
 from .dataset import COUNTS_PARQUET
-from .features import FEATURE_COLUMNS, FEATURES_PARQUET, HOTSPOT_FEATURES
+from .features import (
+    FEATURE_COLUMNS,
+    FEATURES_PARQUET,
+    HOTSPOT_FEATURES,
+    SEASON_FEATURES,
+    WEATHER_FEATURES,
+    ZONE_FEATURES,
+)
 from .fire_events import load_fire_events
 from .metrics import calibration_table, evaluate
 from .power import POWER_PARQUET
@@ -52,6 +59,15 @@ HGB_GRID = [
     for lr in (0.05, 0.1)
     for leaves in (15, 31)
 ]
+
+# Ablation: logistic regression with groups of features removed (what does each group add?).
+ABLATION_SETS = {
+    "all": FEATURE_COLUMNS,
+    "without_weather": HOTSPOT_FEATURES + SEASON_FEATURES + ZONE_FEATURES,
+    "without_hotspots": WEATHER_FEATURES + SEASON_FEATURES + ZONE_FEATURES,
+    "without_zone_propensity": WEATHER_FEATURES + HOTSPOT_FEATURES + SEASON_FEATURES,
+    "season_and_zone_only": SEASON_FEATURES + ZONE_FEATURES,
+}
 
 MODELS_DIR = ML_DIR / "models"
 FIGURES_DIR = REPO_DIR / "docs" / "ml"
@@ -130,6 +146,17 @@ def fit_hgb(train, validation):
     return best, best_params
 
 
+def ablation(train, test) -> dict[str, dict]:
+    """Uncalibrated logistic regressions: rankings only (ROC/PR-AUC, precision@k)."""
+    results = {}
+    for name, columns in ABLATION_SETS.items():
+        model = logistic(columns).fit(train[columns], train[LABEL])
+        metrics = evaluate(test["date"], test[LABEL], model.predict_proba(test[columns])[:, 1])
+        results[name] = {key: metrics[key] for key in
+                         ("roc_auc", "pr_auc", "precision_at_5", "precision_at_10")}
+    return results
+
+
 def git_commit() -> str:
     try:
         return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=REPO_DIR,
@@ -201,6 +228,7 @@ def main() -> None:
     results["weighted_model"]["test_raw_score"] = evaluate(
         test["date"], test[LABEL], test["weighted_score"].to_numpy() / 100)
 
+    results["ablation_logistic_test"] = ablation(train, test)
     linear_coefficients = dict(zip(FEATURE_COLUMNS, linear[-1].coef_[0].round(4).tolist()))
     importance = permutation_importance(
         boosting, test[FEATURE_COLUMNS], test[LABEL], scoring="average_precision",
@@ -235,7 +263,8 @@ def main() -> None:
         "gradient_boosting_params": boosting_params,
         "metrics": {name: {split: values for split, values in result.items()
                            if split in ("validation", "test", "test_raw_score")}
-                    for name, result in results.items()},
+                    for name, result in results.items() if name in models},
+        "ablation_logistic_test": results["ablation_logistic_test"],
         "logistic_regression_coefficients_standardized": linear_coefficients,
         "gradient_boosting_permutation_importance_test_pr_auc": boosting_importance,
     }
@@ -244,11 +273,13 @@ def main() -> None:
 
     columns = ["roc_auc", "pr_auc", "brier", "precision_at_5", "recall_at_5", "precision_at_10",
                "recall_at_10"]
-    summary = pd.DataFrame({name: result["test"] for name, result in results.items()}).T
+    summary = pd.DataFrame({name: results[name]["test"] for name in models}).T
     summary.loc["weighted_model (raw score/100)"] = results["weighted_model"]["test_raw_score"]
     print(f"\nTest ({test['date'].min():%Y-%m-%d}..{test['date'].max():%Y-%m-%d}), "
           f"positive rate {test[LABEL].mean():.3%}")
     print(summary[columns].round(4).to_string())
+    print("\nAblation (logistic regression, test):")
+    print(pd.DataFrame(results["ablation_logistic_test"]).T.round(4).to_string())
     print("\nPermutation importance (gradient boosting, test PR-AUC drop):")
     for feature, value in list(boosting_importance.items())[:10]:
         print(f"  {feature:30s} {value:.4f}")

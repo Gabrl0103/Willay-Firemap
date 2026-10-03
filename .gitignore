@@ -11,3 +11,4 @@ ml/.env
 ml/data/
 __pycache__/
 .pytest_cache/
+ml/models/*.joblib
