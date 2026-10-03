@@ -26,10 +26,12 @@ NARINO_BBOX = (-79.1, 0.35, -76.8, 2.7)
 # Hotspot labels and counts use local dates (Colombia, UTC-5, no daylight saving time).
 LOCAL_UTC_OFFSET_HOURS = -5
 
-# First day of the dataset (VIIRS 375 m is used from 2015 on).
-DATASET_START = date(2015, 1, 1)
+# First day of the dataset: the NASA POWER weather is downloaded from 2019 on (see power.py).
+DATASET_START = date(2019, 1, 1)
 # Weather starts earlier so 30-day features exist on the first dataset day.
 WEATHER_LOOKBACK_DAYS = 30
+# VIIRS hotspots go further back (2015): the zone propensity uses years before the dataset.
+HOTSPOT_HISTORY_START = date(2014, 12, 2)
 
 # Label: at least one hotspot within RADIUS_KM of the zone in the next HORIZON_DAYS days.
 HORIZON_DAYS = 3
