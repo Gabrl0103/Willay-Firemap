@@ -191,6 +191,16 @@ def download(client: FirmsClient) -> None:
                 print(f"  {index}/{len(pending)} chunks")
 
 
+def covered_days(sensor: str) -> pd.DatetimeIndex:
+    """UTC days covered by the cached chunks of one sensor (archive + near-real-time)."""
+    days: set[pd.Timestamp] = set()
+    for processing in ("SP", "NRT"):
+        for path in (FIRMS_RAW_DIR / f"{sensor.upper()}_{processing}").glob("*.csv"):
+            start, end = path.stem.split("_")
+            days.update(pd.date_range(start, end))
+    return pd.DatetimeIndex(sorted(days))
+
+
 def read_chunk(path) -> pd.DataFrame:
     frame = pd.read_csv(path, dtype={"acq_time": str, "confidence": str, "version": str})
     frame["source"] = path.parent.name
