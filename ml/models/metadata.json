@@ -1,0 +1,254 @@
+{
+  "version": "1.0.0",
+  "trained_at": "2026-10-03T22:32:28+00:00",
+  "git_commit": "e451b6a",
+  "label": "VIIRS hotspot <= 25 km of the municipal seat in the next 72 h",
+  "features": [
+    "rain_1d_mm",
+    "rain_3d_mm",
+    "rain_7d_mm",
+    "rain_14d_mm",
+    "rain_30d_mm",
+    "dry_days",
+    "temperature_mean_c",
+    "temperature_max_c",
+    "temperature_range_c",
+    "temperature_trend_7d_c",
+    "humidity_mean_pct",
+    "humidity_7d_pct",
+    "wind_max_ms",
+    "wind_7d_ms",
+    "evapotranspiration_mm",
+    "water_balance_30d_mm",
+    "surface_soil_wetness",
+    "hotspots_zone_1d",
+    "hotspots_zone_7d",
+    "hotspots_zone_30d",
+    "hotspots_ring_7d",
+    "hotspots_ring_30d",
+    "day_of_year_sin",
+    "day_of_year_cos",
+    "zone_hotspot_days_per_year"
+  ],
+  "data": {
+    "train": [
+      "2019-01-01",
+      "2023-12-31"
+    ],
+    "validation": [
+      "2024-01-01",
+      "2024-12-31"
+    ],
+    "test": [
+      "2025-01-01",
+      "2026-09-29"
+    ],
+    "rows": {
+      "train": 116864,
+      "validation": 23424,
+      "test": 40768
+    },
+    "weather": "NASA POWER daily (MERRA-2, AG community)",
+    "hotspots": "NASA FIRMS VIIRS SNPP + NOAA-20"
+  },
+  "gradient_boosting_params": {
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 15,
+    "min_samples_leaf": 100
+  },
+  "metrics": {
+    "baseline": {
+      "validation": {
+        "rows": 23424,
+        "positive_rate": 0.20052083333333334,
+        "roc_auc": 0.7647813906568909,
+        "pr_auc": 0.4409951883960552,
+        "brier": 0.13689972786751956,
+        "precision_at_5": 0.3655737704918033,
+        "recall_at_5": 0.1906385178215867,
+        "precision_at_10": 0.34808743169398915,
+        "recall_at_10": 0.331302121350956
+      },
+      "test": {
+        "rows": 40768,
+        "positive_rate": 0.15553865777080061,
+        "roc_auc": 0.7378037693510887,
+        "pr_auc": 0.2891136087845665,
+        "brier": 0.12141833146268274,
+        "precision_at_5": 0.3227629513343799,
+        "recall_at_5": 0.2233653821192642,
+        "precision_at_10": 0.29638932496075354,
+        "recall_at_10": 0.38658546320413256
+      }
+    },
+    "weighted_model": {
+      "validation": {
+        "rows": 23424,
+        "positive_rate": 0.20052083333333334,
+        "roc_auc": 0.7447132736602573,
+        "pr_auc": 0.47003450568586963,
+        "brier": 0.13170964199325716,
+        "precision_at_5": 0.3136612021857923,
+        "recall_at_5": 0.1236132286254397,
+        "precision_at_10": 0.3008196721311476,
+        "recall_at_10": 0.2405971245119043
+      },
+      "test": {
+        "rows": 40768,
+        "positive_rate": 0.15553865777080061,
+        "roc_auc": 0.6799061836498529,
+        "pr_auc": 0.314227440433165,
+        "brier": 0.11972917575205147,
+        "precision_at_5": 0.2552590266875981,
+        "recall_at_5": 0.1428116800909609,
+        "precision_at_10": 0.24097331240188383,
+        "recall_at_10": 0.2684089791479828
+      },
+      "test_raw_score": {
+        "rows": 40768,
+        "positive_rate": 0.15553865777080061,
+        "roc_auc": 0.6793698064714656,
+        "pr_auc": 0.33244353047604486,
+        "brier": 0.12040325500392465,
+        "precision_at_5": 0.2543171114599686,
+        "recall_at_5": 0.13741960853466795,
+        "precision_at_10": 0.24238618524332806,
+        "recall_at_10": 0.2729603748469673
+      }
+    },
+    "logistic_regression": {
+      "validation": {
+        "rows": 23424,
+        "positive_rate": 0.20052083333333334,
+        "roc_auc": 0.8675564373228918,
+        "pr_auc": 0.641368079857841,
+        "brier": 0.10763275087488874,
+        "precision_at_5": 0.37814207650273224,
+        "recall_at_5": 0.1929319080353036,
+        "precision_at_10": 0.36256830601092893,
+        "recall_at_10": 0.34370389031357546
+      },
+      "test": {
+        "rows": 40768,
+        "positive_rate": 0.15553865777080061,
+        "roc_auc": 0.8531025999272648,
+        "pr_auc": 0.5115871187550448,
+        "brier": 0.0996221393082154,
+        "precision_at_5": 0.3167974882260597,
+        "recall_at_5": 0.2144708463060445,
+        "precision_at_10": 0.2995290423861853,
+        "recall_at_10": 0.3752633350027408
+      }
+    },
+    "gradient_boosting": {
+      "validation": {
+        "rows": 23424,
+        "positive_rate": 0.20052083333333334,
+        "roc_auc": 0.855838621555606,
+        "pr_auc": 0.6013403629017835,
+        "brier": 0.11110881433397346,
+        "precision_at_5": 0.36065573770491804,
+        "recall_at_5": 0.17752592738130699,
+        "precision_at_10": 0.3426229508196722,
+        "recall_at_10": 0.30572066156833694
+      },
+      "test": {
+        "rows": 40768,
+        "positive_rate": 0.15553865777080061,
+        "roc_auc": 0.8223256162287435,
+        "pr_auc": 0.47356545154651986,
+        "brier": 0.10419336291968119,
+        "precision_at_5": 0.3076923076923077,
+        "recall_at_5": 0.1939264170589085,
+        "precision_at_10": 0.28712715855573,
+        "recall_at_10": 0.34310798457524544
+      }
+    }
+  },
+  "ablation_logistic_test": {
+    "all": {
+      "roc_auc": 0.8531025999272648,
+      "pr_auc": 0.5115871187550448,
+      "precision_at_5": 0.3167974882260597,
+      "precision_at_10": 0.2995290423861853
+    },
+    "without_weather": {
+      "roc_auc": 0.8426798159117537,
+      "pr_auc": 0.49416039798355865,
+      "precision_at_5": 0.31742543171114596,
+      "precision_at_10": 0.29529042386185245
+    },
+    "without_hotspots": {
+      "roc_auc": 0.8344083834435538,
+      "pr_auc": 0.4657912198928936,
+      "precision_at_5": 0.31930926216640504,
+      "precision_at_10": 0.2905808477237049
+    },
+    "without_zone_propensity": {
+      "roc_auc": 0.8382085409934705,
+      "pr_auc": 0.4968093892584855,
+      "precision_at_5": 0.2857142857142857,
+      "precision_at_10": 0.27566718995290423
+    },
+    "season_and_zone_only": {
+      "roc_auc": 0.8281262469130608,
+      "pr_auc": 0.503403275124046,
+      "precision_at_5": 0.3218210361067504,
+      "precision_at_10": 0.3029827315541601
+    }
+  },
+  "logistic_regression_coefficients_standardized": {
+    "rain_1d_mm": -0.1723,
+    "rain_3d_mm": -0.1946,
+    "rain_7d_mm": 0.1346,
+    "rain_14d_mm": 0.0154,
+    "rain_30d_mm": -0.2087,
+    "dry_days": 0.0328,
+    "temperature_mean_c": 0.0196,
+    "temperature_max_c": -0.0948,
+    "temperature_range_c": -0.2236,
+    "temperature_trend_7d_c": 0.0074,
+    "humidity_mean_pct": -0.482,
+    "humidity_7d_pct": -0.4107,
+    "wind_max_ms": 0.1686,
+    "wind_7d_ms": 0.1941,
+    "evapotranspiration_mm": 0.3097,
+    "water_balance_30d_mm": 0.4124,
+    "surface_soil_wetness": -0.0312,
+    "hotspots_zone_1d": 0.0295,
+    "hotspots_zone_7d": 0.0606,
+    "hotspots_zone_30d": 0.2657,
+    "hotspots_ring_7d": 0.0581,
+    "hotspots_ring_30d": 0.336,
+    "day_of_year_sin": -0.092,
+    "day_of_year_cos": 0.1338,
+    "zone_hotspot_days_per_year": 1.2314
+  },
+  "gradient_boosting_permutation_importance_test_pr_auc": {
+    "zone_hotspot_days_per_year": 0.0921,
+    "hotspots_ring_30d": 0.0612,
+    "hotspots_zone_30d": 0.0427,
+    "humidity_mean_pct": 0.0396,
+    "humidity_7d_pct": 0.0272,
+    "day_of_year_cos": 0.0262,
+    "day_of_year_sin": 0.025,
+    "surface_soil_wetness": 0.0202,
+    "wind_max_ms": 0.0136,
+    "hotspots_ring_7d": 0.0085,
+    "wind_7d_ms": 0.0079,
+    "rain_1d_mm": 0.0056,
+    "hotspots_zone_7d": 0.0052,
+    "rain_3d_mm": 0.004,
+    "temperature_trend_7d_c": 0.0028,
+    "dry_days": 0.0012,
+    "hotspots_zone_1d": 0.001,
+    "evapotranspiration_mm": -0.0002,
+    "temperature_mean_c": -0.0006,
+    "temperature_max_c": -0.0012,
+    "rain_7d_mm": -0.0021,
+    "temperature_range_c": -0.0021,
+    "rain_14d_mm": -0.0063,
+    "rain_30d_mm": -0.0074,
+    "water_balance_30d_mm": -0.0104
+  }
+}
