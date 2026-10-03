@@ -101,7 +101,7 @@ def modis_section(hotspots: pd.DataFrame, labeled: pd.DataFrame, zones, days) ->
     modis_only = int(((modis_label == 1) & (viirs_label == 0) & known).sum())
     viirs_positive = int(((viirs_label == 1) & known).sum())
     return [
-        "## MODIS vs VIIRS (desde 2015, sin volcanes)",
+        f"## MODIS vs VIIRS (desde {DATASET_START:%Y-%m-%d}, sin fuentes estáticas)",
         f"- Focos MODIS: {len(modis)}; con un foco VIIRS a <= {MATCH_KM:g} km y +-1 día: "
         f"{matched.sum()} ({pct(matched.sum(), len(modis))}).",
         f"- Días-zona positivos (r = {RADIUS_KM} km) con VIIRS: {viirs_positive}. "
