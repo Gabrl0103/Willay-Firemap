@@ -4,3 +4,10 @@ dist/
 .angular/
 android/app/build/
 *.log
+
+# Machine learning (ml/): heavy data and local environment stay out of git
+ml/.venv/
+ml/.env
+ml/data/
+__pycache__/
+.pytest_cache/

@@ -1,0 +1,9 @@
+# Python 3.12+ (tested with 3.13). Install: python -m pip install -r requirements.txt
+numpy>=2.0,<3
+pandas>=2.2,<4
+pyarrow>=16
+requests>=2.32,<3
+psycopg[binary]>=3.2,<4
+python-dotenv>=1.0,<2
+scikit-learn>=1.5,<2
+pytest>=8
