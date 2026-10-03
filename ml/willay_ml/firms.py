@@ -8,7 +8,7 @@ MAP_KEY budget (5000 every 10 minutes). Each 5-day chunk is cached as a CSV in
 data/raw/firms/<SOURCE>/, so runs can be stopped and resumed without downloading again.
 
 Sources: the standard-processing archive (*_SP) until its last day, then near-real-time (*_NRT).
-VIIRS (375 m) SNPP + NOAA-20 are the same satellites the backend ingests. MODIS (1 km) is downloaded
+VIIRS (375 m) SNPP + NOAA-20 from 2014-12 are the same satellites the backend ingests. MODIS (1 km) is downloaded
 only to compare it with VIIRS (see summary).
 """
 
@@ -26,12 +26,11 @@ import pandas as pd
 import requests
 
 from .config import (
-    DATASET_START,
     FIRMS_RAW_DIR,
+    HOTSPOT_HISTORY_START,
     LOCAL_UTC_OFFSET_HOURS,
     NARINO_BBOX,
     PROCESSED_DIR,
-    WEATHER_LOOKBACK_DAYS,
     require_env,
 )
 
@@ -44,8 +43,7 @@ PAUSE_SECONDS = 0.5
 WORKERS = 3  # parallel requests (the budget check is shared)
 MAX_RETRIES = 6
 
-# Hotspot counts look back 30 days, so the history starts before the first dataset day.
-HISTORY_START = DATASET_START - timedelta(days=WEATHER_LOOKBACK_DAYS)
+HISTORY_START = HOTSPOT_HISTORY_START
 
 # (archive, near-real-time) pairs. NOAA-21 is left out: the backend does not ingest it.
 SOURCE_PAIRS = {

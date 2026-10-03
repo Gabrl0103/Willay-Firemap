@@ -3,7 +3,7 @@
     python -m willay_ml.dataset
 
 Row = (zone, local day d). The prediction is made at the end of day d, so:
-- weather columns are those of day d (later phases build features only from days <= d);
+- weather columns (NASA POWER, power.py) are those of day d; features.py only uses days <= d;
 - label_r{R} = 1 if at least one VIIRS hotspot is detected within R km of the zone's municipal seat
   on days d+1, d+2 or d+3 (local dates, America/Bogota). The hotspots of day d are NOT in the label.
 
@@ -23,16 +23,19 @@ import pandas as pd
 from .config import (
     DATASET_START,
     HORIZON_DAYS,
+    HOTSPOT_HISTORY_START,
     PROCESSED_DIR,
     RADIUS_KM,
     SENSITIVITY_RADII_KM,
 )
 from .firms import HOTSPOTS_PARQUET, VIIRS_SOURCES, covered_days
 from .geo import distance_matrix_km, within_km_of_any
-from .weather import WEATHER_PARQUET
+from .power import POWER_PARQUET
 from .zones import load_zones
 
 DATASET_PARQUET = PROCESSED_DIR / "dataset_daily.parquet"
+# Hotspots per zone and local day for every radius, from 2014-12 (inputs of the phase 2 features).
+COUNTS_PARQUET = PROCESSED_DIR / "hotspot_counts_daily.parquet"
 STATIC_TYPES = (1, 2, 3)
 # NOAA-20 data starts here; before it only SNPP exists.
 NOAA20_START = pd.Timestamp("2018-04-01")
@@ -97,12 +100,12 @@ def missing_hotspot_days(days: pd.DatetimeIndex) -> pd.DatetimeIndex:
 def build(today: date | None = None) -> pd.DataFrame:
     zones = load_zones().sort_values("id").reset_index(drop=True)
     hotspots = pd.read_parquet(HOTSPOTS_PARQUET)
-    weather = pd.read_parquet(WEATHER_PARQUET)
+    weather = pd.read_parquet(POWER_PARQUET)
 
     # Last day whose hotspots are complete: yesterday (local). Labels need HORIZON_DAYS after d.
     today = today or date.today()
     last_hotspot_day = pd.Timestamp(today - timedelta(days=1))
-    days = pd.date_range(pd.Timestamp(DATASET_START) - pd.Timedelta(days=30), last_hotspot_day)
+    days = pd.date_range(pd.Timestamp(HOTSPOT_HISTORY_START), last_hotspot_day)
 
     labeled = label_hotspots(hotspots)
     # The last local day also needs the next UTC day, which is today: drop it from the check.
@@ -118,6 +121,9 @@ def build(today: date | None = None) -> pd.DataFrame:
         counts[f"label_r{radius}"] = future_any(counts["count"], counts["zone_id"], HORIZON_DAYS)
         counts = counts.rename(columns={"count": f"hotspots_today_r{radius}"})
         dataset = counts if dataset is None else dataset.merge(counts, on=["zone_id", "date"])
+
+    counts_columns = [c for c in dataset.columns if c.startswith("hotspots_today_r")]
+    dataset[["zone_id", "date", *counts_columns]].to_parquet(COUNTS_PARQUET, index=False)
 
     # Rows: every zone x day from DATASET_START with a known label. Weather is NaN where missing.
     dataset = dataset.merge(weather, on=["zone_id", "date"], how="left")

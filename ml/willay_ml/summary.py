@@ -14,7 +14,7 @@ from .config import DATASET_START, HORIZON_DAYS, PROCESSED_DIR, RADIUS_KM, SENSI
 from .dataset import DATASET_PARQUET, daily_counts, future_any, label_hotspots
 from .firms import HOTSPOTS_PARQUET
 from .geo import distance_matrix_km
-from .weather import DAILY_VARIABLES
+from .power import PARAMETERS
 from .zones import load_zones
 
 SUMMARY_MD = PROCESSED_DIR / "summary.md"
@@ -136,7 +136,7 @@ def dataset_section(dataset: pd.DataFrame) -> list[str]:
     top = ", ".join(f"{zone} {rate:.1f} %" for zone, rate in per_zone.tail(5)[::-1].items())
     bottom = ", ".join(f"{zone} {rate:.1f} %" for zone, rate in per_zone.head(5).items())
 
-    weather_columns = [column for column in DAILY_VARIABLES if column in dataset]
+    weather_columns = [column for column in PARAMETERS.values() if column in dataset]
     missing = pd.DataFrame(
         {
             "columna": weather_columns,
