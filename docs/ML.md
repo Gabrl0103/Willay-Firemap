@@ -37,6 +37,26 @@ espera creciente y caché por zona.
 MERRA-2, así que muchos municipios vecinos tienen exactamente el mismo clima, aunque estén a alturas muy
 distintas (de la costa a 2500 m). Por eso el clima diferencia poco entre municipios (ver §5.3).
 
+### ¿Aporta MODIS? (no se usa)
+
+Se descargó también MODIS (1 km, Terra y Aqua) para compararlo con VIIRS desde el 2019-01-01. Se quitaron las
+127 detecciones que FIRMS marca como volcán o fuente estática.
+
+| | MODIS | VIIRS |
+|---|---|---|
+| Focos desde 2019 | 1 469 | 16 090 |
+| MODIS con un foco VIIRS a ≤ 2 km y ±1 día | 1 034 (70 %) | — |
+| Días-zona positivos (25 km) | — | 29 078 |
+| Positivos nuevos que agregaría MODIS (MODIS sí, VIIRS no) | 1 101 (+3,8 %) | — |
+
+**Conclusión:** MODIS detecta ~11 veces menos focos. Siete de cada diez ya los vio VIIRS. Agregarlo sumaría
+solo un 3,8 % de positivos, y en parte pueden ser:
+- diferencias de hora de paso (Terra pasa por la mañana);
+- detecciones de baja confianza (mediana 70).
+
+Además, el backend solo ingiere VIIRS, así que usar MODIS en el entrenamiento haría que la etiqueta no
+coincida con lo que se ve en producción. **Se deja fuera.**
+
 Como POWER se descargó desde 2019, el dataset empieza el **2019-01-01**. Los focos de 2015–2018 solo se usan
 para la propensión de cada zona.
 
