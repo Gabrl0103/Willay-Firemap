@@ -8,10 +8,11 @@ import { UNGRD_DATASETS, UngrdFireReportSource } from './UngrdFireReportSource.j
  * Local news with an RSS feed. robots.txt checked on 2026-10-01:
  * - Gobernación de Nariño (narino.gov.co): "User-agent: *" -> Allow: /, Crawl-delay: 3.
  *   Its WordPress search feed returns whole press releases (the Gestión del Riesgo office reports
- *   every wildfire it attends), 10 per page.
+ *   every wildfire it attends), 10 per page. On 2026-10-04 it had 55 items (6 pages, back to
+ *   2024-01); 8 pages leave room for new ones. The reader stops at the first empty page.
  */
 const NEWS_FEEDS: readonly RssFeedConfig[] = [
-  { name: 'gobernacion-narino', feedUrl: 'https://narino.gov.co/search/incendio/feed/rss2/', maxPages: 5 },
+  { name: 'gobernacion-narino', feedUrl: 'https://narino.gov.co/search/incendio/feed/rss2/', maxPages: 8 },
 ];
 
 /**

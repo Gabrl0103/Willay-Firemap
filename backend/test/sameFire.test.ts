@@ -153,6 +153,27 @@ describe('isWildfireArticle', () => {
     assert.equal(isWildfireArticle(article), false);
   });
 
+  it('accepts "incendios" in plural when the title names a municipality', () => {
+    const article = {
+      title: 'Gobernación de Nariño instaló PMU en Santacruz de Guachavés para coordinar la atención de uno de los incendios',
+      publishedAt: '2026-08-18T10:00:00-05:00',
+      text: 'El incendio forestal afecta cobertura vegetal en zona rural del municipio.',
+    };
+    const santacruz = { id: 'santacruz', name: 'Santacruz', latitude: 1.22, longitude: -77.68, aliases: ['Santacruz de Guachavés'] };
+    assert.equal(isWildfireArticle(article, [...zones, santacruz]), true);
+    assert.equal(articleToFireEvent(article, 'https://n.test/santacruz', [...zones, santacruz])?.zoneId, 'santacruz');
+    // Without zones the plural is not enough.
+    assert.equal(isWildfireArticle(article), false);
+  });
+
+  it('still rejects plural bulletins that name no municipality', () => {
+    const article = {
+      title: 'Nariño mantiene atención simultánea en tres incendios forestales activos',
+      text: 'Bosques afectados en varios municipios.',
+    };
+    assert.equal(isWildfireArticle(article, zones), false);
+  });
+
   it('keeps a wildfire that also reached a house', () => {
     const article = {
       title: 'Incendio forestal en la vereda El Rosal',

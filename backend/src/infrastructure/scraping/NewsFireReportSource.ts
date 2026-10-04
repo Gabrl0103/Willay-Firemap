@@ -26,6 +26,8 @@ const FIRE_WORD = /incendi/i;
  * or "tres incendios activos" are bulletins whose towns and hectares do not belong to one event.
  */
 const ONE_FIRE = /\bincendio\b/i;
+/** Plural: kept only when the title also names a municipality ("PMU en Santacruz ... de los incendios"). */
+const SOME_FIRES = /\bincendios\b/i;
 /**
  * Wildfire vocabulary, to leave out house and vehicle fires. Whole words only: "esquema" is not
  * "quema" (a press release about burned houses got through that way).
@@ -118,12 +120,16 @@ export function findArticleZone(title: string, text: string, zones: readonly Zon
 }
 
 /**
- * The title reports one fire and the article says it burned vegetation. Fires of houses, shops or
- * warehouses are left out unless the article also talks about forest, páramo or vegetation cover.
+ * The title reports a fire ("incendio", or "incendios" next to the name of one of the zones) and the
+ * article says it burned vegetation. Fires of houses, shops or warehouses are left out unless the
+ * article also talks about forest, páramo or vegetation cover. Without zones only the singular counts.
  */
-export function isWildfireArticle(article: NewsArticle): boolean {
+export function isWildfireArticle(article: NewsArticle, zones: readonly Zone[] = []): boolean {
   const fullText = `${article.title}. ${article.text}`;
-  if (!ONE_FIRE.test(article.title) || !VEGETATION_WORDS.test(fullText)) return false;
+  const titleReportsFire =
+    ONE_FIRE.test(article.title) ||
+    (SOME_FIRES.test(article.title) && findMentionedZone(article.title, zones) !== undefined);
+  if (!titleReportsFire || !VEGETATION_WORDS.test(fullText)) return false;
   return !BUILDING_WORDS.test(fullText) || STRONG_WILDFIRE_WORDS.test(fullText);
 }
 
@@ -133,7 +139,7 @@ export function articleToFireEvent(
   url: string,
   zones: readonly Zone[],
 ): NewFireEvent | undefined {
-  if (!isWildfireArticle(article)) return undefined;
+  if (!isWildfireArticle(article, zones)) return undefined;
   const fullText = `${article.title}. ${article.text}`;
 
   const zone = findArticleZone(article.title, article.text, zones);
@@ -186,7 +192,7 @@ export class NewsFireReportSource implements FireReportSource {
       this.visited.add(link);
       try {
         const article = parseArticle(await this.http.getText(link));
-        if (isWildfireArticle(article)) wildfireItems++;
+        if (isWildfireArticle(article, zones)) wildfireItems++;
         const event = articleToFireEvent(article, link, zones);
         if (event) events.push(event);
       } catch (error) {

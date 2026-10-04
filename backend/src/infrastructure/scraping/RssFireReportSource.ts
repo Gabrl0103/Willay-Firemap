@@ -89,7 +89,7 @@ export class RssFireReportSource implements FireReportSource {
       if (items.length === 0) break;
       itemsRead += items.length;
       for (const item of items) {
-        if (isWildfireArticle(item.article)) wildfireItems++;
+        if (isWildfireArticle(item.article, zones)) wildfireItems++;
         if (knownSourceUrls.has(item.link)) continue;
         const event = articleToFireEvent(item.article, item.link, zones);
         if (event) events.push(event);
