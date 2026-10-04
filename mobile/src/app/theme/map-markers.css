@@ -34,6 +34,9 @@
   box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 25%, transparent);
 }
 .zone-marker.is-selected .zone-dot { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 45%, transparent); }
+/* Score inside the dot: hidden while names are shown (the label already has it). */
+.zone-dot i { display: none; font-style: normal; font-size: 8px; font-weight: 700; line-height: 1; color: #fff; }
+.zone-marker.risk-medium .zone-dot i { color: var(--map-deep); }
 .zone-label {
   position: absolute;
   left: 14px;
@@ -68,6 +71,10 @@
 }
 @keyframes signal { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
 
-.zone-label i { display: none; font-style: normal; font-size: 9px; font-weight: 700; color: var(--map-foreground); }
-.zoom-far .zone-label b, .zoom-far .zone-label small { display: none; }
-.zoom-far .zone-label i { display: block; }
+/* Zoomed out: only the colored dot with the score; the selected zone keeps its name. */
+.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-label { display: none; }
+.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-dot {
+  inset: 0; display: grid; place-items: center; border-radius: 50%;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 25%, transparent);
+}
+.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-dot i { display: block; }

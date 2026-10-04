@@ -6,12 +6,12 @@ import { Geolocation } from '@capacitor/geolocation';
 import * as L from 'leaflet';
 import type { Hotspot, ZoneRiskSummary } from '../../../domain/model/risk';
 import { nearestZone } from '../../../domain/util/geo';
-import { RISK_LABELS } from '../../../domain/util/risk-labels';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
 import { RiskLegend } from '../../components/risk-legend/risk-legend';
 import { SearchBox } from '../../components/search-box/search-box';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
+import { showsNames, zoneMarkerHtml } from './zone-marker';
 
 /** Center of Nariño (approx.) and starting zoom. The real department outline arrives with the IGAC/DANE GeoJSON. */
 const NARINO_CENTER: L.LatLngTuple = [1.3, -77.7];
@@ -69,9 +69,9 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.zoneLayer.addTo(this.map);
     this.hotspotLayer.addTo(this.map);
     this.map.attributionControl.setPrefix(false);
-    // Labels get shorter when the map is zoomed out, so markers do not pile up.
+    // Names only when zoomed in (or on the selected zone), so 64 markers do not pile up.
     const updateZoomClass = (): void => {
-      this.mapElement().nativeElement.classList.toggle('zoom-far', (this.map?.getZoom() ?? 0) < 9);
+      this.mapElement().nativeElement.classList.toggle('show-names', showsNames(this.map?.getZoom() ?? 0));
     };
     this.map.on('zoomend', updateZoomClass);
     updateZoomClass();
@@ -137,17 +137,10 @@ export class MapPage implements AfterViewInit, OnDestroy {
       });
     }
     for (const zone of zones) {
-      const selected = zone.id === selectedId ? ' is-selected' : '';
-      const icon = L.divIcon({
-        className: 'zone-icon',
-        iconSize: [18, 18],
-        html:
-          `<div class="zone-marker risk-${zone.level}${selected}">` +
-          `<span class="zone-dot"></span>` +
-          `<span class="zone-label"><b>${zone.name}</b><small>${zone.score} · ${RISK_LABELS[zone.level]}</small><i>${zone.score}</i></span>` +
-          `</div>`,
-      });
-      L.marker([zone.latitude, zone.longitude], { icon, title: zone.name })
+      const selected = zone.id === selectedId;
+      const icon = L.divIcon({ className: 'zone-icon', iconSize: [18, 18], html: zoneMarkerHtml(zone, selected) });
+      // The selected marker goes on top, so its name is not hidden under its neighbours.
+      L.marker([zone.latitude, zone.longitude], { icon, title: zone.name, zIndexOffset: selected ? 1000 : 0 })
         .on('click', () => this.selectZone(zone))
         .addTo(this.zoneLayer);
     }
