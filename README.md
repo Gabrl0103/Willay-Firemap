@@ -46,7 +46,7 @@ Para correrla una vez a mano: `npm run ingest` (todas) o `npm run ingest weather
 | Tarea | Fuente | Frecuencia |
 |---|---|---|
 | `weather` | Open-Meteo (sin API key), una sola petición para los 64 municipios → `weather_snapshot` | cada hora |
-| `hotspots` | NASA FIRMS, VIIRS últimos 2 días → `hotspot` (solo si hay `MAP_KEY`) | cada 3 h |
+| `hotspots` | NASA FIRMS, VIIRS SNPP/NOAA-20/NOAA-21, últimos 5 días → `hotspot` (solo si hay `MAP_KEY`) | cada 3 h |
 | `fires` | Scraping: datasets UNGRD 2019–2025 (datos.gov.co `wwkg-r6te`, `rgre-6ak4`, `2343-nuqp`; CC BY-SA 4.0 / CC BY 4.0, atribución en Historial) y feed RSS de noticias de la Gobernación de Nariño → `fire_event` | diario, 03:30 |
 
 El scraping revisa `robots.txt` antes de cada URL (caché 24 h), deja al menos 5 s entre peticiones al mismo sitio (o el `Crawl-delay` si es mayor) y no vuelve a guardar una noticia ya guardada (`source_url`). Las noticias de un mismo municipio con 3 días o menos entre una y otra cuentan como **un solo incendio**: se guarda la más antigua y las demás quedan como enlaces de referencia (`related_urls`).
@@ -75,7 +75,7 @@ Para generar el APK: Android Studio → Build → Build APK(s).
 ## Modelo de riesgo
 Puntaje 0–100 por municipio = **0,5 × clima seco + 0,3 × focos cercanos + 0,2 × historial** (cada factor de 0 a 100).
 - **Clima seco:** temperatura, humedad, viento y días sin lluvia de Open-Meteo.
-- **Focos cercanos:** focos de NASA FIRMS a 25 km o menos (3 o más = 100).
+- **Focos cercanos:** focos de NASA FIRMS a 25 km o menos en los últimos 5 días, con peso por antigüedad (1 hasta 2 días, 0 a los 5); suma 3 o más = 100.
 - **Historial:** incendios *reportados* por año del municipio desde el 2019-01-01 (UNGRD + noticias); 2,8 por año = 100 (p90 de los municipios, fijo). Los municipios grandes reportan más.
 
 Niveles: Bajo 0–24, Medio 25–49, Alto 50–74, Extremo 75–100. Detalle y limitaciones en `docs/REQUIREMENTS.md` (sección 7).
@@ -87,6 +87,5 @@ Niveles: Bajo 0–24, Medio 25–49, Alto 50–74, Extremo 75–100. Detalle y l
 - `GET /api/hotspots` — focos de calor.
 
 ## Qué falta
-- Pedir la `MAP_KEY` de NASA FIRMS y ponerla en `backend/.env`.
 - Polígonos de los municipios (GeoJSON IGAC/DANE) para dibujar los límites.
 - Desplegar el backend (Render/Railway) y cambiar `API_BASE_URL` en `mobile/src/app/core/config/api-config.ts`.
