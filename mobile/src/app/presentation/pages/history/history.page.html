@@ -1,9 +1,12 @@
 <header class="history-header">
   <span class="brand-mark"><app-icon name="flame" [size]="20" /></span>
   <div>
-    <span class="eyebrow">Registros 2023–2026</span>
+    <span class="eyebrow">{{ recordsRange() }}</span>
     <h1>Historial</h1>
     <p>Incendios reportados en Nariño</p>
+    @if (coverage(); as note) {
+      <p class="coverage-note">{{ note }}</p>
+    }
   </div>
 </header>
 
@@ -31,9 +34,9 @@
   <div class="state">Cargando registros…</div>
 } @else {
   <div class="list-heading"><span>Registros</span><b>{{ summary().count }}</b></div>
-  @if (store.history()?.events?.length) {
+  @if (events().length) {
     <div class="event-list">
-      @for (event of store.history()?.events; track event.id) {
+      @for (event of events(); track event.id) {
         <app-fire-event-tile [event]="event" />
       }
     </div>

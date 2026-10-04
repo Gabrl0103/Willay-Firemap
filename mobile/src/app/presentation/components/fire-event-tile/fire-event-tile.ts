@@ -1,5 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 import type { FireEvent } from '../../../domain/model/risk';
+import { hasHectares } from '../../../domain/util/fire-history';
 import { formatDateLong, formatHectares } from '../../../domain/util/format';
 import { SOURCE_LABELS } from '../../../domain/util/risk-labels';
 import { AppIcon } from '../app-icon/app-icon';
@@ -13,7 +14,7 @@ import { AppIcon } from '../app-icon/app-icon';
       <div class="event-copy">
         <h2>{{ event().place }}</h2>
         <p>{{ date() }}</p>
-        <span>{{ hectares() }} ha afectadas</span>
+        <span>{{ hectares() }}</span>
       </div>
       <b class="source-tag" [class.source-news]="event().source === 'news'" [class.source-official]="event().source === 'ungrd'">
         {{ source() }}
@@ -25,6 +26,9 @@ import { AppIcon } from '../app-icon/app-icon';
 export class FireEventTile {
   readonly event = input.required<FireEvent>();
   protected readonly date = computed(() => formatDateLong(this.event().date));
-  protected readonly hectares = computed(() => formatHectares(this.event().hectares));
+  protected readonly hectares = computed(() => {
+    const hectares = this.event().hectares;
+    return hasHectares(hectares) ? `${formatHectares(hectares)} ha afectadas` : 'Sin dato de hectáreas';
+  });
   protected readonly source = computed(() => SOURCE_LABELS[this.event().source]);
 }

@@ -41,7 +41,8 @@ export interface FireEvent {
   readonly zoneId: string;
   readonly place: string;
   readonly date: string;
-  readonly hectares: number;
+  /** Burned area; 0 or null when the source does not say. */
+  readonly hectares: number | null;
   readonly source: FireSource;
 }
 

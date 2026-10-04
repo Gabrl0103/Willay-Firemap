@@ -1,6 +1,9 @@
 import { Component, computed, effect, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
-import { formatDateShort, formatHectares } from '../../../domain/util/format';
+import {
+  coverageNote, recordsRangeLabel, sortByDateDesc, totalHectaresLabel,
+} from '../../../domain/util/fire-history';
+import { formatDateShort } from '../../../domain/util/format';
 import { HistoryStore } from '../../../state/history.store';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
@@ -22,14 +25,23 @@ export class HistoryPage {
   private readonly zonesStore = inject(ZonesStore);
   private readonly router = inject(Router);
 
+  /** Newest first, whatever order the API sends. */
+  protected readonly events = computed(() => sortByDateDesc(this.store.history()?.events ?? []));
+
   protected readonly summary = computed(() => {
-    const summary = this.store.history()?.summary;
+    const events = this.events();
     return {
-      count: summary?.count ?? 0,
-      hectares: formatHectares(summary?.totalHectares ?? 0),
-      last: summary?.lastDate ? formatDateShort(summary.lastDate) : '—',
+      count: events.length,
+      hectares: totalHectaresLabel(events),
+      last: events[0] ? formatDateShort(events[0].date) : '—',
     };
   });
+
+  /** Range and sources come from the records shown, so they follow the data and the filter. */
+  protected readonly recordsRange = computed(() =>
+    this.store.history() ? recordsRangeLabel(this.events()) : 'Registros',
+  );
+  protected readonly coverage = computed(() => coverageNote(this.events()));
 
   constructor() {
     if (this.zonesStore.zones().length === 0) this.zonesStore.load();
