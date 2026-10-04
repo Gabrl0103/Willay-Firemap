@@ -1,18 +1,3 @@
-.sheet-layer { position: absolute; z-index: 70; inset: 0; }
-.sheet-backdrop { position: absolute; inset: 0; width: 100%; background: rgba(9, 20, 24, 0.42); }
-.zone-sheet {
-  position: absolute;
-  inset: auto 0 0;
-  max-height: calc(100% - 16px);
-  overflow-y: auto;
-  scrollbar-width: none;
-  border-radius: 20px 20px 0 0;
-  background: var(--card);
-  box-shadow: 0 -16px 38px rgba(9, 20, 24, 0.28);
-  animation: sheet-up 0.32s cubic-bezier(0.22, 0.75, 0.2, 1);
-}
-.zone-sheet::-webkit-scrollbar { display: none; }
-.sheet-handle { position: absolute; z-index: 3; top: 8px; left: 50%; width: 36px; height: 4px; transform: translateX(-50%); border-radius: 2px; background: rgba(249, 249, 244, 0.65); }
 .sheet-close { position: absolute; z-index: 3; right: 13px; top: 17px; padding: 7px; display: grid; place-items: center; border-radius: 999px; background: rgba(15, 28, 33, 0.56); color: var(--map-foreground); backdrop-filter: blur(10px); }
 
 .zone-cover {
@@ -44,7 +29,6 @@ h2 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 2
 .score-block span { font-size: 10px; opacity: 0.8; }
 .score-block b { grid-column: 1 / -1; margin-top: 2px; font-size: 11px; }
 
-.zone-content { padding: 15px 16px 14px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
 .section-heading span { font-family: var(--font-display); font-weight: 800; font-size: 13px; }
 .section-heading small { font-size: 9px; color: var(--muted-foreground); }
@@ -64,4 +48,3 @@ h2 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 2
 }
 .history-cta app-icon:last-child { margin-left: auto; }
 .disclaimer { margin: 8px 8px 0; text-align: center; font-size: 8px; line-height: 1.35; color: var(--muted-foreground); }
-@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }

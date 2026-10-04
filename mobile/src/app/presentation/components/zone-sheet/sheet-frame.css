@@ -1,0 +1,26 @@
+/* Sheet mechanics: layer, drag area and scroll. Content styles live in zone-sheet.css. */
+.sheet-layer { position: absolute; z-index: 70; inset: 0; overflow: hidden; }
+.sheet-backdrop { position: absolute; inset: 0; width: 100%; background: rgba(9, 20, 24, 0.42); transition: opacity 0.32s; }
+.is-closing .sheet-backdrop { opacity: 0; pointer-events: none; }
+/* Height and translateY come from the component (sheet-snap.ts): mid 45 %, expanded 85 %. */
+.zone-sheet {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: 0 -16px 38px rgba(9, 20, 24, 0.28);
+  transition: transform 0.32s cubic-bezier(0.22, 0.75, 0.2, 1);
+}
+.zone-sheet.is-dragging { transition: none; }
+.sheet-drag-area { position: relative; flex: none; touch-action: none; user-select: none; }
+.sheet-handle { position: absolute; z-index: 3; top: 0; left: 50%; width: 72px; height: 26px; display: grid; place-items: center; transform: translateX(-50%); }
+.sheet-handle span { width: 36px; height: 4px; border-radius: 2px; background: rgba(249, 249, 244, 0.65); }
+/* Bottom padding keeps the last button clear of the bottom nav, which overlaps the map area. */
+.zone-content {
+  flex: 1; min-height: 0; overflow: hidden; overscroll-behavior: contain;
+  padding: 15px 16px calc(28px + env(safe-area-inset-bottom, 0px));
+}
+.is-expanded .zone-content { overflow-y: auto; }
