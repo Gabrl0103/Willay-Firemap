@@ -1,13 +1,24 @@
 import axios from 'axios';
 import type { NewHotspot } from '../../domain/model/Hotspot.js';
 import type { HotspotProvider } from '../../domain/port/DataSources.js';
+import { HOTSPOT_WINDOW_DAYS } from '../../domain/service/hotspotRecency.js';
 
 const FIRMS_AREA_URL = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv';
 /** Nariño bounding box: west, south, east, north. */
 const NARINO_BBOX = '-79.1,0.35,-76.8,2.7';
-/** Near-real-time VIIRS satellites (375 m). */
-const SATELLITES = ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT'] as const;
-const DAY_RANGE = 2;
+/** Near-real-time VIIRS satellites (375 m). NOAA-21 adds more passes over Nariño each day. */
+export const FIRMS_SOURCES = ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'] as const;
+/** UTC days up to today (FIRMS accepts 1-5). The model weights older detections less (hotspotRecency.ts). */
+export const FIRMS_DAY_RANGE = HOTSPOT_WINDOW_DAYS;
+
+export const firmsAreaUrl = (mapKey: string, source: string): string =>
+  `${FIRMS_AREA_URL}/${mapKey}/${source}/${NARINO_BBOX}/${FIRMS_DAY_RANGE}`;
+
+/** GET that returns the body as text (axios by default; tests pass a fake). */
+export type TextGetter = (url: string) => Promise<string>;
+
+const axiosGetText: TextGetter = async (url) =>
+  (await axios.get<string>(url, { timeout: 30_000, responseType: 'text' })).data;
 
 /** Parses the FIRMS area CSV (latitude, longitude, acq_date YYYY-MM-DD, acq_time HHMM in UTC). */
 export function parseFirmsCsv(csv: string): NewHotspot[] {
@@ -40,16 +51,15 @@ export function parseFirmsCsv(csv: string): NewHotspot[] {
 
 /** NASA FIRMS area API. Needs a free MAP_KEY: https://firms.modaps.eosdis.nasa.gov/api/map_key/ */
 export class FirmsHotspotProvider implements HotspotProvider {
-  constructor(private readonly mapKey: string) {}
+  constructor(
+    private readonly mapKey: string,
+    private readonly getText: TextGetter = axiosGetText,
+  ) {}
 
   async fetchRecent(): Promise<NewHotspot[]> {
     const results: NewHotspot[] = [];
-    for (const satellite of SATELLITES) {
-      const { data } = await axios.get<string>(
-        `${FIRMS_AREA_URL}/${this.mapKey}/${satellite}/${NARINO_BBOX}/${DAY_RANGE}`,
-        { timeout: 30_000, responseType: 'text' },
-      );
-      results.push(...parseFirmsCsv(data));
+    for (const source of FIRMS_SOURCES) {
+      results.push(...parseFirmsCsv(await this.getText(firmsAreaUrl(this.mapKey, source))));
     }
     return results;
   }
