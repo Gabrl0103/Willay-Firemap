@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import type { ZoneDetail } from '../../../domain/model/risk';
-import { ZoneSheet } from './zone-sheet';
+import { ZoneSheet, hotspotNote } from './zone-sheet';
 
 const DETAIL: ZoneDetail = {
   id: 'pasto',
@@ -11,9 +11,9 @@ const DETAIL: ZoneDetail = {
   factors: { dryWeather: 40, nearbyHotspots: 20, fireHistory: 60 },
 };
 
-function render() {
+function render(detail: ZoneDetail = DETAIL) {
   const fixture = TestBed.createComponent(ZoneSheet);
-  fixture.componentRef.setInput('detail', DETAIL);
+  fixture.componentRef.setInput('detail', detail);
   fixture.detectChanges();
   const host = fixture.nativeElement as HTMLElement;
   const sheet = host.querySelector<HTMLElement>('.zone-sheet')!;
@@ -53,5 +53,18 @@ describe('ZoneSheet', () => {
 
     vi.advanceTimersByTime(400);
     expect(closed).toBe(1);
+  });
+
+  it('says how long ago the newest nearby hotspot was detected', () => {
+    const latestDetectedAt = new Date(Date.now() - 3.5 * 24 * 3_600_000).toISOString();
+    const { host } = render({ ...DETAIL, hotspots: { count: 4, latestDetectedAt } });
+    const notes = [...host.querySelectorAll('.factor-note')].map((n) => n.textContent!.trim());
+    expect(notes).toEqual(['4 focos a 25 km o menos · el último, hace 3 días']);
+  });
+
+  it('writes the hotspot note only when the backend sends the data', () => {
+    expect(hotspotNote(undefined)).toBe('');
+    expect(hotspotNote({ count: 0, latestDetectedAt: null })).toBe('Sin focos a 25 km o menos en los últimos 5 días');
+    expect(render().host.querySelectorAll('.factor-note').length).toBe(0);
   });
 });

@@ -25,6 +25,11 @@ export interface ZoneDetail {
     readonly nearbyHotspots: number;
     readonly fireHistory: number;
   };
+  /** FIRMS detections within 25 km in the last 5 days. Missing on backends older than v0.20. */
+  readonly hotspots?: {
+    readonly count: number;
+    readonly latestDetectedAt: string | null;
+  };
 }
 
 export interface Hotspot {

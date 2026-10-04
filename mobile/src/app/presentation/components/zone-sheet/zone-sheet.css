@@ -41,6 +41,7 @@ h2 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 2
 .factor { padding: 8px 0; border-bottom: 1px solid var(--border); }
 .factor > div:first-child { display: flex; justify-content: space-between; font-size: 11px; }
 .factor-track { display: block !important; height: 4px; margin-top: 6px; overflow: hidden; border-radius: 3px; background: var(--secondary); }
+.factor-note { display: block; margin-top: 5px; font-size: 9px; color: var(--muted-foreground); }
 .factor-track span { display: block; height: 100%; border-radius: 3px; background: var(--risk-high); }
 .history-cta {
   width: 100%; margin-top: 14px; padding: 12px 14px; gap: 8px; display: flex; align-items: center;

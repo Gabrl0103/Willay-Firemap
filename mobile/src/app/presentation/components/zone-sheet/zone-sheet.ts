@@ -2,6 +2,7 @@ import {
   Component, ElementRef, OnDestroy, afterNextRender, computed, input, output, signal, viewChild,
 } from '@angular/core';
 import type { ZoneDetail } from '../../../domain/model/risk';
+import { formatTimeAgo } from '../../../domain/util/format';
 import { RISK_LABELS } from '../../../domain/util/risk-labels';
 import { AppIcon, type IconName } from '../app-icon/app-icon';
 import { FULL_HEIGHT, clampOffset, resolveSnap, snapOffset, type SheetSnap } from './sheet-snap';
@@ -93,6 +94,9 @@ interface DragState {
               <div class="factor">
                 <div><span>{{ factor.label }}</span><b>{{ factor.value }}%</b></div>
                 <div class="factor-track"><span [style.width.%]="factor.value"></span></div>
+                @if (factor.note) {
+                  <small class="factor-note">{{ factor.note }}</small>
+                }
               </div>
             }
           </div>
@@ -222,11 +226,19 @@ export class ZoneSheet implements OnDestroy {
   });
 
   protected readonly factors = computed(() => {
-    const f = this.detail().factors;
+    const { factors: f, hotspots } = this.detail();
     return [
-      { label: 'Clima seco', value: f.dryWeather },
-      { label: 'Focos de calor cercanos', value: f.nearbyHotspots },
-      { label: 'Historial de incendios', value: f.fireHistory },
+      { label: 'Clima seco', value: f.dryWeather, note: '' },
+      { label: 'Focos de calor cercanos', value: f.nearbyHotspots, note: hotspotNote(hotspots) },
+      { label: 'Historial de incendios', value: f.fireHistory, note: '' },
     ];
   });
+}
+
+/** "2 focos a 25 km o menos · el último, hace 3 días" (empty when the backend does not send it). */
+export function hotspotNote(hotspots: ZoneDetail['hotspots']): string {
+  if (!hotspots) return '';
+  if (hotspots.count === 0 || !hotspots.latestDetectedAt) return 'Sin focos a 25 km o menos en los últimos 5 días';
+  const count = hotspots.count === 1 ? '1 foco' : `${hotspots.count} focos`;
+  return `${count} a 25 km o menos · el último, ${formatTimeAgo(hotspots.latestDetectedAt)}`;
 }
