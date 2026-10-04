@@ -29,6 +29,14 @@ function yearRange(from: number, to: number): string {
   return from === to ? `${from}` : `${from}–${to}`;
 }
 
+/** Invisible character that forbids a line break where it stands. */
+export const WORD_JOINER = String.fromCharCode(0x2060);
+
+/** Word joiner after the dash of "2023–2025", so a line never breaks inside a year range. */
+export function keepYearRangesTogether(text: string): string {
+  return text.replace(/(\d{4})–(\d{4})/g, `$1–${WORD_JOINER}$2`);
+}
+
 /** "a", "a y b", "a, b y c". */
 function joinSpanish(items: readonly string[]): string {
   return items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} y ${items.at(-1)}`;

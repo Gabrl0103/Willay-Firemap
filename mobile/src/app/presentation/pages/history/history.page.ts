@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
 import {
-  coverageNote, recordsRangeLabel, sortByDateDesc, totalHectaresLabel,
+  coverageNote, keepYearRangesTogether, recordsRangeLabel, sortByDateDesc, totalHectaresLabel,
 } from '../../../domain/util/fire-history';
 import { formatDateShort } from '../../../domain/util/format';
 import { HistoryStore } from '../../../state/history.store';
@@ -41,7 +41,7 @@ export class HistoryPage {
   protected readonly recordsRange = computed(() =>
     this.store.history() ? recordsRangeLabel(this.events()) : 'Registros',
   );
-  protected readonly coverage = computed(() => coverageNote(this.events()));
+  protected readonly coverage = computed(() => keepYearRangesTogether(coverageNote(this.events())));
 
   constructor() {
     if (this.zonesStore.zones().length === 0) this.zonesStore.load();

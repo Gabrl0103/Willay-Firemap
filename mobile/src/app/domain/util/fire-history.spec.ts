@@ -1,6 +1,6 @@
 import type { FireEvent, FireSource } from '../model/risk';
 import {
-  coverageNote, hasHectares, recordsRangeLabel, sortByDateDesc, totalHectaresLabel,
+  coverageNote, hasHectares, keepYearRangesTogether, recordsRangeLabel, sortByDateDesc, totalHectaresLabel, WORD_JOINER,
 } from './fire-history';
 
 let nextId = 0;
@@ -52,6 +52,10 @@ describe('fire history', () => {
     expect(coverageNote(events)).toBe(
       'Fuentes: UNGRD (2019–2022) y noticias locales (2026). Sin datos de 2021 y 2023–2025.',
     );
+  });
+
+  it('keeps year ranges on one line', () => {
+    expect(keepYearRangesTogether('Sin datos de 2023–2025.')).toBe(`Sin datos de 2023–${WORD_JOINER}2025.`);
   });
 
   it('leaves out the gap sentence when every year has records', () => {
