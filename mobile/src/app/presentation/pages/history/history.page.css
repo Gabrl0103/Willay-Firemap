@@ -1,4 +1,4 @@
-:host { position: absolute; inset: 0; display: block; padding-bottom: 78px; overflow-y: auto; background: var(--background); scrollbar-width: none; }
+:host { position: absolute; inset: 0; display: block; padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; background: var(--background); scrollbar-width: none; }
 :host::-webkit-scrollbar { display: none; }
 .history-header { padding: calc(22px + env(safe-area-inset-top)) 16px 16px; display: flex; align-items: flex-start; gap: 11px; background: var(--card); }
 .brand-mark { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); box-shadow: 0 5px 14px rgba(120, 40, 20, 0.24); }
