@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { levelFromScore } from '../src/domain/model/RiskLevel.js';
 import { firesPerYear } from '../src/domain/service/fireFrequency.js';
-import { RiskScoringService, SCORE_WEIGHTS } from '../src/domain/service/RiskScoringService.js';
+import { FIRES_PER_YEAR_FOR_MAX, RiskScoringService, SCORE_WEIGHTS } from '../src/domain/service/RiskScoringService.js';
 
 const service = new RiskScoringService();
 const weather = (t: number, h: number, w: number, d: number) => ({
@@ -51,20 +51,25 @@ describe('RiskScoringService', () => {
     assert.ok(withHotspots.score > without.score);
   });
 
-  it('turns fires per year into the history factor: 1 per year = 100, capped', () => {
+  it('caps the history at the 90th percentile of the municipalities (2.8 fires per year)', () => {
+    assert.equal(FIRES_PER_YEAR_FOR_MAX, 2.8);
+  });
+
+  it('turns fires per year into the history factor, capped at 100', () => {
     const history = (rate: number) =>
       service.assess({ weather: weather(12, 85, 5, 0), nearbyHotspotCount: 0, firesPerYear: rate }).factors.fireHistory;
     assert.equal(history(0), 0);
-    assert.equal(history(0.258), 26); // 2 fires in 7.75 years
-    assert.equal(history(1), 100);
-    assert.equal(history(2.5), 100);
+    assert.equal(history(1.03), 37); // median zone on 2026-10-04
+    assert.equal(history(1.4), 50);
+    assert.equal(history(2.8), 100);
+    assert.equal(history(9.93), 100); // Pasto
   });
 
   it('adds at most 20 points for the history (its weight stays 0.2)', () => {
     assert.deepEqual(SCORE_WEIGHTS, { dryWeather: 0.5, nearbyHotspots: 0.3, fireHistory: 0.2 });
     const base = { weather: weather(26, 35, 15, 12), nearbyHotspotCount: 0 };
     const none = service.assess({ ...base, firesPerYear: 0 });
-    const max = service.assess({ ...base, firesPerYear: 1 });
+    const max = service.assess({ ...base, firesPerYear: FIRES_PER_YEAR_FOR_MAX });
     assert.equal(max.score - none.score, 20);
   });
 });

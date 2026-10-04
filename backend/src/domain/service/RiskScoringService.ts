@@ -14,10 +14,17 @@ export interface RiskInput {
 export const SCORE_WEIGHTS = { dryWeather: 0.5, nearbyHotspots: 0.3, fireHistory: 0.2 } as const;
 
 /**
- * Fires per year that give a full history factor (100). Slightly above the 90th percentile of the
- * 64 municipalities on 2026-10-01 (6 fires in 7.75 years, 0.77 per year).
+ * Fires per year that give a full history factor (100): the 90th percentile of the 64
+ * municipalities on 2026-10-04 (nearest rank: La Unión, 22 fires in 7.76 years = 2.84), rounded
+ * down. Computed once from the UNGRD 2019-2025 + news record (701 fires) and kept fixed, so a
+ * zone's score does not move when other zones get new reports. With the old value (1, set when
+ * only UNGRD 2019-2022 was loaded) 36 of 64 zones were capped at 100. Recompute it by hand when
+ * the record changes a lot (see docs/REQUIREMENTS.md, section 7).
+ *
+ * The rate counts *reported* fires (UNGRD and news): large municipalities, with more people and
+ * more fire crews, report more, so the factor also reflects reporting, not only burning.
  */
-export const FIRES_PER_YEAR_FOR_MAX = 1;
+export const FIRES_PER_YEAR_FOR_MAX = 2.8;
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 const toPercent = (ratio: number): number => Math.round(clamp01(ratio) * 100);
