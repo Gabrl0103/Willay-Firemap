@@ -166,6 +166,18 @@ describe('isWildfireArticle', () => {
     assert.equal(isWildfireArticle(article), false);
   });
 
+  it('leaves the area unknown when a plural title quotes a department total', () => {
+    const article = {
+      title: 'Secretaría de Agricultura inicia atención y diagnóstico en Ancuya tras afectaciones por incendios de cobertura vegetal',
+      publishedAt: '2026-08-28T09:00:00-05:00',
+      text: 'Los reportes dan cuenta de 15 municipios, 1.485 hectáreas productivas afectadas.',
+    };
+    const ancuya = { id: 'ancuya', name: 'Ancuya', latitude: 1.26, longitude: -77.51 };
+    const event = articleToFireEvent(article, 'https://n.test/ancuya', [...zones, ancuya]);
+    assert.equal(event?.zoneId, 'ancuya');
+    assert.equal(event?.hectares, 0);
+  });
+
   it('still rejects plural bulletins that name no municipality', () => {
     const article = {
       title: 'Nariño mantiene atención simultánea en tres incendios forestales activos',

@@ -151,7 +151,8 @@ export function articleToFireEvent(
     zoneId: zone.id,
     place: locality && locality !== zone.name ? `${locality}, ${zone.name}` : zone.name,
     date,
-    hectares: extractHectares(fullText) ?? 0,
+    // A plural title ("tras afectaciones por incendios") often quotes department totals: area unknown.
+    hectares: ONE_FIRE.test(article.title) ? (extractHectares(fullText) ?? 0) : 0,
     source: 'news',
     sourceUrl: url,
   };
