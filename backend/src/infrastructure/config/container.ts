@@ -108,7 +108,10 @@ function buildIngestionJobs(repositories: RepositorySet, config: Env): Ingestion
       name: 'hotspots',
       schedule: '15 */3 * * *', // every 3 hours
       runOnStart: true,
-      run: async () => `${await ingestHotspots.execute()} hotspots stored`,
+      run: async () => {
+        const { detected, stored } = await ingestHotspots.execute();
+        return `${detected} detections, ${stored} hotspots stored after removing satellite duplicates`;
+      },
     });
   } else {
     console.log('Hotspots: MAP_KEY is not set, NASA FIRMS ingestion is off');
