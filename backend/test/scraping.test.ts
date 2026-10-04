@@ -9,7 +9,12 @@ import {
   parseArticle,
 } from '../src/infrastructure/scraping/NewsFireReportSource.js';
 import { parseRobotsTxt } from '../src/infrastructure/scraping/robotsTxt.js';
-import { ungrdRowsToFireEvents } from '../src/infrastructure/scraping/UngrdFireReportSource.js';
+import {
+  UNGRD_DATASETS,
+  UngrdFireReportSource,
+  ungrdQuery,
+  ungrdRowsToFireEvents,
+} from '../src/infrastructure/scraping/UngrdFireReportSource.js';
 
 const zones = [
   { id: 'pasto', name: 'Pasto', latitude: 1.21, longitude: -77.28 },
@@ -112,6 +117,7 @@ describe('ungrdRowsToFireEvents', () => {
         { fecha: '2019-01-07T00:00:00.000', municipio: 'PASTO', hectareas: 'n/a' },
       ],
       zones,
+      'https://www.datos.gov.co/d/wwkg-r6te',
     );
     assert.deepEqual(
       events.map((e) => [e.zoneId, e.place, e.date, e.hectares, e.source]),
@@ -119,6 +125,50 @@ describe('ungrdRowsToFireEvents', () => {
         ['la-cruz', 'La Cruz', '2019-01-05', 4, 'ungrd'],
         ['pasto', 'Pasto', '2019-01-07', 0, 'ungrd'],
       ],
+    );
+    assert.ok(events.every((e) => e.sourceUrl === 'https://www.datos.gov.co/d/wwkg-r6te'));
+  });
+
+  it('asks for both names the UNGRD has used for wildfires', () => {
+    const where = ungrdQuery().get('$where') ?? '';
+    assert.match(where, /departamento like 'NARI%'/);
+    assert.match(where, /evento in \('INCENDIO DE COBERTURA VEGETAL', 'INCENDIO FORESTAL'\)/);
+  });
+});
+
+describe('UngrdFireReportSource', () => {
+  it('covers 2019-2025 with three datasets and their licenses', () => {
+    assert.deepEqual(
+      UNGRD_DATASETS.map((d) => [d.id, d.years, d.license]),
+      [
+        ['wwkg-r6te', '2019-2022', 'CC BY-SA 4.0'],
+        ['rgre-6ak4', '2023-2024', 'CC BY-SA 4.0'],
+        ['2343-nuqp', '2025', 'CC BY 4.0'],
+      ],
+    );
+  });
+
+  it('reads one dataset and links its events to the dataset page', async () => {
+    const requested: string[] = [];
+    const http = {
+      getJson: async <T>(url: string): Promise<T> => {
+        requested.push(url);
+        return [
+          { fecha: '2023-01-08T00:00:00.000', municipio: 'PASTO', hectareas: '30' },
+          { fecha: '2023-02-07T00:00:00.000', municipio: 'LEIVA', hectareas: '1' },
+        ] as T;
+      },
+    };
+    const source = new UngrdFireReportSource(UNGRD_DATASETS[1]!, http);
+    const batch = await source.fetchReports(zones);
+
+    assert.equal(source.name, 'ungrd-2023-2024');
+    assert.equal(requested.length, 1);
+    assert.ok(requested[0]!.startsWith('https://www.datos.gov.co/resource/rgre-6ak4.json?'));
+    assert.equal(batch.itemsRead, 2);
+    assert.deepEqual(
+      batch.events.map((e) => [e.zoneId, e.date, e.hectares, e.sourceUrl]),
+      [['pasto', '2023-01-08', 30, 'https://www.datos.gov.co/d/rgre-6ak4']],
     );
   });
 });

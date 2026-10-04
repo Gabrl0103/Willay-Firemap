@@ -2,7 +2,7 @@ import type { FireReportSource } from '../../domain/port/DataSources.js';
 import { NewsFireReportSource, type NewsSiteConfig } from './NewsFireReportSource.js';
 import { PoliteHttpClient } from './PoliteHttpClient.js';
 import { RssFireReportSource, type RssFeedConfig } from './RssFireReportSource.js';
-import { UngrdFireReportSource } from './UngrdFireReportSource.js';
+import { UNGRD_DATASETS, UngrdFireReportSource } from './UngrdFireReportSource.js';
 
 /**
  * Local news with an RSS feed. robots.txt checked on 2026-10-01:
@@ -31,7 +31,7 @@ export function createFireReportSources(): FireReportSource[] {
     timeoutMs: 20_000,
   });
   return [
-    new UngrdFireReportSource(http),
+    ...UNGRD_DATASETS.map((dataset) => new UngrdFireReportSource(dataset, http)),
     ...NEWS_FEEDS.map((feed) => new RssFireReportSource(feed, http)),
     ...NEWS_SITES.map((site) => new NewsFireReportSource(site, http)),
   ];
