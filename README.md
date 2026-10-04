@@ -76,7 +76,7 @@ Para generar el APK: Android Studio → Build → Build APK(s).
 Puntaje 0–100 por municipio = **0,5 × clima seco + 0,3 × focos cercanos + 0,2 × historial** (cada factor de 0 a 100).
 - **Clima seco:** temperatura, humedad, viento y días sin lluvia de Open-Meteo.
 - **Focos cercanos:** focos de NASA FIRMS a 25 km o menos (3 o más = 100).
-- **Historial:** incendios por año del municipio desde el 2019-01-01 (UNGRD + noticias); 1 incendio por año = 100.
+- **Historial:** incendios *reportados* por año del municipio desde el 2019-01-01 (UNGRD + noticias); 2,8 por año = 100 (p90 de los municipios, fijo). Los municipios grandes reportan más.
 
 Niveles: Bajo 0–24, Medio 25–49, Alto 50–74, Extremo 75–100. Detalle y limitaciones en `docs/REQUIREMENTS.md` (sección 7).
 
