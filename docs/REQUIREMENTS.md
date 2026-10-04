@@ -3,7 +3,7 @@
 *(Antes llamado FIREMAP. **Willay** viene del quechua/kichwa: "avisar, contar, anunciar" — la app avisa dónde hay riesgo de incendio. Confirmar el significado y la escritura con un hablante o una fuente local.)*
 
 > Documento vivo. Se actualiza al cierre de cada sesión. Al iniciar una sesión nueva, pega este archivo (o léelo del proyecto) para retomar el contexto.
-> **Última actualización:** 2026-10-01 · **Versión:** 0.15 (historial = incendios por año)
+> **Última actualización:** 2026-10-04 · **Versión:** 0.17 (hoja arrastrable, historial con fuentes, etiquetas del mapa)
 
 ---
 
@@ -81,8 +81,9 @@ willay/
 
 | Fuente | Qué aporta | Estado |
 |---|---|---|
-| Noticias locales: boletines de la Gobernación de Nariño (narino.gov.co) | Incendios recientes (2024–hoy): fecha, municipio, vereda, a veces hectáreas | `robots.txt` revisado (2026-10-01): `User-agent: *` → `Allow: /`, `Crawl-delay: 3`. Se lee el feed RSS de su buscador (`/search/incendio/feed/rss2/`, 5 páginas de 10 noticias con el texto completo): 5 peticiones por corrida. **Diario del Sur** dio 0 resultados y se quitó. **HSB Noticias** ya resuelve DNS y su `robots.txt` permite `*`, pero bloquea por nombre a agentes de IA (`Claude-User`, `ClaudeBot`), así que el asistente no revisó su HTML; queda como candidata. |
+| Noticias locales: boletines de la Gobernación de Nariño (narino.gov.co) | Incendios recientes (2024–hoy): fecha, municipio, vereda, a veces hectáreas | `robots.txt` revisado (2026-10-01): `User-agent: *` → `Allow: /`, `Crawl-delay: 3`. Se lee el feed RSS de su buscador (`/search/incendio/feed/rss2/`, 5 páginas de 10 noticias con el texto completo): 5 peticiones por corrida. Auditoría 2026-10-04: el buscador solo tiene **55 noticias** (6 páginas, la más antigua del 2024-01-24; nada de 2023); 41 son de 2026. Con 5 páginas se leen 50: 9 son incendios forestales, las 9 caen en una zona (0 perdidas por zona) y se agrupan en 4 incendios. Se pierden por otras razones: la página 6 (cerro El Cundur, Chachagüí, 2024-09-15) y 2 notas con "incendios" en plural en el título (Santacruz 2026-08-18, Ancuya 2026-08-28). **Diario del Sur** dio 0 resultados y se quitó. **HSB Noticias** ya resuelve DNS y su `robots.txt` permite `*`, pero bloquea por nombre a agentes de IA (`Claude-User`, `ClaudeBot`), así que el asistente no revisó su HTML; queda como candidata. |
 | Datos abiertos UNGRD: "Emergencias UNGRD" (datos.gov.co, CC BY-SA 4.0) | Histórico 2019–2022 con municipio, DIVIPOLA, evento y hectáreas | Implementado y probado. `robots.txt` de datos.gov.co permite `/resource/` (Crawl-delay 1). 266 incendios de cobertura vegetal en Nariño, todos en alguno de los 64 municipios (184 únicos por la llave zona+lugar+fecha, 2026-10-01). |
+| Datos abiertos UNGRD 2023–2025 (propuesta, no implementada) | "Emergencias UNGRD2023 - 2024" (`rgre-6ak4`, CC BY-SA 4.0) y "Emergencias UNGRD V2" (`2343-nuqp`, 2025, CC BY 4.0, actualizado 2026-09-22) | Mismas columnas (`fecha`, `municipio`, `hectareas`, `comentarios`), pero el evento se llama `INCENDIO FORESTAL`. En Nariño: 174 (2023), 303 (2024) y 198 (2025) filas. Revisado 2026-10-04. |
 | IDEAM: puntos de calor y estadísticas de incendios | Focos y estadísticas | Candidato, sin verificar si hay datos descargables. |
 
 **APIs abiertas (tiempo real):** NASA FIRMS (focos de calor), Open-Meteo (clima, sin API key).
@@ -174,7 +175,7 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 - Hoja de detalle: radio superior 20, aparece deslizando hacia arriba (0,32 s); fondo oscuro detrás al 42 %.
 - Tarjetas de lista y resumen: radio 9. Chips de filtro: borde fino; el activo en negro (`foreground`) con texto `card`.
 - Sombras suaves y frías (tono `#0E1518` a baja opacidad).
-- Marcadores de zona: cuadrado de 10 px con borde blanco y halo del mismo color; etiqueta con nombre (9 px) y "puntaje · nivel" (7 px).
+- Marcadores de zona: con zoom menor a 10, solo un punto de color de 18 px con el puntaje adentro; desde zoom 10 (y siempre en el municipio seleccionado, que va encima) cuadrado de 10 px con borde blanco y halo, y etiqueta con nombre (9 px) y "puntaje · nivel" (7 px).
 - Focos de calor: punto de 7 px `primary` con borde blanco y halo naranja; pulsan suavemente (2 s).
 - Texto vertical "NARIÑO COLOMBIA" a la izquierda del mapa (Archivo 800, 10 px, espaciado amplio).
 - Respetar "reducir movimiento" (`prefers-reduced-motion`, desactivar animaciones).
@@ -188,16 +189,17 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 - Aviso al pie: "Estimación de riesgo, no predicción exacta".
 
 **Pantalla Detalle de zona (hoja inferior):**
+- Hoja arrastrable desde la manija o la cabecera: posición media (~45 % del área del mapa) y expandida (~85 %); un toque en la manija alterna entre ambas, deslizar rápido mueve una posición y deslizar hasta abajo la cierra. El contenido hace scroll solo expandida y tiene relleno inferior con `safe-area` para que la barra de navegación no tape el botón.
 - Cabecera oscura con textura topográfica: "ZONA SELECCIONADA", nombre grande (ej. Samaniego), "Riesgo próximas 24–72 h", bloque de color con puntaje "67 /100" y nivel; botón cerrar.
 - Cuerpo claro: "Condiciones actuales" con 4 columnas (temperatura, humedad, viento km/h, días sin lluvia); "Factores de riesgo" con barras naranjas y porcentaje (Clima seco, Focos de calor cercanos, Historial de incendios).
 - Botón ancho rojo ladrillo "Ver historial de [municipio]" con icono y flecha.
 - Aviso: "Datos simulados para fines académicos. El riesgo no confirma la ocurrencia de un incendio."
 
 **Pantalla Historial:**
-- Encabezado claro: "REGISTROS 2023–2026", título "Historial", "Incendios reportados en Nariño".
+- Encabezado claro: "REGISTROS {primer año}–{último año}" calculado de los registros mostrados, título "Historial", "Incendios reportados en Nariño" y una nota generada de los datos con las fuentes y sus años y los años sin registros (ej. "Fuentes: UNGRD (2019–2022) y noticias locales (2026). Sin datos de 2023–2025.").
 - Chips de municipio (Todos seleccionado en negro; Pasto, Ipiales, Tumaco, La Cruz).
 - Resumen en 3 columnas con icono: incendios, hectáreas, último registro.
-- Lista "REGISTROS": ícono de ubicación en bloque beige, lugar y municipio, fecha, "X ha afectadas", etiqueta de fuente.
+- Lista "REGISTROS" de la más reciente a la más antigua: ícono de ubicación en bloque beige, lugar y municipio, fecha, "X ha afectadas" (o "Sin dato de hectáreas" si la fuente da 0 o nada), etiqueta de fuente. El total de hectáreas suma solo las conocidas y muestra "Sin dato" si no hay ninguna.
 
 **Navegación:** barra inferior flotante blanca en forma de píldora con Mapa e Historial; la pestaña activa lleva fondo gris claro.
 
@@ -238,6 +240,7 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-04 (v0.17, rama `fix/ui-sheet-history`):** app: la hoja de detalle se arrastra entre media (~45 %) y expandida (~85 %), se cierra al deslizarla hasta abajo, hace scroll expandida y deja libre el botón "Ver historial" (relleno con `safe-area`); probado en emulador Android (Pixel 7). Historial: rango de años y nota de fuentes/años sin datos calculados de los registros, "Sin dato" en vez de "0,0 ha", orden por fecha descendente. Mapa: con zoom < 10 solo punto de color con puntaje; nombres desde zoom 10 o en el municipio seleccionado. Pruebas unitarias en la app con Vitest (`npm test` en `mobile/`). Auditoría de cobertura de noticias (sección 6): el feed de la Gobernación solo tiene 55 noticias desde 2024-01; los datos de 2023–2025 están en datasets nuevos de la UNGRD (propuesta, sin aplicar). Nota: v0.16 está en la rama `feat/ml`.
 - **2026-10-01 (v0.15):** factor de historial: incendios por año de la zona desde el 2019-01-01 (1 por año = 100) en vez del conteo de los últimos 730 días / 5. Pesos sin cambio (0,5 / 0,3 / 0,2). Con los datos de hoy: 46 zonas con historial > 0 (antes 4), puntajes 0–20, todas en nivel Bajo (clima húmedo y sin focos porque falta `MAP_KEY`). Se documentan las limitaciones del historial (sección 7).
 - **2026-10-01 (v0.14):** `npm run db:seed` solo carga las 64 zonas; el clima, los incendios y los focos de `seedData.ts` quedan solo para el modo en memoria y las pruebas. Borrados en Neon todos los datos de prueba que había cargado el seed: 8 noticias, 7 filas `ungrd` sin enlace y 7 focos de calor.
 - **2026-10-01 (v0.13):** noticias del mismo incendio: la ingesta agrupa, antes de insertar, las noticias de una zona separadas por 3 días o menos (en cadena) con las ya guardadas; queda la más antigua (fecha y enlace), el mayor número de hectáreas y los demás enlaces en `fire_event.related_urls`. Limpieza única en Neon con `npm run db:merge-news` (idempotente): 5 duplicados del cerro Aminda fusionados. Filtro de incendios forestales: palabras completas ("esquema" ya no cuenta como "quema") y se descartan los que mencionan vivienda/casa/local/bodega/establecimiento sin forestal/bosque/monte/páramo/cobertura vegetal/quema. Olaya Herrera (La Isla, 2026-09-29) era un incendio urbano de 15 viviendas: borrado.

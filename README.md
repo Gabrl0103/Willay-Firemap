@@ -59,6 +59,7 @@ npm install
 npm start
 ```
 Abre http://localhost:4200 (con el backend encendido).
+Pruebas unitarias de la app (Vitest): `npm test`.
 
 ### 3. App en el emulador de Android
 ```
