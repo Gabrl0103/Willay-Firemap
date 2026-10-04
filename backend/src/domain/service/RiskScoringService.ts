@@ -4,7 +4,7 @@ import type { WeatherSnapshot } from '../model/WeatherSnapshot.js';
 
 export interface RiskInput {
   readonly weather: WeatherSnapshot;
-  /** Heat spots detected near the zone. */
+  /** Heat spots detected near the zone, each weighted by its age (hotspotRecency.ts): 1 if recent. */
   readonly nearbyHotspotCount: number;
   /** Average fires per year registered in the zone (whole record, see fireFrequency.ts). */
   readonly firesPerYear: number;

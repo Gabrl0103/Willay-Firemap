@@ -9,14 +9,23 @@ import type {
 } from '../../domain/port/Repositories.js';
 import { firesPerYear } from '../../domain/service/fireFrequency.js';
 import { distanceKm } from '../../domain/service/geo.js';
+import { hotspotWeight } from '../../domain/service/hotspotRecency.js';
 import type { RiskScoringService } from '../../domain/service/RiskScoringService.js';
 
 export interface ZoneRisk {
   readonly weather: WeatherSnapshot;
   readonly assessment: RiskAssessment;
+  /** Stored hotspots within HOTSPOT_RADIUS_KM (any age in the window) and the newest detection. */
+  readonly nearbyHotspots: NearbyHotspots;
 }
 
-const HOTSPOT_RADIUS_KM = 25;
+export interface NearbyHotspots {
+  readonly count: number;
+  /** ISO date-time, or null when there are none. */
+  readonly latestDetectedAt: string | null;
+}
+
+export const HOTSPOT_RADIUS_KM = 25;
 /** First day of the fire records (the UNGRD dataset starts on 2019-01-02). */
 export const FIRE_RECORD_START = '2019-01-01';
 
@@ -38,9 +47,15 @@ export class ZoneRiskCalculator {
       this.fireEventRepository.findAll(),
     ]);
 
-    const nearbyHotspotCount = hotspots.filter(
+    const nearby = hotspots.filter(
       (h) => distanceKm(zone.latitude, zone.longitude, h.latitude, h.longitude) <= HOTSPOT_RADIUS_KM,
-    ).length;
+    );
+    // Recent detections count fully, older ones less (hotspotRecency.ts).
+    const nearbyHotspotCount = nearby.reduce((sum, h) => sum + hotspotWeight(h.detectedAt, now), 0);
+    const latestDetectedAt = nearby.reduce<string | null>(
+      (latest, h) => (latest === null || Date.parse(h.detectedAt) > Date.parse(latest) ? h.detectedAt : latest),
+      null,
+    );
 
     const zoneFireDates = fires.filter((f) => f.zoneId === zone.id).map((f) => f.date);
     const assessment = this.scoringService.assess({
@@ -48,6 +63,6 @@ export class ZoneRiskCalculator {
       nearbyHotspotCount,
       firesPerYear: firesPerYear(zoneFireDates, FIRE_RECORD_START, now),
     });
-    return { weather, assessment };
+    return { weather, assessment, nearbyHotspots: { count: nearby.length, latestDetectedAt } };
   }
 }

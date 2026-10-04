@@ -18,9 +18,14 @@ export interface ZoneDetailDto {
     readonly nearbyHotspots: number;
     readonly fireHistory: number;
   };
+  /** NASA FIRMS detections within 25 km in the last 5 days, and when the newest one was seen. */
+  readonly hotspots: {
+    readonly count: number;
+    readonly latestDetectedAt: string | null;
+  };
 }
 
-export function toZoneDetailDto({ zone, weather, assessment }: ZoneDetail): ZoneDetailDto {
+export function toZoneDetailDto({ zone, weather, assessment, nearbyHotspots }: ZoneDetail): ZoneDetailDto {
   return {
     id: zone.id,
     name: zone.name,
@@ -33,5 +38,6 @@ export function toZoneDetailDto({ zone, weather, assessment }: ZoneDetail): Zone
       daysWithoutRain: weather.daysWithoutRain,
     },
     factors: assessment.factors,
+    hotspots: { count: nearbyHotspots.count, latestDetectedAt: nearbyHotspots.latestDetectedAt },
   };
 }
