@@ -7,11 +7,12 @@ import { formatDateShort } from '../../../domain/util/format';
 import { HistoryStore } from '../../../state/history.store';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
+import { DataAttribution } from '../../components/data-attribution/data-attribution';
 import { FireEventTile } from '../../components/fire-event-tile/fire-event-tile';
 
 @Component({
   selector: 'app-history-page',
-  imports: [AppIcon, FireEventTile],
+  imports: [AppIcon, DataAttribution, FireEventTile],
   templateUrl: './history.page.html',
   styleUrl: './history.page.css',
   host: { class: 'ion-page' },
