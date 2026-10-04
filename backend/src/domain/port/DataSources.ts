@@ -1,5 +1,5 @@
 import type { NewFireEvent } from '../model/FireEvent.js';
-import type { NewHotspot } from '../model/Hotspot.js';
+import type { HotspotDetection } from '../model/Hotspot.js';
 import type { WeatherSnapshot } from '../model/WeatherSnapshot.js';
 import type { Zone } from '../model/Zone.js';
 
@@ -11,8 +11,8 @@ export interface WeatherProvider {
 }
 
 export interface HotspotProvider {
-  /** Hotspots detected over Nariño in the last days. */
-  fetchRecent(): Promise<NewHotspot[]>;
+  /** Hotspots detected over Nariño in the last days, one row per satellite detection. */
+  fetchRecent(): Promise<HotspotDetection[]>;
 }
 
 /** What a fire source collected in one run. */
