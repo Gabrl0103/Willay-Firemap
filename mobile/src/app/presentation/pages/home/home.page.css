@@ -1,0 +1,67 @@
+:host { position: absolute; inset: 0; display: block; background: var(--bg); }
+.scroll {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  padding: calc(60px + env(safe-area-inset-top, 0px)) 24px var(--nav-clearance);
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+.brand { display: block; font-size: 15px; font-weight: 500; color: var(--text-2); }
+h1 { margin: 2px 0 0; font-size: 36px; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
+
+.summary { margin-top: 24px; padding: 23px; border-radius: 32px; }
+.label { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-2); }
+.average { margin-top: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.average strong { font-size: 48px; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
+.stats { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat { min-width: 0; padding: 16px 14px; border-radius: 22px; background: rgba(255, 255, 255, 0.07); }
+.stat b { display: block; font-size: 30px; font-weight: 700; line-height: 1.1; }
+.stat span { display: block; margin-top: 6px; font-size: 15px; line-height: 1.2; color: var(--text-2); }
+
+h2 { margin: 28px 0 12px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.carousel {
+  margin: 0 -24px;
+  padding: 0 24px 4px;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 24px;
+  scrollbar-width: none;
+}
+.carousel::-webkit-scrollbar { display: none; }
+.zone {
+  flex: 0 0 149px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 26px;
+  scroll-snap-align: start;
+  text-align: left;
+  transition: scale 0.2s var(--ease-out);
+}
+.zone:active { scale: 0.97; }
+.zone h3 {
+  margin: 12px 0 0;
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.zone p { margin: 8px 0 0; font-size: 14px; color: var(--text-2); }
+
+.note { margin: 36px 0 0; font-size: 13px; line-height: 1.35; color: rgba(255, 243, 234, 0.5); }
+
+.state { margin-top: 24px; padding: 20px; text-align: center; font-size: 15px; color: var(--text-2); }
+.state.error { display: grid; gap: 12px; justify-items: center; color: var(--text); }
+.state button {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-pill);
+  background: var(--text);
+  color: var(--ink);
+  font-weight: 700;
+}

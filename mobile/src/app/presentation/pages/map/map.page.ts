@@ -130,7 +130,10 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.zoneLayer.clearLayers();
     if (!this.fitted && zones.length > 0 && this.map) {
       this.fitted = true;
-      this.map.fitBounds(L.latLngBounds(zones.map((z) => [z.latitude, z.longitude] as L.LatLngTuple)), {
+      // Llegando con una zona ya elegida (p. ej. desde Inicio): enfocarla en vez de mostrar todo Nariño.
+      const selected = zones.find((zone) => zone.id === selectedId);
+      if (selected) this.focusOn(selected.latitude, selected.longitude, 10);
+      else this.map.fitBounds(L.latLngBounds(zones.map((z) => [z.latitude, z.longitude] as L.LatLngTuple)), {
         paddingTopLeft: [34, 190],
         paddingBottomRight: [34, 150],
         maxZoom: 9,

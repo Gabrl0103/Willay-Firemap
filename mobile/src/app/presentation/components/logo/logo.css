@@ -1,0 +1,33 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.33em;
+  color: var(--text);
+  line-height: 1;
+}
+:host([data-variant='dark']) { color: var(--ink); }
+.eye { display: block; flex: none; width: 1.42em; height: 1.42em; }
+:host([data-variant='eye']) .eye { width: 1em; height: 1em; }
+.word {
+  font-family: var(--font-display);
+  font-weight: 800;
+  /* -2.4px a 58px */
+  letter-spacing: -0.041em;
+  white-space: nowrap;
+}
+
+/* Splash: ojo con zoom (0.8 s) y texto de derecha a izquierda (1.1 s, desde 0.7 s). */
+:host(.intro) .eye { animation: logo-eye 0.8s var(--ease-out) both; }
+:host(.intro) .word { animation: logo-word 1.1s var(--ease-out) 0.7s both; }
+@keyframes logo-eye {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: none; }
+}
+/* Insets negativos arriba/abajo para no cortar la "y". */
+@keyframes logo-word {
+  from { clip-path: inset(-20% -10% -30% 100%); transform: translateX(26px); }
+  to { clip-path: inset(-20% -10% -30% 0); transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :host(.intro) .eye, :host(.intro) .word { animation: none; }
+}

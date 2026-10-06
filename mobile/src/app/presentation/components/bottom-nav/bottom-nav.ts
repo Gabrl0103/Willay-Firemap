@@ -10,12 +10,14 @@ import { AppIcon } from '../app-icon/app-icon';
   template: `
     <nav class="bottom-nav anim-sheet" aria-label="Navegación principal">
       <div class="pill">
-        <!-- Inicio se agrega en la Fase 2, cuando exista la ruta. -->
+        <a routerLink="/home" routerLinkActive="nav-active" class="nav-item" (click)="tap()">
+          <app-icon name="home" [size]="24" /><span>Inicio</span>
+        </a>
         <a routerLink="/map" routerLinkActive="nav-active" class="nav-item" (click)="tap()">
           <app-icon name="map" [size]="24" /><span>Mapa</span>
         </a>
         <a routerLink="/history" routerLinkActive="nav-active" class="nav-item" (click)="tap()">
-          <app-icon name="history" [size]="24" /><span>Historial</span>
+          <app-icon name="bars" [size]="24" /><span>Historial</span>
         </a>
       </div>
       <button type="button" class="search-btn" aria-label="Buscar municipio" (click)="openSearch()">

@@ -32,6 +32,14 @@ button { cursor: pointer; border: 0; background: none; color: inherit; padding: 
   .phone-shell { border-radius: 24px; outline: 8px solid #1a1210; }
 }
 
+/* Tarjeta de vidrio sobre el fondo de lava. */
+.glass-card {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  background: var(--glass-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), var(--shadow-soft);
+}
+
 /* Colores de riesgo reutilizables */
 .risk-low { --risk: var(--risk-low); }
 .risk-medium { --risk: var(--risk-medium); }

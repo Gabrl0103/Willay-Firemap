@@ -5,7 +5,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid rgba(var(--c), 0.55);
   background: linear-gradient(135deg, rgba(var(--c), 0.34), rgba(var(--c), 0.1));

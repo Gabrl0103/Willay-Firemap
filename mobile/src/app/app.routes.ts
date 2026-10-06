@@ -1,7 +1,11 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'map' },
+  { path: '', pathMatch: 'full', redirectTo: 'home' },
+  {
+    path: 'home',
+    loadComponent: () => import('./presentation/pages/home/home.page').then((m) => m.HomePage),
+  },
   {
     path: 'map',
     loadComponent: () => import('./presentation/pages/map/map.page').then((m) => m.MapPage),
@@ -10,5 +14,5 @@ export const routes: Routes = [
     path: 'history',
     loadComponent: () => import('./presentation/pages/history/history.page').then((m) => m.HistoryPage),
   },
-  { path: '**', redirectTo: 'map' },
+  { path: '**', redirectTo: 'home' },
 ];

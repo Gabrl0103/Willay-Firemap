@@ -1,0 +1,50 @@
+<app-lava-bg />
+
+<div class="scroll">
+  <header class="head anim-up">
+    <span class="brand">Atalaya</span>
+    <h1>Nariño hoy</h1>
+  </header>
+
+  @if (summary(); as s) {
+    <section class="glass-card summary anim-up" style="--i: 1" aria-label="Resumen del departamento">
+      <p class="label">Riesgo promedio del departamento</p>
+      <div class="average">
+        <strong>{{ riskLabels[s.level] }}</strong>
+        <app-risk-badge [level]="s.level" [label]="s.averageScore + ' / 100'" />
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <b class="mono">{{ s.hotspotCount }}</b>
+          <span>focos de calor, últimos 5 días</span>
+        </div>
+        <div class="stat">
+          <b class="mono">{{ s.zoneCount }}</b>
+          <span>municipios monitoreados</span>
+        </div>
+      </div>
+    </section>
+
+    <h2 class="anim-up" style="--i: 2">Zonas con mayor riesgo</h2>
+    <div class="carousel">
+      @for (zone of topZones(); track zone.id; let i = $index) {
+        <button type="button" class="glass-card zone anim-up" [style.--i]="3 + i" (click)="openZone(zone.id)">
+          <app-risk-badge [level]="zone.level" />
+          <h3>{{ zone.name }}</h3>
+          <p class="mono">{{ zone.score }} de 100</p>
+        </button>
+      }
+    </div>
+
+    <p class="note anim-up" style="--i: 5">
+      El puntaje es un indicador basado en clima, focos de calor e historial. No es una predicción exacta.
+    </p>
+  } @else if (store.error(); as message) {
+    <div class="glass-card state error anim-up" style="--i: 1">
+      <span>{{ message }}</span>
+      <button type="button" (click)="store.load()">Reintentar</button>
+    </div>
+  } @else {
+    <div class="glass-card state anim-up" style="--i: 1">Cargando datos…</div>
+  }
+</div>

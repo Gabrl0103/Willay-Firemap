@@ -8,6 +8,8 @@
   --bg: #0b0604;
   --text: #fff3ea;
   --text-2: rgba(255, 243, 234, 0.65);
+  /* Tinta oscura sobre fondos crema (botón principal, logo oscuro). */
+  --ink: #1a0a03;
 
   /* Acentos */
   --amber: #ffb347;
@@ -47,7 +49,7 @@
   --card: #1b100a;
   --card-foreground: var(--text);
   --primary: var(--orange);
-  --primary-foreground: #1a0a03;
+  --primary-foreground: var(--ink);
   --secondary: var(--glass-bg);
   --secondary-foreground: var(--text);
   --muted-foreground: var(--text-2);
