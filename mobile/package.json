@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "build:android": "ng build && cap sync android",
-    "open:android": "cap open android"
+    "open:android": "cap open android",
+    "assets": "node scripts/brand-assets.mjs"
   },
   "private": true,
   "packageManager": "npm@10.9.7",
@@ -36,10 +37,12 @@
     "@angular/cli": "^22.2.0",
     "@angular/compiler-cli": "^22.2.0",
     "@capacitor/android": "^8.5.2",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.2",
     "@types/leaflet": "^1.9.22",
     "jsdom": "^30.1.1",
     "prettier": "^3.8.1",
+    "sharp": "^0.32.6",
     "typescript": "~6.0.2",
     "vitest": "^4.1.11"
   }

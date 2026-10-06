@@ -9,6 +9,7 @@ import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
+import { Logo } from '../../components/logo/logo';
 import { RiskLegend } from '../../components/risk-legend/risk-legend';
 import { SearchBox } from '../../components/search-box/search-box';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
@@ -23,7 +24,7 @@ const TILES_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyrig
 
 @Component({
   selector: 'app-map-page',
-  imports: [AppIcon, SearchBox, RiskLegend, ZoneSheet],
+  imports: [AppIcon, Logo, SearchBox, RiskLegend, ZoneSheet],
   templateUrl: './map.page.html',
   styleUrl: './map.page.css',
   host: { class: 'ion-page' },
