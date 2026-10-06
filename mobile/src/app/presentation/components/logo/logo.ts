@@ -21,7 +21,7 @@ export type LogoVariant = 'eye' | 'light' | 'dark';
       </g>
     </svg>
     @if (variant() !== 'eye') {
-      <span class="word" aria-hidden="true">Atalaya</span>
+      <span class="word-wrap" aria-hidden="true"><span class="word">Atalaya</span></span>
     }
   `,
   styleUrl: './logo.css',
@@ -37,6 +37,6 @@ export class Logo {
   readonly variant = input<LogoVariant>('light');
   /** Horizontal: tamaño del texto "Atalaya" en px. Solo ojo: lado del ojo en px. */
   readonly size = input(32);
-  /** Animación de la splash: el ojo entra con zoom y el texto se despliega de derecha a izquierda. */
+  /** Animación de la splash: el ojo entra con zoom, centrado, y "Atalaya" se revela de izquierda a derecha. */
   readonly intro = input(false);
 }
