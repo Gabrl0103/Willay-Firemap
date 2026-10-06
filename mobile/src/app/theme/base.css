@@ -2,31 +2,34 @@
 html, body { min-height: 100%; }
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--font-sans);
   letter-spacing: 0;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 button, input { font: inherit; letter-spacing: 0; }
 button { cursor: pointer; border: 0; background: none; color: inherit; padding: 0; }
+/* Cifras, fechas, años, hectáreas y badges van en Roboto Mono. */
+.mono { font-family: var(--font-mono); }
 
 .app-stage {
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 50% 10%, #f4f8f6, var(--background) 55%);
+  background: radial-gradient(circle at 50% 10%, #2a120a, var(--bg) 60%);
 }
 .phone-shell {
   position: relative;
   width: min(100vw, 390px);
   height: min(100dvh, 844px);
   overflow: hidden;
-  background: var(--card);
-  box-shadow: 0 30px 80px rgba(20, 30, 34, 0.18);
+  background: var(--bg);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
 }
 @media (min-width: 600px) {
-  .phone-shell { border-radius: 24px; outline: 8px solid #12191c; }
+  .phone-shell { border-radius: 24px; outline: 8px solid #1a1210; }
 }
 
 /* Colores de riesgo reutilizables */

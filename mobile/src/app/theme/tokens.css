@@ -1,30 +1,62 @@
-/* Design tokens de Willay (tomados del prototipo de Lovable, convertidos a hex). */
+/* Tokens de diseño de Atalaya: tema oscuro estilo Apple, acentos de brasa. */
 :root {
-  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
-  --font-display: "Archivo", "Segoe UI", sans-serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
+  --font-display: "Manrope", system-ui, sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, monospace;
 
-  --background: #f5f3ef;
-  --foreground: #0e1518;
-  --card: #fefdfc;
-  --card-foreground: #0e1518;
-  --primary: #9c3f26;
-  --primary-foreground: #fdfcf9;
-  --secondary: #f2f0ec;
-  --secondary-foreground: #182a2f;
-  --muted-foreground: #536064;
-  --accent: #f1dec9;
-  --accent-foreground: #492517;
-  --border: #becfd1;
+  /* Base */
+  --bg: #0b0604;
+  --text: #fff3ea;
+  --text-2: rgba(255, 243, 234, 0.65);
+
+  /* Acentos */
+  --amber: #ffb347;
+  --orange: #ff8a2b;
+  --ember: #c8360f;
+  --gradient-primary: linear-gradient(90deg, #ffb347, #ff5a1f);
+
+  /* Vidrio */
+  --glass-bg: rgba(255, 255, 255, 0.09);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-strong: rgba(40, 24, 16, 0.6);
+  --glass-blur: blur(24px);
+
+  /* Radios */
+  --radius-card: 28px;
+  --radius-sheet: 36px;
+  --radius-pill: 999px;
+
+  /* Riesgo (semántica fija) */
+  --risk-low: #4ade80;
+  --risk-medium: #facc15;
+  --risk-high: #ff7a1a;
+  --risk-extreme: #ff3b3b;
+
+  /* Barra inferior flotante */
+  --nav-height: 72px;
+  --nav-bottom: 28px;
+  /* Padding inferior que debe dejar todo el contenido para no quedar bajo la barra. */
+  --nav-clearance: calc(var(--nav-height) + var(--nav-bottom) + 24px + env(safe-area-inset-bottom, 0px));
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.45);
+
+  /* Alias heredados: mantienen legibles las pantallas aún no rediseñadas. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: #1b100a;
+  --card-foreground: var(--text);
+  --primary: var(--orange);
+  --primary-foreground: #1a0a03;
+  --secondary: var(--glass-bg);
+  --secondary-foreground: var(--text);
+  --muted-foreground: var(--text-2);
+  --accent: rgba(255, 138, 43, 0.18);
+  --accent-foreground: var(--amber);
+  --border: var(--glass-border);
 
   --map: #2c474e;
   --map-deep: #09232a;
   --map-line: rgba(191, 213, 208, 0.28);
   --map-foreground: #f9f9f4;
-
-  --risk-low: #2e8f5b;
-  --risk-medium: #d59800;
-  --risk-high: #dd5400;
-  --risk-extreme: #c21725;
-
-  --shadow-soft: 0 10px 28px rgba(14, 21, 24, 0.18);
 }

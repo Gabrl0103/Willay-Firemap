@@ -3,8 +3,8 @@ import {
 } from '@angular/core';
 import type { ZoneDetail } from '../../../domain/model/risk';
 import { formatTimeAgo } from '../../../domain/util/format';
-import { RISK_LABELS } from '../../../domain/util/risk-labels';
 import { AppIcon, type IconName } from '../app-icon/app-icon';
+import { RiskBadge } from '../risk-badge/risk-badge';
 import { FULL_HEIGHT, clampOffset, resolveSnap, snapOffset, type SheetSnap } from './sheet-snap';
 
 /** Movement (px) below which a press on the handle is a tap, not a drag. */
@@ -27,7 +27,7 @@ interface DragState {
 
 @Component({
   selector: 'app-zone-sheet',
-  imports: [AppIcon],
+  imports: [AppIcon, RiskBadge],
   template: `
     <div class="sheet-layer" [class.is-closing]="snap() === 'closed'">
       <button type="button" class="sheet-backdrop" aria-label="Cerrar detalle" (click)="close()"></button>
@@ -68,9 +68,9 @@ interface DragState {
                 <h2>{{ detail().name }}</h2>
                 <p>Riesgo próximas 24–72 h</p>
               </div>
-              <div class="score-block" [class]="'risk-' + detail().level">
+              <div class="score-block">
                 <strong>{{ detail().score }}</strong><span>/100</span>
-                <b>{{ level() }}</b>
+                <app-risk-badge [level]="detail().level" />
               </div>
             </div>
           </header>
@@ -212,8 +212,6 @@ export class ZoneSheet implements OnDestroy {
     this.drag = undefined;
     this.dragOffset.set(null);
   }
-
-  protected readonly level = computed(() => RISK_LABELS[this.detail().level]);
 
   protected readonly weather = computed<{ icon: IconName; value: string; label: string }[]>(() => {
     const w = this.detail().weather;

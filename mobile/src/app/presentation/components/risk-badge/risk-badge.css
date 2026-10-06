@@ -1,0 +1,31 @@
+:host { display: inline-block; }
+.badge {
+  --c: 74, 222, 128;
+  --t: #c4f7d8;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--c), 0.55);
+  background: linear-gradient(135deg, rgba(var(--c), 0.34), rgba(var(--c), 0.1));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 0 18px rgba(var(--c), 0.28);
+  color: var(--t);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge[data-level='medium'] { --c: 250, 204, 21; --t: #fff0b0; }
+.badge[data-level='high'] { --c: 255, 122, 26; --t: #ffcfa6; }
+.badge[data-level='extreme'] { --c: 255, 59, 59; --t: #ffc0c0; }
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(var(--c));
+  box-shadow: 0 0 8px 1px rgba(var(--c), 0.9);
+}
