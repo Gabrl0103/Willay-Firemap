@@ -40,6 +40,36 @@ button { cursor: pointer; border: 0; background: none; color: inherit; padding: 
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), var(--shadow-soft);
 }
 
+/* Contenido desplazable de una pantalla: termina por encima de la barra flotante. */
+.page-scroll {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  padding: calc(60px + env(safe-area-inset-top, 0px)) 24px var(--nav-clearance);
+  scrollbar-width: none;
+}
+.page-scroll::-webkit-scrollbar { display: none; }
+.page-title { margin: 0; font-size: 36px; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
+.section-title { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+
+/* Cifra grande con su explicación (Inicio, hoja de zona). */
+.stat-tile { min-width: 0; padding: 16px 14px; border-radius: 22px; background: rgba(255, 255, 255, 0.07); }
+.stat-tile b { display: block; font-size: 30px; font-weight: 700; line-height: 1.1; }
+.stat-tile span { display: block; margin-top: 6px; font-size: 15px; line-height: 1.2; color: var(--text-2); }
+
+/* Mensaje de carga o error dentro de una tarjeta de vidrio. */
+.state-card { padding: 20px; text-align: center; font-size: 15px; color: var(--text-2); }
+.state-card.error { display: grid; gap: 12px; justify-items: center; color: var(--text); }
+.state-card button {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-pill);
+  background: var(--text);
+  color: var(--ink);
+  font-weight: 700;
+}
+
 /* Colores de riesgo reutilizables */
 .risk-low { --risk: var(--risk-low); }
 .risk-medium { --risk: var(--risk-medium); }

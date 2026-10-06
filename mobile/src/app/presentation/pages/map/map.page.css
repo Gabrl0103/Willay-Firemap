@@ -10,6 +10,10 @@
 
 .map-header { position: absolute; z-index: 50; inset: 0 0 auto; padding: calc(14px + env(safe-area-inset-top)) 14px 0; pointer-events: none; }
 .map-header > * { pointer-events: auto; }
+/* Con la hoja de zona abierta, su botón "Nariño" ocupa este lugar. */
+.map-header { transition: opacity 0.32s; }
+.map-header.is-covered { opacity: 0; }
+.map-header.is-covered > * { pointer-events: none; }
 .brand-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; color: var(--map-foreground); }
 .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); box-shadow: 0 5px 14px rgba(120, 40, 20, 0.28); }
 h1 { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 800; line-height: 1; }

@@ -16,6 +16,8 @@
   --orange: #ff8a2b;
   --ember: #c8360f;
   --gradient-primary: linear-gradient(90deg, #ffb347, #ff5a1f);
+  /* El mismo gradiente de arriba abajo (barras verticales). */
+  --gradient-primary-v: linear-gradient(180deg, #ffb347, #ff5a1f);
 
   /* Vidrio */
   --glass-bg: rgba(255, 255, 255, 0.09);

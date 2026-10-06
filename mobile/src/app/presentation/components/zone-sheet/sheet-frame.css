@@ -20,10 +20,11 @@
 .zone-sheet.is-dragging { transition: none; }
 .sheet-drag-area { position: relative; flex: none; touch-action: none; user-select: none; }
 .sheet-handle { position: absolute; z-index: 3; top: 0; left: 50%; width: 72px; height: 26px; display: grid; place-items: center; transform: translateX(-50%); }
-.sheet-handle span { width: 36px; height: 4px; border-radius: 2px; background: rgba(249, 249, 244, 0.65); }
+.sheet-handle span { width: 40px; height: 4px; border-radius: 2px; background: rgba(255, 243, 234, 0.3); }
 /* El padding inferior deja el último elemento por encima de la barra flotante. */
 .zone-content {
   flex: 1; min-height: 0; overflow: hidden; overscroll-behavior: contain;
-  padding: 15px 16px var(--nav-clearance);
+  padding: 28px 24px var(--nav-clearance);
 }
-.is-expanded .zone-content { overflow-y: auto; }
+.is-expanded .zone-content { overflow-y: auto; scrollbar-width: none; }
+.zone-content::-webkit-scrollbar { display: none; }

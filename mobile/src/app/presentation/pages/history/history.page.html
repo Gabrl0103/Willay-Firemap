@@ -1,48 +1,72 @@
-<header class="history-header">
-  <span class="brand-mark"><app-icon name="flame" [size]="20" /></span>
-  <div>
-    <span class="eyebrow">{{ recordsRange() }}</span>
-    <h1>Historial</h1>
-    <p>Incendios reportados en Nariño</p>
-    @if (coverage(); as note) {
-      <p class="coverage-note">{{ note }}</p>
+<app-lava-bg />
+
+<div class="page-scroll">
+  <header class="head anim-up">
+    <h1 class="page-title">Historial</h1>
+    <p class="period">{{ placePrefix() }}del <span class="mono">{{ period.from }}</span> al <span class="mono">{{ period.to }}</span></p>
+  </header>
+
+  <div class="filter-row anim-up" style="--i: 1" role="group" aria-label="Municipio">
+    <button type="button" [class.is-active]="!zoneId()" (click)="filterBy()">Todos</button>
+    @for (zone of zones(); track zone.id) {
+      <button type="button" [class.is-active]="zoneId() === zone.id" (click)="filterBy(zone.id)">{{ zone.name }}</button>
     }
   </div>
-</header>
 
-<div class="filter-row">
-  <button type="button" [class]="!zoneId() ? 'filter-active' : 'filter-idle'" (click)="filterBy()">Todos</button>
-  @for (zone of zones(); track zone.id) {
-    <button type="button" [class]="zoneId() === zone.id ? 'filter-active' : 'filter-idle'" (click)="filterBy(zone.id)">
-      {{ zone.name }}
-    </button>
-  }
-</div>
-
-<section class="summary-grid" aria-label="Resumen">
-  <div><app-icon name="flame" [size]="15" /><strong>{{ summary().count }}</strong><span>Incendios</span></div>
-  <div><app-icon name="map" [size]="15" /><strong>{{ summary().hectares }}</strong><span>Hectáreas</span></div>
-  <div><app-icon name="calendar" [size]="15" /><strong>{{ summary().last }}</strong><span>Último registro</span></div>
-</section>
-
-@if (store.error(); as message) {
-  <div class="state error">
-    <span>{{ message }}</span>
-    <button type="button" (click)="store.load(zoneId())">Reintentar</button>
-  </div>
-} @else if (store.loading() && !store.history()) {
-  <div class="state">Cargando registros…</div>
-} @else {
-  <div class="list-heading"><span>Registros</span><b>{{ summary().count }}</b></div>
-  @if (events().length) {
-    <div class="event-list">
-      @for (event of events(); track event.id) {
-        <app-fire-event-tile [event]="event" />
-      }
+  @if (store.error(); as message) {
+    <div class="glass-card state-card error anim-up" style="--i: 2">
+      <span>{{ message }}</span>
+      <button type="button" (click)="store.load(zoneId())">Reintentar</button>
     </div>
+  } @else if (store.loading() && !store.history()) {
+    <div class="glass-card state-card anim-up" style="--i: 2">Cargando registros…</div>
   } @else {
-    <div class="state">No hay incendios registrados para este municipio.</div>
-  }
-}
+    <section class="glass-card overview anim-up" style="--i: 2" aria-label="Reportes por año">
+      <div class="totals">
+        <div class="count">
+          <strong class="mono">{{ events().length }}</strong>
+          <span>{{ events().length === 1 ? 'reporte' : 'reportes' }} en {{ years().length }} años</span>
+        </div>
+        <div class="rates">
+          <b class="mono">{{ perYear() }} por año</b>
+          @if (peak(); as p) {
+            <span>Máximo: <span class="mono">{{ p.year }} ({{ p.count }})</span></span>
+          }
+        </div>
+      </div>
+      <div class="chart" role="img" [attr.aria-label]="chartLabel()">
+        @for (bar of bars(); track bar.year; let i = $index) {
+          <div class="bar-col" [class.is-peak]="bar.year === peak()?.year" [class.is-empty]="!bar.count">
+            <span class="bar-value mono">{{ bar.count }}</span>
+            <span class="bar anim-growy" [style.height.px]="bar.height" [style.--i]="i"></span>
+            <span class="bar-year mono">{{ bar.year }}</span>
+          </div>
+        }
+      </div>
+    </section>
 
-<app-data-attribution />
+    <div class="list-heading anim-up" style="--i: 3">
+      <h2 class="section-title">Reportes recientes</h2>
+      <span class="mono">{{ shownEvents().length }} de {{ events().length }}</span>
+    </div>
+    @if (events().length) {
+      <div class="event-list">
+        @for (event of shownEvents(); track event.id; let i = $index) {
+          <app-fire-event-tile class="anim-up" [style.--i]="4 + i" [event]="event" />
+        }
+      </div>
+      @if (events().length > shownEvents().length) {
+        <button type="button" class="show-all" (click)="showAll.set(true)">
+          Ver los <span class="mono">{{ events().length }}</span> reportes
+        </button>
+      }
+    } @else {
+      <div class="glass-card state-card">No hay incendios registrados para este municipio.</div>
+    }
+  }
+
+  @if (coverage(); as note) {
+    <p class="sources">{{ note }}</p>
+  }
+  <app-data-attribution />
+</div>

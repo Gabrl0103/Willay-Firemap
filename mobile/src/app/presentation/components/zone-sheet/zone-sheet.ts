@@ -2,8 +2,9 @@ import {
   Component, ElementRef, OnDestroy, afterNextRender, computed, input, output, signal, viewChild,
 } from '@angular/core';
 import type { ZoneDetail } from '../../../domain/model/risk';
-import { formatTimeAgo } from '../../../domain/util/format';
-import { AppIcon, type IconName } from '../app-icon/app-icon';
+import { formatDecimal, formatTimeAgo, formatUpdatedDay } from '../../../domain/util/format';
+import { RISK_LABELS } from '../../../domain/util/risk-labels';
+import { AppIcon } from '../app-icon/app-icon';
 import { RiskBadge } from '../risk-badge/risk-badge';
 import { FULL_HEIGHT, clampOffset, resolveSnap, snapOffset, type SheetSnap } from './sheet-snap';
 
@@ -11,8 +12,11 @@ import { FULL_HEIGHT, clampOffset, resolveSnap, snapOffset, type SheetSnap } fro
 const TAP_SLOP = 6;
 /** A finger that stops this long (ms) before lifting releases with no speed. */
 const STILL_MS = 100;
-/** Same as the transform transition in zone-sheet.css. */
+/** Same as the transform transition in sheet-frame.css. */
 const SLIDE_MS = 320;
+/** Score ring: 92 px wide with a 9 px stroke (zone-sheet.css). */
+const RING_RADIUS = 41.5;
+const RING_TOTAL = 2 * Math.PI * RING_RADIUS;
 
 interface DragState {
   readonly pointerId: number;
@@ -31,6 +35,9 @@ interface DragState {
   template: `
     <div class="sheet-layer" [class.is-closing]="snap() === 'closed'">
       <button type="button" class="sheet-backdrop" aria-label="Cerrar detalle" (click)="close()"></button>
+      <button type="button" class="sheet-back" aria-label="Volver a Nariño" (click)="close()">
+        <app-icon name="chevron-left" [size]="22" /><span>Nariño</span>
+      </button>
       <section
         #sheet
         class="zone-sheet"
@@ -56,55 +63,73 @@ interface DragState {
           >
             <span></span>
           </button>
-          <button type="button" class="sheet-close" aria-label="Cerrar" (click)="close()">
-            <app-icon name="x" [size]="16" />
-          </button>
 
-          <header class="zone-cover">
-            <div class="zone-cover-lines"></div>
-            <div class="zone-heading">
-              <div>
-                <span class="eyebrow">Zona seleccionada</span>
-                <h2>{{ detail().name }}</h2>
-                <p>Riesgo próximas 24–72 h</p>
-              </div>
-              <div class="score-block">
-                <strong>{{ detail().score }}</strong><span>/100</span>
-                <app-risk-badge [level]="detail().level" />
-              </div>
+          <header class="zone-heading">
+            <div class="zone-title">
+              <h2>{{ detail().name }}</h2>
+              <p>Nariño{{ updated() }}</p>
+              <app-risk-badge [level]="detail().level" />
+            </div>
+            <div
+              class="score-ring"
+              [class]="'risk-' + detail().level"
+              role="img"
+              [attr.aria-label]="'Puntaje ' + detail().score + ' de 100, ' + riskLabel()"
+            >
+              <svg viewBox="0 0 92 92" aria-hidden="true">
+                <circle class="ring-track" cx="46" cy="46" [attr.r]="ringRadius" />
+                <circle
+                  class="ring-value anim-ring"
+                  cx="46"
+                  cy="46"
+                  [attr.r]="ringRadius"
+                  [attr.stroke-dasharray]="ringValue() + ' ' + ringTotal"
+                  [style.--ring-value]="ringValue()"
+                  [style.--ring-total]="ringTotal"
+                />
+              </svg>
+              <strong class="mono">{{ detail().score }}</strong>
+              <span>{{ riskLabel() }}</span>
             </div>
           </header>
         </div>
 
         <div class="zone-content">
-          <div class="section-heading"><span>Condiciones actuales</span><small>Ahora</small></div>
-          <div class="weather-grid">
-            @for (item of weather(); track item.label) {
-              <div class="weather-item">
-                <app-icon [name]="item.icon" [size]="17" />
-                <strong>{{ item.value }}</strong>
-                <small>{{ item.label }}</small>
+          <h3 class="factors-title">De qué depende el puntaje</h3>
+          @for (factor of factors(); track factor.label; let i = $index) {
+            <div class="factor">
+              <div class="factor-head">
+                <span>{{ factor.label }} <small>· <span class="mono">{{ factor.weight }} %</span></small></span>
+                <b class="mono">{{ factor.value }}</b>
               </div>
-            }
-          </div>
+              <div class="factor-track">
+                <span class="anim-growx" [style.--i]="i + 1" [style.width.%]="factor.value"></span>
+              </div>
+            </div>
+          }
 
-          <div class="factors">
-            <div class="section-heading"><span>Factores de riesgo</span><small>Contribución</small></div>
-            @for (factor of factors(); track factor.label) {
-              <div class="factor">
-                <div><span>{{ factor.label }}</span><b>{{ factor.value }}%</b></div>
-                <div class="factor-track"><span [style.width.%]="factor.value"></span></div>
-                @if (factor.note) {
-                  <small class="factor-note">{{ factor.note }}</small>
-                }
-              </div>
-            }
-          </div>
+          @if (detail().hotspots || firesPerYear() !== null) {
+            <div class="stats">
+              @if (detail().hotspots; as hotspots) {
+                <div class="stat-tile hotspots-stat">
+                  <b class="mono">{{ hotspots.count }}</b>
+                  <span>{{ hotspots.count === 1 ? 'foco' : 'focos' }} a menos de 25 km</span>
+                  @if (latestHotspot(); as latest) {
+                    <small>el último, {{ latest }}</small>
+                  }
+                </div>
+              }
+              @if (firesPerYear(); as perYear) {
+                <div class="stat-tile fires-stat">
+                  <b class="mono">{{ perYear }}</b>
+                  <span>incendios por año</span>
+                </div>
+              }
+            </div>
+          }
 
           <button type="button" class="history-cta" (click)="historyRequested.emit()">
-            <app-icon name="history" [size]="16" />
-            <span>Ver historial de {{ detail().name }}</span>
-            <app-icon name="chevron-right" [size]="16" />
+            Ver historial de {{ detail().name }}
           </button>
           <p class="disclaimer">
             Datos simulados para fines académicos. El riesgo no confirma la ocurrencia de un incendio.
@@ -117,6 +142,10 @@ interface DragState {
 })
 export class ZoneSheet implements OnDestroy {
   readonly detail = input.required<ZoneDetail>();
+  /** When the zones were loaded; null leaves the "actualizado" text out. */
+  readonly updatedAt = input<Date | null>(null);
+  /** Average fires per year of the zone (from its records); null leaves the card out. */
+  readonly firesPerYear = input<string | null, number | null>(null, { transform: perYearLabel });
   readonly closed = output<void>();
   readonly historyRequested = output<void>();
 
@@ -163,7 +192,7 @@ export class ZoneSheet implements OnDestroy {
 
   protected onPointerDown(event: PointerEvent): void {
     this.suppressClick = false;
-    if (event.button !== 0 || (event.target as Element).closest('.sheet-close')) return;
+    if (event.button !== 0) return;
     const sheetHeight = this.sheet().nativeElement.offsetHeight;
     this.drag = {
       pointerId: event.pointerId,
@@ -213,30 +242,31 @@ export class ZoneSheet implements OnDestroy {
     this.dragOffset.set(null);
   }
 
-  protected readonly weather = computed<{ icon: IconName; value: string; label: string }[]>(() => {
-    const w = this.detail().weather;
-    return [
-      { icon: 'thermometer', value: `${w.temperatureC}°`, label: 'Temperatura' },
-      { icon: 'droplet', value: `${w.humidityPct}%`, label: 'Humedad' },
-      { icon: 'wind', value: `${w.windKmh}`, label: 'Viento km/h' },
-      { icon: 'calendar', value: `${w.daysWithoutRain}`, label: 'Días sin lluvia' },
-    ];
+  protected readonly ringRadius = RING_RADIUS;
+  protected readonly ringTotal = RING_TOTAL;
+  protected readonly ringValue = computed(() => (Math.min(Math.max(this.detail().score, 0), 100) / 100) * RING_TOTAL);
+  protected readonly riskLabel = computed(() => RISK_LABELS[this.detail().level]);
+  protected readonly updated = computed(() => {
+    const date = this.updatedAt();
+    return date ? ` · actualizado ${formatUpdatedDay(date)}` : '';
+  });
+  protected readonly latestHotspot = computed(() => {
+    const hotspots = this.detail().hotspots;
+    return hotspots?.count && hotspots.latestDetectedAt ? formatTimeAgo(hotspots.latestDetectedAt) : '';
   });
 
+  /** Weights from backend/src/domain/service/RiskScoringService.ts (SCORE_WEIGHTS). */
   protected readonly factors = computed(() => {
-    const { factors: f, hotspots } = this.detail();
+    const f = this.detail().factors;
     return [
-      { label: 'Clima seco', value: f.dryWeather, note: '' },
-      { label: 'Focos de calor cercanos', value: f.nearbyHotspots, note: hotspotNote(hotspots) },
-      { label: 'Historial de incendios', value: f.fireHistory, note: '' },
+      { label: 'Clima seco', weight: 50, value: f.dryWeather },
+      { label: 'Focos cercanos', weight: 30, value: f.nearbyHotspots },
+      { label: 'Historial', weight: 20, value: f.fireHistory },
     ];
   });
 }
 
-/** "2 focos a 25 km o menos · el último, hace 3 días" (empty when the backend does not send it). */
-export function hotspotNote(hotspots: ZoneDetail['hotspots']): string {
-  if (!hotspots) return '';
-  if (hotspots.count === 0 || !hotspots.latestDetectedAt) return 'Sin focos a 25 km o menos en los últimos 5 días';
-  const count = hotspots.count === 1 ? '1 foco' : `${hotspots.count} focos`;
-  return `${count} a 25 km o menos · el último, ${formatTimeAgo(hotspots.latestDetectedAt)}`;
+/** 2.08 -> "2,1"; null stays null. */
+function perYearLabel(value: number | null): string | null {
+  return value === null ? null : formatDecimal(value);
 }

@@ -3,7 +3,7 @@
   <div #mapElement class="map-element"></div>
 </div>
 
-<header class="map-header">
+<header class="map-header" [class.is-covered]="store.detail()">
   <div class="brand-row">
     <span class="brand-mark"><app-icon name="flame" [size]="20" /></span>
     <div>
@@ -33,5 +33,11 @@
 }
 
 @if (store.detail(); as detail) {
-  <app-zone-sheet [detail]="detail" (closed)="closeSheet()" (historyRequested)="openHistory(detail.id)" />
+  <app-zone-sheet
+    [detail]="detail"
+    [updatedAt]="store.updatedAt()"
+    [firesPerYear]="firesPerYear()"
+    (closed)="closeSheet()"
+    (historyRequested)="openHistory(detail.id)"
+  />
 }

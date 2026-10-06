@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 
 export type IconName =
-  | 'search' | 'crosshair' | 'map' | 'history' | 'flame' | 'x' | 'chevron-right'
+  | 'search' | 'crosshair' | 'map' | 'history' | 'flame' | 'x' | 'chevron-right' | 'chevron-left'
   | 'map-pin' | 'calendar' | 'alert' | 'wind' | 'thermometer' | 'droplet' | 'home' | 'bars' | 'wifi';
 
 /** Small inline SVG icon set (24x24, stroke). Keeps the APK free of icon fonts. */
@@ -38,6 +38,7 @@ export type IconName =
         }
         @case ('x') { <path d="M18 6 6 18M6 6l12 12" /> }
         @case ('chevron-right') { <path d="m9 18 6-6-6-6" /> }
+        @case ('chevron-left') { <path d="m15 18-6-6 6-6" /> }
         @case ('map-pin') {
           <path d="M20 10c0 5-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 15 4 10a8 8 0 0 1 16 0" /><circle cx="12" cy="10" r="3" />
         }

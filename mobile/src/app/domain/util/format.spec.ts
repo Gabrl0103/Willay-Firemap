@@ -1,13 +1,25 @@
-import { formatDateLong, formatDateShort, formatHectares, formatTimeAgo } from './format';
+import {
+  dateParts, formatDateLong, formatDateMedium, formatDecimal, formatTimeAgo, formatUpdatedDay,
+} from './format';
 
 describe('format', () => {
   it('formats ISO dates in Spanish', () => {
     expect(formatDateLong('2026-09-18')).toBe('18 de sept de 2026');
-    expect(formatDateShort('2026-01-05')).toBe('5 ene');
+    expect(formatDateMedium('2019-01-01')).toBe('1 ene 2019');
+    expect(dateParts('2024-09-09')).toEqual({ day: '09', month: 'sept', year: '2024' });
   });
 
-  it('formats hectares with one decimal and a comma', () => {
-    expect(formatHectares(2.5)).toBe('2,5');
+  it('writes at most one decimal, none for whole numbers', () => {
+    expect(formatDecimal(3)).toBe('3');
+    expect(formatDecimal(1.5)).toBe('1,5');
+    expect(formatDecimal(3.5714)).toBe('3,6');
+  });
+
+  it('names the day of an update', () => {
+    const now = new Date(2026, 9, 6, 9, 0);
+    expect(formatUpdatedDay(new Date(2026, 9, 6, 0, 5), now)).toBe('hoy');
+    expect(formatUpdatedDay(new Date(2026, 9, 5, 23, 59), now)).toBe('ayer');
+    expect(formatUpdatedDay(new Date(2026, 9, 3, 12, 0), now)).toBe('3 oct');
   });
 
   it('says how long ago something was detected', () => {

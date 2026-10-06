@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { Geolocation } from '@capacitor/geolocation';
 import * as L from 'leaflet';
 import type { Hotspot, ZoneRiskSummary } from '../../../domain/model/risk';
+import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
@@ -44,6 +45,12 @@ export class MapPage implements AfterViewInit, OnDestroy {
     return date
       ? `Actualizado ${date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`
       : 'Cargando…';
+  });
+
+  /** Fires per year of the selected zone, from its records (null until they arrive). */
+  protected readonly firesPerYear = computed(() => {
+    const history = this.store.detailFires();
+    return history ? averagePerYear(history.events, new Date()) : null;
   });
 
   constructor() {
