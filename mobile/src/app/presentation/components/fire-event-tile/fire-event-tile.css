@@ -1,19 +1,37 @@
 :host { display: block; }
 .event-item {
-  position: relative;
-  min-height: 76px;
+  min-height: 84px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 11px;
-  padding: 12px 10px;
-  background: var(--card);
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 10px 16px 10px 11px;
+  border-radius: 26px;
 }
-.event-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 7px; background: var(--accent); color: var(--primary); }
-.event-copy { min-width: 0; padding-right: 58px; }
-h2 { margin: 0; font-size: 12px; font-weight: 500; line-height: 1.25; }
-p { margin: 4px 0 0; font-size: 9px; color: var(--muted-foreground); }
-.event-copy span { display: block; margin-top: 2px; font-size: 9px; font-weight: 600; }
-.source-tag { position: absolute; right: 10px; top: 12px; padding: 3px 5px; border-radius: 4px; font-size: 8px; font-weight: 700; }
-.source-news { background: var(--accent); color: var(--accent-foreground); }
-.source-official { background: var(--secondary); color: var(--secondary-foreground); }
+/* Bloque de 58×62 px: día, mes y año apilados. Naranja para la UNGRD, ámbar para noticias. */
+.date-block {
+  --c: 255, 122, 26;
+  --t: #ffcfa6;
+  width: 58px;
+  height: 62px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  border: 1px solid rgba(var(--c), 0.5);
+  border-radius: 16px;
+  background: rgba(var(--c), 0.16);
+  line-height: 1;
+}
+.is-news .date-block { --c: 250, 204, 21; --t: #fff0b0; }
+.date-block b { font-size: 21px; font-weight: 700; }
+.date-block span { margin-top: 4px; font-size: 10px; font-weight: 500; color: var(--text-2); }
+.date-block .month { margin-top: 3px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--t); }
+
+.event-copy { min-width: 0; }
+h3, .event-copy p { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.event-copy p { margin: 5px 0 0; font-size: 14px; color: var(--text-2); }
+
+.event-area { text-align: right; }
+.event-area b { display: block; font-size: 15px; font-weight: 700; white-space: nowrap; }
+.event-area span { display: block; margin-top: 4px; font-size: 12px; color: var(--text-2); }

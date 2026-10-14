@@ -1,0 +1,33 @@
+:host {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg);
+}
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(22px);
+  background: radial-gradient(circle, #ff6a2b 0%, rgba(200, 54, 15, 0.5) 55%, transparent 72%);
+}
+.glow-a { width: 300px; height: 300px; left: -90px; bottom: -70px; opacity: 0.5; }
+.glow-b { width: 240px; height: 240px; right: -80px; top: 12%; opacity: 0.35; }
+.blob {
+  position: absolute;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: radial-gradient(circle at 35% 30%, #ffe2b0 0%, #ff9a3d 35%, #e8431a 75%, #9a2208 100%);
+  box-shadow: 0 0 24px rgba(255, 106, 43, 0.55);
+  animation-name: rise;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: translate;
+}
+@keyframes rise {
+  from { translate: 0 10px; }
+  to { translate: 0 -34px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blob { animation: none; }
+}

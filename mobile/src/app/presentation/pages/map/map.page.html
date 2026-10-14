@@ -3,11 +3,10 @@
   <div #mapElement class="map-element"></div>
 </div>
 
-<header class="map-header">
+<header class="map-header" [class.is-covered]="store.detail()">
   <div class="brand-row">
-    <span class="brand-mark"><app-icon name="flame" [size]="20" /></span>
     <div>
-      <h1>WILLAY</h1>
+      <h1><app-logo variant="light" [size]="20" /></h1>
       <p>Nariño, Colombia</p>
     </div>
     <span class="update-status"><span class="status-dot"></span>{{ updatedLabel() }}</span>
@@ -33,5 +32,11 @@
 }
 
 @if (store.detail(); as detail) {
-  <app-zone-sheet [detail]="detail" (closed)="closeSheet()" (historyRequested)="openHistory(detail.id)" />
+  <app-zone-sheet
+    [detail]="detail"
+    [updatedAt]="store.updatedAt()"
+    [firesPerYear]="firesPerYear()"
+    (closed)="closeSheet()"
+    (historyRequested)="openHistory(detail.id)"
+  />
 }

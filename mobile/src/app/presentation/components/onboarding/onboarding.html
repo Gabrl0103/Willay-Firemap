@@ -1,0 +1,85 @@
+<app-lava-bg />
+
+<header class="top">
+  @if (!isLast()) {
+    <button type="button" class="skip" (click)="finish()">Omitir</button>
+  }
+</header>
+
+<div class="track" #track (scroll)="onScroll()">
+  <section class="page" aria-roledescription="diapositiva" aria-label="1 de 3" [attr.aria-hidden]="index() !== 0">
+    <div class="visual">
+      <div class="glass-card example anim-up">
+        <div class="card-head">
+          <span>Ejemplo de municipio</span>
+          <app-risk-badge level="high" />
+        </div>
+        <p class="score"><b class="mono">62</b><span class="mono">de 100</span></p>
+        <div class="bar"><span class="anim-growx" style="--i: 4; width: 62%"></span></div>
+      </div>
+    </div>
+    <div class="copy">
+      <h1 class="anim-up" style="--i: 1">Mira dónde hay riesgo antes de que haya fuego</h1>
+      <p class="anim-up" style="--i: 2">
+        Atalaya mezcla clima, focos de calor y el historial de incendios para dar un indicador por municipio de
+        Nariño. Es una guía, no una predicción exacta.
+      </p>
+    </div>
+  </section>
+
+  <section class="page" aria-roledescription="diapositiva" aria-label="2 de 3" [attr.aria-hidden]="index() !== 1">
+    <div class="visual">
+      <div class="glass-card factors">
+        <span class="card-label">Cómo se calcula el puntaje</span>
+        @for (factor of factors; track factor.label) {
+          <div class="factor">
+            <div class="factor-row"><span>{{ factor.label }}</span><b class="mono">{{ factor.weight }}&nbsp;%</b></div>
+            <div class="bar"><span [style.width.%]="factor.weight"></span></div>
+          </div>
+        }
+      </div>
+    </div>
+    <div class="copy">
+      <h1>Tres señales, un solo puntaje</h1>
+      <p>
+        Cada municipio recibe un puntaje de 0&nbsp;a&nbsp;100: clima seco (50&nbsp;%), focos de calor vistos por satélite en los
+        últimos 5&nbsp;días (30&nbsp;%) e incendios reportados antes (20&nbsp;%).
+      </p>
+    </div>
+  </section>
+
+  <section class="page" aria-roledescription="diapositiva" aria-label="3 de 3" [attr.aria-hidden]="index() !== 2">
+    <div class="visual">
+      <div class="glass-card permissions">
+        <app-logo class="permissions-logo" variant="eye" [size]="56" />
+        <div class="permission">
+          <span class="permission-icon"><app-icon name="map-pin" [size]="20" /></span>
+          <div>
+            <b>Ubicación (opcional)</b>
+            <span>Solo cuando tocas «Mi ubicación» en el mapa, para mostrarte tu municipio.</span>
+          </div>
+        </div>
+        <div class="permission">
+          <span class="permission-icon"><app-icon name="wifi" [size]="20" /></span>
+          <div>
+            <b>Internet</b>
+            <span>Para traer el clima, los focos de calor y el historial actualizados.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="copy">
+      <h1>Tú decides qué compartir</h1>
+      <p>Atalaya no pide cuenta. Si no das permiso de ubicación, puedes buscar tu municipio en el mapa.</p>
+    </div>
+  </section>
+</div>
+
+<footer class="bottom">
+  <div class="dots" aria-hidden="true">
+    @for (page of pages; track page) {
+      <i [class.active]="page === index()"></i>
+    }
+  </div>
+  <button type="button" class="cta" (click)="next()">Continuar</button>
+</footer>

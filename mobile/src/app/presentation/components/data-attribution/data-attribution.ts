@@ -34,14 +34,23 @@ export const UNGRD_DATASETS: readonly Dataset[] = [
           </li>
         }
       </ul>
-      <p>Willay solo toma los incendios forestales de Nariño y une los reportes del mismo día y municipio.</p>
+      <p>Atalaya solo toma los incendios forestales de Nariño y une los reportes del mismo día y municipio.</p>
     </footer>
   `,
   styles: `
-    .attribution { margin: 4px 16px 0; padding: 12px; border-radius: 9px; background: var(--card); font-size: 9px; line-height: 1.4; color: var(--muted-foreground); }
+    .attribution {
+      padding: 16px 18px;
+      border: 1px solid var(--glass-border);
+      border-radius: 22px;
+      background: var(--glass-bg);
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--text-2);
+    }
     p { margin: 0; }
-    ul { margin: 6px 0; padding-left: 14px; }
-    a { color: var(--foreground); }
+    ul { margin: 8px 0; padding-left: 16px; }
+    li { font-family: var(--font-mono); font-size: 11px; line-height: 1.8; }
+    a { color: var(--amber); text-underline-offset: 2px; }
   `,
 })
 export class DataAttribution {

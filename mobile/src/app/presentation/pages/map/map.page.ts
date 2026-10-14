@@ -5,9 +5,11 @@ import { Router } from '@angular/router';
 import { Geolocation } from '@capacitor/geolocation';
 import * as L from 'leaflet';
 import type { Hotspot, ZoneRiskSummary } from '../../../domain/model/risk';
+import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
+import { Logo } from '../../components/logo/logo';
 import { RiskLegend } from '../../components/risk-legend/risk-legend';
 import { SearchBox } from '../../components/search-box/search-box';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
@@ -22,7 +24,7 @@ const TILES_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyrig
 
 @Component({
   selector: 'app-map-page',
-  imports: [AppIcon, SearchBox, RiskLegend, ZoneSheet],
+  imports: [AppIcon, Logo, SearchBox, RiskLegend, ZoneSheet],
   templateUrl: './map.page.html',
   styleUrl: './map.page.css',
   host: { class: 'ion-page' },
@@ -44,6 +46,12 @@ export class MapPage implements AfterViewInit, OnDestroy {
     return date
       ? `Actualizado ${date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`
       : 'Cargando…';
+  });
+
+  /** Fires per year of the selected zone, from its records (null until they arrive). */
+  protected readonly firesPerYear = computed(() => {
+    const history = this.store.detailFires();
+    return history ? averagePerYear(history.events, new Date()) : null;
   });
 
   constructor() {
@@ -130,7 +138,10 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.zoneLayer.clearLayers();
     if (!this.fitted && zones.length > 0 && this.map) {
       this.fitted = true;
-      this.map.fitBounds(L.latLngBounds(zones.map((z) => [z.latitude, z.longitude] as L.LatLngTuple)), {
+      // Llegando con una zona ya elegida (p. ej. desde Inicio): enfocarla en vez de mostrar todo Nariño.
+      const selected = zones.find((zone) => zone.id === selectedId);
+      if (selected) this.focusOn(selected.latitude, selected.longitude, 10);
+      else this.map.fitBounds(L.latLngBounds(zones.map((z) => [z.latitude, z.longitude] as L.LatLngTuple)), {
         paddingTopLeft: [34, 190],
         paddingBottomRight: [34, 150],
         maxZoom: 9,

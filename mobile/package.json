@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "build:android": "ng build && cap sync android",
-    "open:android": "cap open android"
+    "open:android": "cap open android",
+    "assets": "node scripts/brand-assets.mjs"
   },
   "private": true,
   "packageManager": "npm@10.9.7",
@@ -21,8 +22,10 @@
     "@angular/router": "^22.2.0",
     "@capacitor/core": "^8.5.2",
     "@capacitor/geolocation": "^8.2.2",
-    "@fontsource/archivo": "^5.3.0",
-    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/preferences": "^8.0.1",
+    "@fontsource/manrope": "^5.3.0",
+    "@fontsource/roboto-mono": "^5.3.0",
     "@ionic/angular": "^9.0.6",
     "ionicons": "^8.1.0",
     "leaflet": "^1.9.4",
@@ -34,10 +37,12 @@
     "@angular/cli": "^22.2.0",
     "@angular/compiler-cli": "^22.2.0",
     "@capacitor/android": "^8.5.2",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.2",
     "@types/leaflet": "^1.9.22",
     "jsdom": "^30.1.1",
     "prettier": "^3.8.1",
+    "sharp": "^0.32.6",
     "typescript": "~6.0.2",
     "vitest": "^4.1.11"
   }

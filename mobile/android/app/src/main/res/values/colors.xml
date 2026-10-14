@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo de la splash nativa: el mismo de la splash animada de Atalaya. -->
+    <color name="splash_background">#0B0604</color>
+</resources>

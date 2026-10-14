@@ -1,18 +1,21 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
 import { RISK_LABELS } from '../../../domain/util/risk-labels';
+import { SearchRequest } from '../../../core/search-request';
 import { AppIcon } from '../app-icon/app-icon';
+import { RiskBadge } from '../risk-badge/risk-badge';
 
 const normalize = (text: string): string =>
   text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 @Component({
   selector: 'app-search-box',
-  imports: [AppIcon],
+  imports: [AppIcon, RiskBadge],
   template: `
     <label class="search-wrap">
       <app-icon name="search" [size]="18" />
       <input
+        #field
         type="search"
         placeholder="Buscar municipio"
         autocomplete="off"
@@ -30,7 +33,7 @@ const normalize = (text: string): string =>
         @for (zone of results(); track zone.id) {
           <button type="button" class="result" (click)="pick(zone)">
             <span>{{ zone.name }}</span>
-            <strong [class]="'risk-' + zone.level">{{ zone.score }} · {{ label(zone) }}</strong>
+            <app-risk-badge [level]="zone.level" [label]="zone.score + ' · ' + label(zone)" />
           </button>
         }
       </div>
@@ -43,6 +46,18 @@ const normalize = (text: string): string =>
 export class SearchBox {
   readonly zones = input.required<readonly ZoneRiskSummary[]>();
   readonly selected = output<ZoneRiskSummary>();
+
+  private readonly searchRequest = inject(SearchRequest);
+  private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
+
+  constructor() {
+    // El botón de búsqueda de la barra inferior pide enfocar este campo.
+    effect(() => {
+      if (!this.searchRequest.pending()) return;
+      this.searchRequest.consume();
+      setTimeout(() => this.field()?.nativeElement.focus(), 50);
+    });
+  }
 
   protected readonly query = signal('');
   protected readonly results = computed(() => {
