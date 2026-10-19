@@ -11,7 +11,8 @@ export const FALLBACK_REASONS: Record<ForecastFallbackReason, string> = {
   model_error: 'el modelo no pudo calcularlo',
 };
 
-const WHEN: Record<24 | 48 | 72, string> = { 24: 'desde hoy', 48: 'desde mañana', 72: 'desde pasado mañana' };
+/** Day at whose end each row starts its 72 h (the note under the rows explains it). */
+const WHEN: Record<24 | 48 | 72, string> = { 24: 'hoy', 48: 'mañana', 72: 'pasado mañana' };
 
 /** "24 %", or "<1 %" so a tiny probability does not read as zero. */
 export function percentLabel(probability: number): string {
@@ -54,7 +55,8 @@ export function percentLabel(probability: number): string {
                 }
               </ul>
               <p class="forecast-note">
-                Probabilidad de focos de calor a menos de 25 km en las 72 h siguientes, con el clima pronosticado.
+                Probabilidad de focos de calor a menos de 25 km en las 72 h siguientes a cada día (hoy, mañana y
+                pasado mañana), con el clima pronosticado.
                 Es una estimación del modelo, no una predicción exacta.
               </p>
             } @else {
