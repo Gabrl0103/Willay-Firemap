@@ -1,3 +1,4 @@
+import type { DailyWeather } from '../model/DailyWeather.js';
 import type { NewFireEvent } from '../model/FireEvent.js';
 import type { HotspotDetection } from '../model/Hotspot.js';
 import type { WeatherSnapshot } from '../model/WeatherSnapshot.js';
@@ -13,6 +14,11 @@ export interface WeatherProvider {
 export interface HotspotProvider {
   /** Hotspots detected over Nariño in the last days, one row per satellite detection. */
   fetchRecent(): Promise<HotspotDetection[]>;
+}
+
+export interface DailyWeatherProvider {
+  /** Daily weather of each zone for the local days `from`..`to` (YYYY-MM-DD, inclusive). */
+  fetchDaily(zones: readonly Zone[], from: string, to: string): Promise<DailyWeather[]>;
 }
 
 /** What a fire source collected in one run. */

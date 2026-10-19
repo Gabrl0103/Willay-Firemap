@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { IngestHotspotsUseCase } from '../src/application/useCase/IngestHotspotsUseCase.js';
+import { InMemoryHotspotDetectionRepository } from '../src/infrastructure/persistence/InMemoryRepositories.js';
 import type { HotspotDetection, NewHotspot } from '../src/domain/model/Hotspot.js';
 import { dedupeAcrossSatellites, isSameHotspot } from '../src/domain/service/hotspotDedup.js';
 
@@ -76,6 +77,7 @@ describe('IngestHotspotsUseCase', () => {
         ],
       },
       { findAll: async () => [], replaceAll: async (hotspots) => void stored.push([...hotspots]) },
+      new InMemoryHotspotDetectionRepository(),
     );
 
     assert.deepEqual(await useCase.execute(), { detected: 3, stored: 2 });

@@ -1,10 +1,13 @@
 import type pg from 'pg';
+import type { DailyWeather, DailyWeatherSource } from '../../domain/model/DailyWeather.js';
 import type { FireEvent, FireSource, NewFireEvent, StoredFireEvent } from '../../domain/model/FireEvent.js';
-import type { Hotspot, NewHotspot } from '../../domain/model/Hotspot.js';
+import type { Hotspot, NewHotspot, RawDetection } from '../../domain/model/Hotspot.js';
 import type { WeatherSnapshot } from '../../domain/model/WeatherSnapshot.js';
 import type { Zone } from '../../domain/model/Zone.js';
 import type {
+  DailyWeatherRepository,
   FireEventRepository,
+  HotspotDetectionRepository,
   HotspotRepository,
   WeatherRepository,
   ZoneRepository,
@@ -109,7 +112,7 @@ export class PostgresFireEventRepository implements FireEventRepository {
     const result = await this.pool.query(
       `INSERT INTO fire_event (zone_id, place, event_date, hectares, source, source_url, related_urls)
        SELECT zone_id, place, event_date, hectares, source, source_url, string_to_array(related, chr(10))
-       FROM unnest($1::text[], $2::text[], $3::date[], $4::real[], $5::text[], $6::text[], $7::text[])
+       FROM unnest($1::text[], $2::text[], $3::date[], $4::float8[], $5::text[], $6::text[], $7::text[])
             AS e(zone_id, place, event_date, hectares, source, source_url, related)
        ON CONFLICT DO NOTHING`, // same (zone_id, place, event_date), or a news source_url already stored
       [
@@ -219,5 +222,143 @@ export class PostgresHotspotRepository implements HotspotRepository {
     } finally {
       client.release();
     }
+  }
+}
+
+interface DailyWeatherRow {
+  zone_id: string;
+  day: string;
+  precipitation_mm: number | null;
+  temperature_mean_c: number | null;
+  temperature_max_c: number | null;
+  temperature_min_c: number | null;
+  humidity_mean_pct: number | null;
+  wind_max_kmh: number | null;
+  wind_mean_kmh: number | null;
+  et0_mm: number | null;
+  source: DailyWeatherSource;
+}
+
+export class PostgresDailyWeatherRepository implements DailyWeatherRepository {
+  constructor(private readonly pool: pg.Pool) {}
+
+  async findRange(zoneId: string, from: string, to: string): Promise<DailyWeather[]> {
+    const { rows } = await this.pool.query<DailyWeatherRow>(
+      `SELECT zone_id, to_char(day, 'YYYY-MM-DD') AS day, precipitation_mm, temperature_mean_c, temperature_max_c,
+              temperature_min_c, humidity_mean_pct, wind_max_kmh, wind_mean_kmh, et0_mm, source
+       FROM weather_daily WHERE zone_id = $1 AND day BETWEEN $2::date AND $3::date ORDER BY day`,
+      [zoneId, from, to],
+    );
+    return rows.map((row) => ({
+      zoneId: row.zone_id,
+      date: row.day,
+      source: row.source,
+      precipitation_sum: row.precipitation_mm,
+      temperature_2m_mean: row.temperature_mean_c,
+      temperature_2m_max: row.temperature_max_c,
+      temperature_2m_min: row.temperature_min_c,
+      relative_humidity_2m_mean: row.humidity_mean_pct,
+      wind_speed_10m_max: row.wind_max_kmh,
+      wind_speed_10m_mean: row.wind_mean_kmh,
+      et0_fao_evapotranspiration: row.et0_mm,
+    }));
+  }
+
+  async upsertMany(days: readonly DailyWeather[], keepFrom: string): Promise<void> {
+    const client = await this.pool.connect();
+    const column = <K extends keyof DailyWeather>(key: K) => days.map((day) => day[key]);
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO weather_daily (zone_id, day, precipitation_mm, temperature_mean_c, temperature_max_c, temperature_min_c,
+                                    humidity_mean_pct, wind_max_kmh, wind_mean_kmh, et0_mm, source, updated_at)
+         SELECT *, now() FROM unnest($1::text[], $2::date[], $3::float8[], $4::float8[], $5::float8[], $6::float8[],
+                                     $7::float8[], $8::float8[], $9::float8[], $10::float8[], $11::text[])
+         ON CONFLICT (zone_id, day) DO UPDATE SET
+           precipitation_mm = EXCLUDED.precipitation_mm, temperature_mean_c = EXCLUDED.temperature_mean_c,
+           temperature_max_c = EXCLUDED.temperature_max_c, temperature_min_c = EXCLUDED.temperature_min_c,
+           humidity_mean_pct = EXCLUDED.humidity_mean_pct, wind_max_kmh = EXCLUDED.wind_max_kmh,
+           wind_mean_kmh = EXCLUDED.wind_mean_kmh, et0_mm = EXCLUDED.et0_mm, source = EXCLUDED.source,
+           updated_at = now()`,
+        [
+          column('zoneId'), column('date'), column('precipitation_sum'), column('temperature_2m_mean'),
+          column('temperature_2m_max'), column('temperature_2m_min'), column('relative_humidity_2m_mean'),
+          column('wind_speed_10m_max'), column('wind_speed_10m_mean'), column('et0_fao_evapotranspiration'),
+          column('source'),
+        ],
+      );
+      await client.query('DELETE FROM weather_daily WHERE day < $1::date', [keepFrom]);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+}
+
+interface DetectionRow {
+  source: string;
+  latitude: number;
+  longitude: number;
+  detected_at: string;
+}
+
+export class PostgresHotspotDetectionRepository implements HotspotDetectionRepository {
+  constructor(private readonly pool: pg.Pool) {}
+
+  async findSince(since: string): Promise<RawDetection[]> {
+    const { rows } = await this.pool.query<DetectionRow>(
+      `SELECT source, latitude, longitude,
+              to_char(detected_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS detected_at
+       FROM hotspot_detection WHERE detected_at >= $1::timestamptz ORDER BY detected_at`,
+      [since],
+    );
+    return rows.map((row) => ({
+      source: row.source,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      detectedAt: row.detected_at,
+    }));
+  }
+
+  async saveFetch(detections: readonly RawDetection[], completeUtcDays: readonly string[], keepFrom: string): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO hotspot_detection (source, latitude, longitude, detected_at)
+         SELECT * FROM unnest($1::text[], $2::float8[], $3::float8[], $4::timestamptz[])
+         ON CONFLICT DO NOTHING`,
+        [
+          detections.map((d) => d.source),
+          detections.map((d) => d.latitude),
+          detections.map((d) => d.longitude),
+          detections.map((d) => d.detectedAt),
+        ],
+      );
+      await client.query(
+        `INSERT INTO firms_complete_day (day) SELECT unnest($1::date[])
+         ON CONFLICT (day) DO UPDATE SET fetched_at = now()`,
+        [completeUtcDays],
+      );
+      await client.query(`DELETE FROM hotspot_detection WHERE detected_at < $1::date`, [keepFrom]);
+      await client.query(`DELETE FROM firms_complete_day WHERE day < $1::date`, [keepFrom]);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async findCompleteDays(from: string): Promise<string[]> {
+    const { rows } = await this.pool.query<{ day: string }>(
+      `SELECT to_char(day, 'YYYY-MM-DD') AS day FROM firms_complete_day WHERE day >= $1::date ORDER BY day`,
+      [from],
+    );
+    return rows.map((row) => row.day);
   }
 }

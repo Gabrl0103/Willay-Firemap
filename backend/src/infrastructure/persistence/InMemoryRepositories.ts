@@ -1,9 +1,12 @@
+import type { DailyWeather } from '../../domain/model/DailyWeather.js';
 import type { FireEvent, FireSource, NewFireEvent, StoredFireEvent } from '../../domain/model/FireEvent.js';
-import type { Hotspot, NewHotspot } from '../../domain/model/Hotspot.js';
+import type { Hotspot, NewHotspot, RawDetection } from '../../domain/model/Hotspot.js';
 import type { WeatherSnapshot } from '../../domain/model/WeatherSnapshot.js';
 import type { Zone } from '../../domain/model/Zone.js';
 import type {
+  DailyWeatherRepository,
   FireEventRepository,
+  HotspotDetectionRepository,
   HotspotRepository,
   WeatherRepository,
   ZoneRepository,
@@ -85,5 +88,46 @@ export class InMemoryHotspotRepository implements HotspotRepository {
   }
   async replaceAll(hotspots: readonly NewHotspot[]): Promise<void> {
     this.hotspots = hotspots.map((hotspot, index) => ({ ...hotspot, id: `mem-${index + 1}` }));
+  }
+}
+
+export class InMemoryDailyWeatherRepository implements DailyWeatherRepository {
+  private readonly days = new Map<string, DailyWeather>();
+  constructor(initial: readonly DailyWeather[] = []) {
+    for (const day of initial) this.days.set(`${day.zoneId}|${day.date}`, day);
+  }
+  async findRange(zoneId: string, from: string, to: string): Promise<DailyWeather[]> {
+    return [...this.days.values()]
+      .filter((day) => day.zoneId === zoneId && day.date >= from && day.date <= to)
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+  async upsertMany(days: readonly DailyWeather[], keepFrom: string): Promise<void> {
+    for (const day of days) this.days.set(`${day.zoneId}|${day.date}`, day);
+    for (const [key, day] of this.days) if (day.date < keepFrom) this.days.delete(key);
+  }
+}
+
+const detectionKey = (d: RawDetection): string => `${d.source}|${d.detectedAt}|${d.latitude}|${d.longitude}`;
+
+export class InMemoryHotspotDetectionRepository implements HotspotDetectionRepository {
+  private readonly detections = new Map<string, RawDetection>();
+  private readonly completeDays = new Set<string>();
+  constructor(initial: readonly RawDetection[] = [], completeDays: readonly string[] = []) {
+    for (const detection of initial) this.detections.set(detectionKey(detection), detection);
+    for (const day of completeDays) this.completeDays.add(day);
+  }
+  async findSince(since: string): Promise<RawDetection[]> {
+    const start = Date.parse(since);
+    return [...this.detections.values()].filter((d) => Date.parse(d.detectedAt) >= start);
+  }
+  async saveFetch(detections: readonly RawDetection[], completeUtcDays: readonly string[], keepFrom: string): Promise<void> {
+    for (const detection of detections) this.detections.set(detectionKey(detection), detection);
+    for (const day of completeUtcDays) this.completeDays.add(day);
+    const start = Date.parse(`${keepFrom}T00:00:00Z`);
+    for (const [key, d] of this.detections) if (Date.parse(d.detectedAt) < start) this.detections.delete(key);
+    for (const day of this.completeDays) if (day < keepFrom) this.completeDays.delete(day);
+  }
+  async findCompleteDays(from: string): Promise<string[]> {
+    return [...this.completeDays].filter((day) => day >= from).sort();
   }
 }

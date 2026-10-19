@@ -20,3 +20,6 @@ export interface HotspotDetection extends NewHotspot {
   /** Fire radiative power (MW), used to break ties between equally confident detections. */
   readonly frp?: number;
 }
+
+/** A detection kept as the satellite reported it, for the ML model (which counts every satellite pass). */
+export type RawDetection = Pick<HotspotDetection, 'source' | 'latitude' | 'longitude' | 'detectedAt'>;

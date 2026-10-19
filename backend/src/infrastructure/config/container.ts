@@ -7,7 +7,9 @@ import { IngestFireEventsUseCase } from '../../application/useCase/IngestFireEve
 import { IngestHotspotsUseCase } from '../../application/useCase/IngestHotspotsUseCase.js';
 import { IngestWeatherUseCase } from '../../application/useCase/IngestWeatherUseCase.js';
 import type {
+  DailyWeatherRepository,
   FireEventRepository,
+  HotspotDetectionRepository,
   HotspotRepository,
   WeatherRepository,
   ZoneRepository,
@@ -16,13 +18,17 @@ import { RiskScoringService } from '../../domain/service/RiskScoringService.js';
 import { FirmsHotspotProvider } from '../external/FirmsHotspotProvider.js';
 import { OpenMeteoWeatherProvider } from '../external/OpenMeteoWeatherProvider.js';
 import {
+  InMemoryDailyWeatherRepository,
   InMemoryFireEventRepository,
+  InMemoryHotspotDetectionRepository,
   InMemoryHotspotRepository,
   InMemoryWeatherRepository,
   InMemoryZoneRepository,
 } from '../persistence/InMemoryRepositories.js';
 import {
+  PostgresDailyWeatherRepository,
   PostgresFireEventRepository,
+  PostgresHotspotDetectionRepository,
   PostgresHotspotRepository,
   PostgresWeatherRepository,
   PostgresZoneRepository,
@@ -47,6 +53,8 @@ interface RepositorySet {
   readonly weather: WeatherRepository;
   readonly fireEvents: FireEventRepository;
   readonly hotspots: HotspotRepository;
+  readonly dailyWeather: DailyWeatherRepository;
+  readonly hotspotDetections: HotspotDetectionRepository;
 }
 
 /** Neon when DATABASE_URL exists; otherwise the in-memory test data (handy for local work and tests). */
@@ -59,6 +67,8 @@ function buildRepositories(config: Env): RepositorySet {
       weather: new PostgresWeatherRepository(pool),
       fireEvents: new PostgresFireEventRepository(pool),
       hotspots: new PostgresHotspotRepository(pool),
+      dailyWeather: new PostgresDailyWeatherRepository(pool),
+      hotspotDetections: new PostgresHotspotDetectionRepository(pool),
     };
   }
   console.log('Persistence: in-memory test data (DATABASE_URL is not set)');
@@ -67,6 +77,8 @@ function buildRepositories(config: Env): RepositorySet {
     weather: new InMemoryWeatherRepository(weatherSnapshots),
     fireEvents: new InMemoryFireEventRepository(fireEvents),
     hotspots: new InMemoryHotspotRepository(hotspots),
+    dailyWeather: new InMemoryDailyWeatherRepository(),
+    hotspotDetections: new InMemoryHotspotDetectionRepository(),
   };
 }
 
@@ -103,7 +115,11 @@ function buildIngestionJobs(repositories: RepositorySet, config: Env): Ingestion
   ];
 
   if (config.firmsMapKey) {
-    const ingestHotspots = new IngestHotspotsUseCase(new FirmsHotspotProvider(config.firmsMapKey), repositories.hotspots);
+    const ingestHotspots = new IngestHotspotsUseCase(
+      new FirmsHotspotProvider(config.firmsMapKey),
+      repositories.hotspots,
+      repositories.hotspotDetections,
+    );
     jobs.push({
       name: 'hotspots',
       schedule: '15 */3 * * *', // every 3 hours
