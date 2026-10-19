@@ -31,6 +31,7 @@ copy .env.example .env      # pega la cadena de conexión de Neon en DATABASE_UR
 npm run db:schema           # crea PostGIS y las tablas (database/schema.sql)
 npm run db:zones            # carga los 64 municipios de Nariño (DIVIPOLA del DANE)
 npm run db:seed             # opcional: igual que db:zones (no carga datos de prueba)
+npm run db:backfill         # historial de 35 días para el pronóstico (clima diario + focos FIRMS)
 npm run dev                 # debe decir "Persistence: PostgreSQL (Neon)"
 ```
 
@@ -48,6 +49,8 @@ Para correrla una vez a mano: `npm run ingest` (todas) o `npm run ingest weather
 |---|---|---|
 | `weather` | Open-Meteo (sin API key), una sola petición para los 64 municipios → `weather_snapshot` | cada hora |
 | `hotspots` | NASA FIRMS, VIIRS SNPP/NOAA-20/NOAA-21, últimos 5 días → `hotspot` (solo si hay `MAP_KEY`) | cada 3 h |
+| `weather-daily` | Open-Meteo histórico (ERA5) de los últimos 35 días → `weather_daily`, para el pronóstico de 72 h | diario, 02:20 y al arrancar |
+| `hotspots-history` | NASA FIRMS, detecciones crudas de los últimos 35 días (tramos de 5 días) → `hotspot_detection` y `firms_complete_day` (solo si hay `MAP_KEY`) | diario, 02:40 y al arrancar |
 | `fires` | Scraping: datasets UNGRD 2019–2025 (datos.gov.co `wwkg-r6te`, `rgre-6ak4`, `2343-nuqp`; CC BY-SA 4.0 / CC BY 4.0, atribución en Historial) y feed RSS de noticias de la Gobernación de Nariño → `fire_event` | diario, 03:30 |
 
 El scraping revisa `robots.txt` antes de cada URL (caché 24 h), deja al menos 5 s entre peticiones al mismo sitio (o el `Crawl-delay` si es mayor) y no vuelve a guardar una noticia ya guardada (`source_url`). Las noticias de un mismo municipio con 3 días o menos entre una y otra cuentan como **un solo incendio**: se guarda la más antigua y las demás quedan como enlaces de referencia (`related_urls`).
@@ -81,12 +84,21 @@ Puntaje 0–100 por municipio = **0,5 × clima seco + 0,3 × focos cercanos + 0,
 
 Niveles: Bajo 0–24, Medio 25–49, Alto 50–74, Extremo 75–100. Detalle y limitaciones en `docs/REQUIREMENTS.md` (sección 7).
 
-### Modelo de machine learning (en evaluación)
-En `ml/` hay un modelo que estima la probabilidad de focos de calor a ≤ 25 km en las próximas 72 h. Se entrenó con NASA FIRMS (VIIRS) y clima de NASA POWER. En el periodo de prueba (2025–2026), la regresión logística supera al modelo de pesos: ROC-AUC 0,85 frente a 0,68. Aún **no está integrado en el backend**. Resultados y limitaciones en `docs/ML.md`; cómo reproducirlo en `ml/README.md`.
+### Pronóstico 72 h (modelo de machine learning)
+En `ml/` hay un modelo que estima la probabilidad de focos de calor a ≤ 25 km en las próximas 72 h. Se entrenó con NASA FIRMS (VIIRS) y clima de NASA POWER. En el periodo de prueba (2025–2026), la regresión logística supera al modelo de pesos: ROC-AUC 0,85 frente a 0,68.
+
+Desde la v0.22 el backend lo usa en `GET /api/zones/:id/forecast` y la app lo muestra en la hoja de zona («Pronóstico 72 h»). El puntaje del mapa sigue siendo el modelo de pesos.
+- **Sin Python en producción:** `python -m willay_ml.export_backend` (en `ml/`) exporta la regresión logística a `backend/src/infrastructure/ml/risk-model-1.0.0.json` y el backend la calcula en TypeScript (`predictRisk`).
+- **Clima:** producción usa Open-Meteo y el modelo se entrenó con NASA POWER, así que cada variable pasa por un ajuste lineal Open-Meteo → POWER (ajustado con 2024). En prueba: ROC-AUC 0,842 con Open-Meteo ajustado frente a 0,853 con POWER.
+- **Filas 24/48/72 h:** el modelo corrido al final de hoy, mañana y pasado mañana, con el clima pronosticado y solo los focos ya observados.
+- **Respaldo:** si faltan datos o algo falla, responde el puntaje actual y el motivo (`source: "fallback"`).
+
+Detalle, ajuste y limitaciones en `docs/ML.md` (sección 7); cómo reproducirlo en `ml/README.md`.
 
 ## Endpoints
 - `GET /api/zones` — municipios con puntaje y nivel de riesgo.
 - `GET /api/zones/:id` — detalle: clima y factores.
+- `GET /api/zones/:id/forecast` — pronóstico de 72 h con el modelo de ML (filas de 24, 48 y 72 h), o respaldo con el puntaje actual.
 - `GET /api/fires?zoneId=pasto` — historial de incendios y resumen.
 - `GET /api/hotspots` — focos de calor.
 

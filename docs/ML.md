@@ -1,8 +1,9 @@
 # Willay — Modelo de machine learning (v1.0.0)
 
-> Estado: **fases 1–3 terminadas** (datos, variables, entrenamiento y evaluación), 2026-10-03.
-> La app **sigue usando el modelo de pesos** (0,5 / 0,3 / 0,2). La integración en el backend (fase 4)
-> está pendiente de aprobación. Código y pasos para reproducir: [`ml/README.md`](../ml/README.md).
+> Estado: **fases 1–3 terminadas** (datos, variables, entrenamiento y evaluación), 2026-10-03, y **fase 4**
+> (integración en el backend, sección 7), 2026-10-18. El puntaje del mapa **sigue siendo el modelo de pesos**
+> (0,5 / 0,3 / 0,2); el modelo de ML se muestra como «Pronóstico 72 h» en la hoja de zona. Código y pasos
+> para reproducir: [`ml/README.md`](../ml/README.md).
 
 ## 1. Qué estima
 
@@ -208,3 +209,90 @@ calibración), implementada en TypeScript. Boosting no es mejor, así que ONNX n
   retraso y otra fuente. La fase 4 tendrá que calcular las mismas variables con el mismo significado, y tener
   un respaldo cuando falten datos.
 - **Resultado: un indicador de riesgo, no una predicción exacta.**
+
+## 7. Fase 4: integración en el backend (v0.22)
+
+### 7.1 Cómo corre sin Python
+
+`python -m willay_ml.export_backend` lee `ml/models/logistic_regression.joblib` y escribe
+`backend/src/infrastructure/ml/risk-model-1.0.0.json`:
+- coeficientes, intercepto, medias y desviaciones, columnas con log1p y calibración Platt;
+- ajuste Open-Meteo → POWER por variable (7.2);
+- propensión de las 64 zonas (2015–2018) y las 13 fuentes estáticas de FIRMS (volcanes e industrias);
+- sha256 del `.joblib` de origen y métricas en prueba.
+
+El backend calcula la probabilidad con una función pura (`backend/src/domain/service/riskForecastModel.ts`) y las
+25 variables con `forecastFeatures.ts`, copia de `features.py`. Las pruebas comparan con sklearn: 12 filas de
+prueba y 3 casos completos (30 días de Open-Meteo y focos → variables → probabilidad), con diferencia < 1e-9.
+
+### 7.2 NASA POWER (entrenamiento) frente a Open-Meteo (producción)
+
+Pares zona-día de 2024 (17 568, 48 zonas) del histórico de Open-Meteo (ERA5) y de POWER. Cada variable se pasa a
+la escala de POWER con `POWER ≈ a × Open-Meteo + b` (recta de mínimos cuadrados) y luego se recorta a su rango
+físico (lluvia, viento y evapotranspiración ≥ 0; humedad 0–100).
+
+| Variable del modelo | Open-Meteo (unidad) | POWER (unidad) | a | b | Correlación |
+|---|---|---|---|---|---|
+| Lluvia | `precipitation_sum` (mm) | `PRECTOTCORR` (mm/día) | 0,163 | 2,161 | 0,36 |
+| Temperatura media | `temperature_2m_mean` (°C a 2 m) | `T2M` (°C a 2 m) | 0,805 | 4,140 | 0,89 |
+| Temperatura máxima | `temperature_2m_max` | `T2M_MAX` | 0,734 | 6,716 | 0,79 |
+| Temperatura mínima | `temperature_2m_min` | `T2M_MIN` | 0,793 | 3,658 | 0,89 |
+| Humedad relativa | `relative_humidity_2m_mean` (% a 2 m) | `RH2M` (% a 2 m) | 0,264 | 61,676 | 0,48 |
+| Viento máximo | `wind_speed_10m_max` (km/h a 10 m) | `WS2M_MAX` (m/s a 2 m) | 0,177 | 1,304 | 0,53 |
+| Viento medio | `wind_speed_10m_mean` (km/h a 10 m) | `WS2M` (m/s a 2 m) | 0,241 | 0,395 | 0,69 |
+| Evapotranspiración | `et0_fao_evapotranspiration` (mm, de referencia) | `EVPTRNS` (MJ/m²/día, real) | 0,308 | 1,073 | 0,22 |
+| Humedad del suelo | — (no hay valor diario) | `GWETTOP` (0–1) | fija en la media del entrenamiento (0,722) | | |
+
+La recta absorbe a la vez el cambio de unidades (km/h → m/s, viento a 10 m → 2 m, mm → MJ/m²) y las
+diferencias entre las fuentes. En estos puntos Open-Meteo llueve unas 2,2 veces más que POWER, y las dos fuentes
+se parecen poco día a día en lluvia, humedad y evapotranspiración (MERRA-2 tiene celdas de ~55 × 70 km).
+
+**Efecto en el modelo** (prueba 2025-01-01 a 2026-09-29):
+
+| Clima de entrada | ROC-AUC | PR-AUC | Brier | Precisión@5 |
+|---|---|---|---|---|
+| NASA POWER (el del entrenamiento) | 0,853 | 0,512 | 0,100 | 0,317 |
+| **Open-Meteo con el ajuste lineal (producción)** | **0,842** | **0,496** | **0,100** | 0,279 |
+| Open-Meteo solo con cambio de unidades | 0,827 | 0,455 | 0,134 | 0,246 |
+| Sin clima (medias del entrenamiento) | 0,826 | 0,475 | 0,103 | 0,323 |
+
+Sin el ajuste, el modelo sobreestima (probabilidad media 0,26 frente a una tasa de 0,156) y su Brier es peor que
+predecir siempre la tasa base (0,131). Con el ajuste queda cerca de POWER. Reentrenar directamente con el
+histórico de Open-Meteo queda como **v1.1**.
+
+**Error de unidades del entrenamiento.** `EVPTRNS` de POWER es un flujo de energía en MJ/m²/día, aunque la variable
+se llama `evapotranspiration_mm`, y `water_balance_30d_mm` resta lluvia (mm) menos esa suma (MJ/m²). El modelo
+v1.0.0 se entrenó así y el backend lo reproduce igual para no cambiar su significado. Se corrige en la v1.1
+(1 mm de agua evaporada ≈ 2,45 MJ/m²).
+
+### 7.3 Datos en producción
+
+- **Clima:** tabla `weather_daily` con 35 días por zona del histórico de Open-Meteo. Los días de menos de 6 días
+  de antigüedad aún no tienen ERA5 y se guardan como `forecast`; la ingesta diaria los reemplaza. Para hoy,
+  mañana y pasado mañana se usa el pronóstico de Open-Meteo (caché de 1 h por zona).
+- **Focos:** tabla `hotspot_detection` con las detecciones crudas de 35 días, como en el entrenamiento: solo
+  SNPP y NOAA-20 (NOAA-21 se guarda, pero el modelo no lo cuenta), sin unir satélites y sin las detecciones a
+  ≤ 1 km de una fuente estática. `firms_complete_day` registra qué días UTC entregó FIRMS completos.
+- **Carga inicial:** `npm run db:backfill` (jobs `weather-daily` y `hotspots-history`). Los dos corren cada día y
+  al arrancar, así se recuperan los días que falten si el servidor estuvo dormido.
+
+### 7.4 Qué responde el endpoint
+
+`GET /api/zones/:id/forecast` corre el modelo tres veces: al final de hoy (fila 24 h), de mañana (48 h) y de
+pasado mañana (72 h). Cada fila es la probabilidad de al menos un foco a ≤ 25 km en las 72 h siguientes a ese
+día. Para los días que vienen no se suponen focos: solo cuentan los ya observados, así que las filas de 48 y
+72 h tienden a bajar cuando hay focos recientes. El nivel usa los mismos cortes que el puntaje (25/50/75 sobre
+la probabilidad × 100); como la tasa base es 15,6 %, la mayoría de los días-zona salen «Bajo».
+
+**Respaldo (nada inventado):** responde `source: "fallback"`, el motivo y el puntaje actual del modelo de pesos si:
+- Open-Meteo falla o no trae los 3 días (`weather_unavailable`);
+- falta un día de clima o un valor (`weather_history_incomplete`);
+- falta un día de FIRMS (`hotspot_history_incomplete`);
+- el modelo falla (`model_error`).
+
+### 7.5 Limitaciones de la integración
+
+- El ajuste se hizo con el **histórico** de Open-Meteo (ERA5). Los últimos días y el pronóstico vienen de otros
+  modelos de Open-Meteo, con su propio error.
+- La calibración es la del entrenamiento (2024, un año alto) y la propensión es fija (2015–2018).
+- La hora de corte no es el final del día: a media mañana, los focos de hoy aún no están completos.

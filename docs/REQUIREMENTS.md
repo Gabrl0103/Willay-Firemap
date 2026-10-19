@@ -3,7 +3,7 @@
 *(Antes llamado FIREMAP. **Willay** viene del quechua/kichwa: "avisar, contar, anunciar" — la app avisa dónde hay riesgo de incendio. Confirmar el significado y la escritura con un hablante o una fuente local.)*
 
 > Documento vivo. Se actualiza al cierre de cada sesión. Al iniciar una sesión nueva, pega este archivo (o léelo del proyecto) para retomar el contexto.
-> **Última actualización:** 2026-10-04 · **Versión:** 0.21 (focos sin duplicados entre satélites)
+> **Última actualización:** 2026-10-18 · **Versión:** 0.22 (pronóstico 72 h con el modelo de ML)
 
 ---
 
@@ -108,7 +108,7 @@ willay/
   - UNGRD pierde reportes del mismo día en un municipio: la regla anti-duplicados (zona, lugar, fecha) usa como lugar el nombre del municipio. 2019–2022: 266 filas → 177 eventos; 2023–2024: 477 → 423; 2025: 198 → 94 (ahí son filas repetidas en el dataset).
   - Las noticias subestiman los años recientes: solo hay una fuente (boletines de la Gobernación), que no reporta todos los incendios. Desde v0.18 la UNGRD cubre 2019–2025; 2026 solo tiene noticias.
 - **Salida:** riesgo estimado para 24–72 h y los factores que más pesaron.
-- **V2 (machine learning, en evaluación; la app sigue usando V1):** probabilidad de al menos un foco de calor
+- **V2 (machine learning; desde v0.22 en el pronóstico de 72 h, el puntaje del mapa sigue siendo V1):** probabilidad de al menos un foco de calor
   VIIRS a ≤ 25 km de la cabecera en las próximas 72 h. Detalle completo en [`docs/ML.md`](ML.md), código
   en `ml/` (Python).
   - Datos: NASA FIRMS VIIRS (SNPP + NOAA-20) desde 2015 y clima diario de NASA POWER (MERRA-2) desde
@@ -123,8 +123,9 @@ willay/
     no la mejora.
   - Pero la mayor parte de la señal viene de la propensión de la zona y la época del año. El clima de
     POWER (10 celdas para 64 municipios) aporta poco.
-  - Fase 4 (integración en el backend con respaldo al modelo de pesos) pendiente de aprobación. Deep
-    learning descartado.
+  - Fase 4 (v0.22): `GET /api/zones/:id/forecast` calcula la regresión logística en TypeScript desde un
+    JSON exportado, con el clima de Open-Meteo ajustado a la escala de POWER, y responde el puntaje
+    actual como respaldo si faltan datos. Detalle en `docs/ML.md`, sección 7. Deep learning descartado.
 
 ## 8. Requisitos funcionales
 
@@ -261,6 +262,24 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-18 (v0.22, rama `feat/ml-forecast`):** pronóstico de 72 h con la regresión logística v1.0.0 (fase 4 del ML).
+  - Se fusiona `feat/ml` (código de `ml/`, `docs/ML.md`).
+  - `ml/willay_ml/export_backend.py` exporta el modelo a `backend/src/infrastructure/ml/risk-model-1.0.0.json`
+    (coeficientes, normalización, calibración Platt, propensión por zona, fuentes estáticas) y casos de
+    sklearn para las pruebas. `predictRisk` (TypeScript) coincide con sklearn con diferencia < 1e-9.
+  - Clima: ajuste lineal Open-Meteo → NASA POWER por variable, ajustado con 2024. En prueba (2025–2026):
+    ROC-AUC 0,842, PR-AUC 0,496, Brier 0,100 (con POWER: 0,853 / 0,512 / 0,100; sin ajuste: 0,827 / 0,455 /
+    0,134, peor que la tasa base). Reentrenar con Open-Meteo queda para la v1.1.
+  - Tablas nuevas: `weather_daily` (35 días, Open-Meteo histórico), `hotspot_detection` (detecciones crudas,
+    una por satélite) y `firms_complete_day`. Jobs diarios `weather-daily` y `hotspots-history`; carga
+    inicial con `npm run db:backfill`. La tabla `hotspot` y el puntaje actual no cambian.
+  - `GET /api/zones/:id/forecast`: filas de 24, 48 y 72 h (el modelo al final de hoy, mañana y pasado
+    mañana, solo con focos observados). Respaldo con el puntaje actual y el motivo si Open-Meteo falla,
+    faltan días de clima o de FIRMS, o falla el modelo.
+  - App: sección «Pronóstico 72 h» en la hoja de zona (nivel, barra y porcentaje; aviso en español con
+    respaldo o error; «Reintentar» solo cuando la petición falla).
+  - Se documenta un error de unidades del entrenamiento: `EVPTRNS` de POWER está en MJ/m²/día, no en mm, y
+    `water_balance_30d_mm` resta mm menos MJ. El backend lo reproduce igual; se corrige en la v1.1.
 - **2026-10-04 (v0.21, rama `fix/ui-sheet-history`):** la ingesta de FIRMS guarda fuente, confianza y FRP de cada detección y quita duplicados entre satélites (≤ 1 km y ≤ 3 h; queda la de mayor confianza). Corrida del 2026-10-04: 13 detecciones → 12 focos guardados (SNPP 18:53 y NOAA-21 18:15 del 30-sep, a ~10 m, quedan en uno: el de NOAA-21, FRP 14,66).
 - **2026-10-04 (v0.20, rama `fix/ui-sheet-history`):** focos FIRMS: ventana de 2 a **5 días** y se agrega **VIIRS NOAA-21 NRT**. El factor de focos pesa cada detección por su antigüedad (1 hasta 2 días, 0 a los 5) para que siga midiendo el riesgo de 24–72 h; umbral 3 y pesos 0,5/0,3/0,2 sin cambio. `GET /api/zones/:id` devuelve `hotspots` (conteo a 25 km y última detección) y la hoja de detalle dice hace cuánto fue. Ojo: el modo en memoria usa focos de prueba del 27–29 de septiembre, que ahora pesan 0.
 - **2026-10-04 (v0.19, rama `fix/ui-sheet-history`):** tope del factor de historial de 1 a **2,8 incendios por año** (p90 de los 64 municipios con UNGRD 2019–2025 + noticias), fijo y documentado en `RiskScoringService.ts`; pesos sin cambio. Zonas en 100: 36 → 8; mediana del factor: 100 → 37. Se documenta que el historial mide incendios reportados y que los municipios grandes reportan más.
