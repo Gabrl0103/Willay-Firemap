@@ -108,7 +108,23 @@ willay/
   - UNGRD pierde reportes del mismo día en un municipio: la regla anti-duplicados (zona, lugar, fecha) usa como lugar el nombre del municipio. 2019–2022: 266 filas → 177 eventos; 2023–2024: 477 → 423; 2025: 198 → 94 (ahí son filas repetidas en el dataset).
   - Las noticias subestiman los años recientes: solo hay una fuente (boletines de la Gobernación), que no reporta todos los incendios. Desde v0.18 la UNGRD cubre 2019–2025; 2026 solo tiene noticias.
 - **Salida:** riesgo estimado para 24–72 h y los factores que más pesaron.
-- **Mejora opcional:** regresión logística con el histórico si sobra tiempo. Deep learning descartado.
+- **V2 (machine learning, en evaluación; la app sigue usando V1):** probabilidad de al menos un foco de calor
+  VIIRS a ≤ 25 km de la cabecera en las próximas 72 h. Detalle completo en [`docs/ML.md`](ML.md), código
+  en `ml/` (Python).
+  - Datos: NASA FIRMS VIIRS (SNPP + NOAA-20) desde 2015 y clima diario de NASA POWER (MERRA-2) desde
+    2019 (Open-Meteo se descartó por su cuota diaria). Dataset: 181 056 días-zona (2019-01-01 a
+    2026-09-29), 16,1 % positivos.
+  - 25 variables sin fuga de información: lluvia acumulada, días sin lluvia, temperatura, humedad,
+    viento, evapotranspiración, focos en la zona y en los vecinos (7/30 días), estacionalidad y
+    propensión 2015–2018.
+  - División temporal: entrenamiento 2019–2023, validación 2024, prueba 2025–2026.
+  - En prueba, la **regresión logística** supera al modelo de pesos (ROC-AUC 0,85 frente a 0,68; PR-AUC
+    0,51 frente a 0,33; Brier 0,100 frente a 0,120; precisión@5 32 % frente a 25 %). El gradient boosting
+    no la mejora.
+  - Pero la mayor parte de la señal viene de la propensión de la zona y la época del año. El clima de
+    POWER (10 celdas para 64 municipios) aporta poco.
+  - Fase 4 (integración en el backend con respaldo al modelo de pesos) pendiente de aprobación. Deep
+    learning descartado.
 
 ## 8. Requisitos funcionales
 
@@ -250,6 +266,17 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 - **2026-10-04 (v0.19, rama `fix/ui-sheet-history`):** tope del factor de historial de 1 a **2,8 incendios por año** (p90 de los 64 municipios con UNGRD 2019–2025 + noticias), fijo y documentado en `RiskScoringService.ts`; pesos sin cambio. Zonas en 100: 36 → 8; mediana del factor: 100 → 37. Se documenta que el historial mide incendios reportados y que los municipios grandes reportan más.
 - **2026-10-04 (v0.18, rama `fix/ui-sheet-history`):** UNGRD 2023–2025: se leen también `rgre-6ak4` y `2343-nuqp` (evento `INCENDIO FORESTAL`), una fuente por dataset. Feed de la Gobernación: 8 páginas y títulos con "incendios" en plural si nombran un municipio (sin hectáreas). `npm run ingest`: 701 incendios (2019: 91, 2020: 37, 2021: 11, 2022: 38, 2023: 161, 2024: 263, 2025: 94, 2026: 6). Corregida en Neon la nota de Ancuya (2026-08-28) que guardó 1.485 ha del total departamental: queda sin dato. Atribución UNGRD/datos.gov.co con licencias en Historial. El historial del modelo satura en 36 de 64 zonas: se documenta, el modelo no cambia. Diario del Sur, HSB Noticias y CorpoNariño descartados.
 - **2026-10-04 (v0.17, rama `fix/ui-sheet-history`):** app: la hoja de detalle se arrastra entre media (~45 %) y expandida (~85 %), se cierra al deslizarla hasta abajo, hace scroll expandida y deja libre el botón "Ver historial" (relleno con `safe-area`); probado en emulador Android (Pixel 7). Historial: rango de años y nota de fuentes/años sin datos calculados de los registros, "Sin dato" en vez de "0,0 ha", orden por fecha descendente. Mapa: con zoom < 10 solo punto de color con puntaje; nombres desde zoom 10 o en el municipio seleccionado. Pruebas unitarias en la app con Vitest (`npm test` en `mobile/`). Auditoría de cobertura de noticias (sección 6): el feed de la Gobernación solo tiene 55 noticias desde 2024-01; los datos de 2023–2025 están en datasets nuevos de la UNGRD (propuesta, sin aplicar). Nota: v0.16 está en la rama `feat/ml`.
+- **2026-10-03 (v0.16):** modelo de machine learning, fases 1–3, en la carpeta nueva `ml/` (Python, rama
+  `feat/ml`).
+  - Descarga reanudable del historial de NASA FIRMS (tramos de 5 días, presupuesto de transacciones).
+  - Clima de NASA POWER: Open-Meteo se detuvo por su cuota de 10 000 llamadas/día y queda en caché sin
+    usarse.
+  - Dataset diario por zona con etiqueta a 72 h (radios de 10/25/50 km), 25 variables con prueba de fuga
+    de información, y entrenamiento con división temporal.
+  - Resultado: la regresión logística supera al modelo de pesos en prueba (2025–2026), pero no al baseline
+    simple en el ranking diario de municipios.
+  - Documentado en `docs/ML.md`. El modelo de pesos (0,5/0,3/0,2) no cambia y la app sigue usándolo.
+
 - **2026-10-01 (v0.15):** factor de historial: incendios por año de la zona desde el 2019-01-01 (1 por año = 100) en vez del conteo de los últimos 730 días / 5. Pesos sin cambio (0,5 / 0,3 / 0,2). Con los datos de hoy: 46 zonas con historial > 0 (antes 4), puntajes 0–20, todas en nivel Bajo (clima húmedo y sin focos porque falta `MAP_KEY`). Se documentan las limitaciones del historial (sección 7).
 - **2026-10-01 (v0.14):** `npm run db:seed` solo carga las 64 zonas; el clima, los incendios y los focos de `seedData.ts` quedan solo para el modo en memoria y las pruebas. Borrados en Neon todos los datos de prueba que había cargado el seed: 8 noticias, 7 filas `ungrd` sin enlace y 7 focos de calor.
 - **2026-10-01 (v0.13):** noticias del mismo incendio: la ingesta agrupa, antes de insertar, las noticias de una zona separadas por 3 días o menos (en cadena) con las ya guardadas; queda la más antigua (fecha y enlace), el mayor número de hectáreas y los demás enlaces en `fire_event.related_urls`. Limpieza única en Neon con `npm run db:merge-news` (idempotente): 5 duplicados del cerro Aminda fusionados. Filtro de incendios forestales: palabras completas ("esquema" ya no cuenta como "quema") y se descartan los que mencionan vivienda/casa/local/bodega/establecimiento sin forestal/bosque/monte/páramo/cobertura vegetal/quema. Olaya Herrera (La Isla, 2026-09-29) era un incendio urbano de 15 viviendas: borrado.
