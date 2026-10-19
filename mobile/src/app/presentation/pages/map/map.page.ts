@@ -2,8 +2,8 @@ import {
   AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { Geolocation } from '@capacitor/geolocation';
 import * as L from 'leaflet';
+import { getUserLocation, locationMessage } from '../../../core/location/user-location';
 import type { Hotspot, ZoneRiskSummary } from '../../../domain/model/risk';
 import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
@@ -40,6 +40,9 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private userMarker?: L.Marker;
   private readonly mapReady = signal(false);
   private fitted = false;
+  protected readonly locating = signal(false);
+  /** Why «Mi ubicación» failed, in Spanish (kept apart from the store error, whose retry reloads zones). */
+  protected readonly locationError = signal<string | null>(null);
 
   protected readonly updatedLabel = computed(() => {
     const date = this.store.updatedAt();
@@ -105,16 +108,20 @@ export class MapPage implements AfterViewInit, OnDestroy {
   }
 
   protected async locateMe(): Promise<void> {
-    try {
-      const position = await Geolocation.getCurrentPosition({ timeout: 10000 });
-      const { latitude, longitude } = position.coords;
-      this.showUser(latitude, longitude);
-      const zone = nearestZone(this.store.zones(), latitude, longitude);
-      if (zone) this.store.select(zone.id);
-      this.focusOn(latitude, longitude, 10);
-    } catch {
-      this.store.reportError('No pudimos obtener tu ubicación. Revisa los permisos.');
+    if (this.locating()) return;
+    this.locating.set(true);
+    this.locationError.set(null);
+    const result = await getUserLocation();
+    this.locating.set(false);
+    if (result.status !== 'ok') {
+      this.locationError.set(locationMessage(result.status));
+      return;
     }
+    const { latitude, longitude } = result;
+    this.showUser(latitude, longitude);
+    const zone = nearestZone(this.store.zones(), latitude, longitude);
+    if (zone) this.store.select(zone.id);
+    this.focusOn(latitude, longitude, 10);
   }
 
   private focusOn(latitude: number, longitude: number, zoom: number): void {

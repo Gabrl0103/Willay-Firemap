@@ -16,8 +16,8 @@
 
 <span class="department-label">NARIÑO <small>COLOMBIA</small></span>
 
-<button type="button" class="location-button" (click)="locateMe()">
-  <app-icon name="crosshair" [size]="16" /><span>Mi ubicación</span>
+<button type="button" class="location-button" [disabled]="locating()" (click)="locateMe()">
+  <app-icon name="crosshair" [size]="16" /><span>{{ locating() ? 'Buscando…' : 'Mi ubicación' }}</span>
 </button>
 
 <app-risk-legend class="legend-slot" />
@@ -28,6 +28,14 @@
   <div class="error-banner" role="alert">
     <span>{{ message }}</span>
     <button type="button" (click)="store.load(); store.dismissError()">Reintentar</button>
+  </div>
+} @else if (locationError(); as message) {
+  <div class="error-banner location-error" role="alert">
+    <span>{{ message }}</span>
+    <div class="banner-actions">
+      <button type="button" (click)="locateMe()">Reintentar</button>
+      <button type="button" (click)="locationError.set(null)">Cerrar</button>
+    </div>
   </div>
 }
 
