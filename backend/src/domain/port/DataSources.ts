@@ -1,6 +1,7 @@
 import type { DailyWeather } from '../model/DailyWeather.js';
 import type { NewFireEvent } from '../model/FireEvent.js';
 import type { HotspotDetection } from '../model/Hotspot.js';
+import type { OpenMeteoDay } from '../model/RiskForecast.js';
 import type { WeatherSnapshot } from '../model/WeatherSnapshot.js';
 import type { Zone } from '../model/Zone.js';
 
@@ -20,6 +21,11 @@ export interface HotspotProvider {
 export interface HotspotHistoryProvider {
   /** Detections of `days` UTC days (at most 5) starting on `startDate` (YYYY-MM-DD). */
   fetchDays(startDate: string, days: number): Promise<HotspotDetection[]>;
+}
+
+export interface WeatherForecastProvider {
+  /** Forecast daily weather of a zone for the local days `from`..`to` (YYYY-MM-DD, inclusive). */
+  fetchForecast(zone: Zone, from: string, to: string): Promise<OpenMeteoDay[]>;
 }
 
 export interface DailyWeatherProvider {

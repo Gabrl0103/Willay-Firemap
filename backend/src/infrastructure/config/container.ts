@@ -2,6 +2,7 @@ import { ZoneRiskCalculator } from '../../application/service/ZoneRiskCalculator
 import { GetFireHistoryUseCase } from '../../application/useCase/GetFireHistoryUseCase.js';
 import { GetHotspotsUseCase } from '../../application/useCase/GetHotspotsUseCase.js';
 import { GetZoneDetailUseCase } from '../../application/useCase/GetZoneDetailUseCase.js';
+import { GetZoneForecastUseCase } from '../../application/useCase/GetZoneForecastUseCase.js';
 import { GetZonesRiskUseCase } from '../../application/useCase/GetZonesRiskUseCase.js';
 import { IngestDailyWeatherUseCase } from '../../application/useCase/IngestDailyWeatherUseCase.js';
 import { IngestFireEventsUseCase } from '../../application/useCase/IngestFireEventsUseCase.js';
@@ -19,6 +20,7 @@ import type {
 import { RiskScoringService } from '../../domain/service/RiskScoringService.js';
 import { FirmsHotspotProvider } from '../external/FirmsHotspotProvider.js';
 import { OpenMeteoArchiveProvider } from '../external/OpenMeteoArchiveProvider.js';
+import { OpenMeteoForecastProvider } from '../external/OpenMeteoForecastProvider.js';
 import { OpenMeteoWeatherProvider } from '../external/OpenMeteoWeatherProvider.js';
 import {
   InMemoryDailyWeatherRepository,
@@ -36,6 +38,7 @@ import {
   PostgresWeatherRepository,
   PostgresZoneRepository,
 } from '../persistence/PostgresRepositories.js';
+import { RISK_MODEL } from '../ml/riskModel.js';
 import { getPool } from '../persistence/postgresPool.js';
 import { fireEvents, hotspots, weatherSnapshots, zones } from '../persistence/seedData.js';
 import { createFireReportSources } from '../scraping/FireReportSourceFactory.js';
@@ -45,6 +48,7 @@ import { env, type Env } from './env.js';
 export interface Container {
   readonly getZonesRisk: GetZonesRiskUseCase;
   readonly getZoneDetail: GetZoneDetailUseCase;
+  readonly getZoneForecast: GetZoneForecastUseCase;
   readonly getFireHistory: GetFireHistoryUseCase;
   readonly getHotspots: GetHotspotsUseCase;
   /** Scheduled by the server (node-cron) and runnable once with `npm run ingest`. */
@@ -99,6 +103,14 @@ export function buildContainer(config: Env = env): Container {
   return {
     getZonesRisk: new GetZonesRiskUseCase(repositories.zones, riskCalculator),
     getZoneDetail: new GetZoneDetailUseCase(repositories.zones, riskCalculator),
+    getZoneForecast: new GetZoneForecastUseCase(
+      repositories.zones,
+      riskCalculator,
+      repositories.dailyWeather,
+      repositories.hotspotDetections,
+      new OpenMeteoForecastProvider(),
+      RISK_MODEL,
+    ),
     getFireHistory: new GetFireHistoryUseCase(repositories.fireEvents, repositories.zones),
     getHotspots: new GetHotspotsUseCase(repositories.hotspots),
     ingestionJobs: buildIngestionJobs(repositories, config),
