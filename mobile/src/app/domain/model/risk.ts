@@ -59,3 +59,36 @@ export interface FireHistory {
     readonly lastDate: string | null;
   };
 }
+
+/** One row of the 72 h forecast: the model run at the end of `baseDate` (today, tomorrow, the day after). */
+export interface ForecastHorizon {
+  readonly hours: 24 | 48 | 72;
+  readonly baseDate: string;
+  /** Probability (0-1) of a heat spot <= 25 km in the 72 h after baseDate. */
+  readonly probability: number;
+  readonly score: number;
+  readonly level: RiskLevel;
+}
+
+export type ForecastFallbackReason =
+  | 'weather_unavailable'
+  | 'weather_history_incomplete'
+  | 'hotspot_history_incomplete'
+  | 'model_error';
+
+/** GET /api/zones/:id/forecast. 'fallback': the model could not run; `current` is today's score. */
+export type ZoneForecast =
+  | {
+      readonly zoneId: string;
+      readonly source: 'model';
+      readonly modelVersion: string;
+      readonly generatedAt: string;
+      readonly horizons: readonly ForecastHorizon[];
+    }
+  | {
+      readonly zoneId: string;
+      readonly source: 'fallback';
+      readonly reason: ForecastFallbackReason;
+      readonly generatedAt: string;
+      readonly current: { readonly score: number; readonly level: RiskLevel };
+    };

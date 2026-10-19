@@ -12,7 +12,8 @@
     "db:seed": "tsx src/infrastructure/persistence/scripts/seedDatabase.ts",
     "db:zones": "tsx src/infrastructure/persistence/scripts/loadZones.ts",
     "db:merge-news": "tsx src/infrastructure/persistence/scripts/mergeNewsDuplicates.ts",
-    "ingest": "tsx src/infrastructure/scraping/runIngestion.ts"
+    "ingest": "tsx src/infrastructure/scraping/runIngestion.ts",
+    "db:backfill": "tsx src/infrastructure/scraping/runIngestion.ts weather-daily hotspots-history"
   },
   "dependencies": {
     "axios": "^1.20.0",

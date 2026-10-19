@@ -1,10 +1,12 @@
 import {
   Component, ElementRef, OnDestroy, afterNextRender, computed, input, output, signal, viewChild,
 } from '@angular/core';
-import type { ZoneDetail } from '../../../domain/model/risk';
+import type { ZoneDetail, ZoneForecast } from '../../../domain/model/risk';
 import { formatDecimal, formatTimeAgo, formatUpdatedDay } from '../../../domain/util/format';
 import { RISK_LABELS } from '../../../domain/util/risk-labels';
+import type { ForecastStatus } from '../../../state/zones.store';
 import { AppIcon } from '../app-icon/app-icon';
+import { ForecastSection } from '../forecast-section/forecast-section';
 import { RiskBadge } from '../risk-badge/risk-badge';
 import { FULL_HEIGHT, clampOffset, resolveSnap, snapOffset, type SheetSnap } from './sheet-snap';
 
@@ -31,7 +33,7 @@ interface DragState {
 
 @Component({
   selector: 'app-zone-sheet',
-  imports: [AppIcon, RiskBadge],
+  imports: [AppIcon, ForecastSection, RiskBadge],
   template: `
     <div class="sheet-layer" [class.is-closing]="snap() === 'closed'">
       <button type="button" class="sheet-backdrop" aria-label="Cerrar detalle" (click)="close()"></button>
@@ -128,6 +130,8 @@ interface DragState {
             </div>
           }
 
+          <app-forecast-section [forecast]="forecast()" [status]="forecastStatus()" (retry)="forecastRetry.emit()" />
+
           <button type="button" class="history-cta" (click)="historyRequested.emit()">
             Ver historial de {{ detail().name }}
           </button>
@@ -146,6 +150,10 @@ export class ZoneSheet implements OnDestroy {
   readonly updatedAt = input<Date | null>(null);
   /** Average fires per year of the zone (from its records); null leaves the card out. */
   readonly firesPerYear = input<string | null, number | null>(null, { transform: perYearLabel });
+  /** 72 h forecast of the zone (ML model or its fallback) and whether it is still loading or failed. */
+  readonly forecast = input<ZoneForecast | null>(null);
+  readonly forecastStatus = input<ForecastStatus>('idle');
+  readonly forecastRetry = output<void>();
   readonly closed = output<void>();
   readonly historyRequested = output<void>();
 

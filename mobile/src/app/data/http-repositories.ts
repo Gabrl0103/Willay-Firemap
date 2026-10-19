@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/config/api-config';
-import type { FireHistory, Hotspot, ZoneDetail, ZoneRiskSummary } from '../domain/model/risk';
-import { FireRepository, HotspotRepository, ZoneRepository } from '../domain/repository/repositories';
+import type { FireHistory, Hotspot, ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../domain/model/risk';
+import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from '../domain/repository/repositories';
 
 @Injectable()
 export class HttpZoneRepository extends ZoneRepository {
@@ -37,5 +37,15 @@ export class HttpHotspotRepository extends HotspotRepository {
 
   list(): Observable<Hotspot[]> {
     return this.http.get<Hotspot[]>(`${this.baseUrl}/hotspots`);
+  }
+}
+
+@Injectable()
+export class HttpForecastRepository extends ForecastRepository {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = inject(API_BASE_URL);
+
+  forecast(zoneId: string): Observable<ZoneForecast> {
+    return this.http.get<ZoneForecast>(`${this.baseUrl}/zones/${encodeURIComponent(zoneId)}/forecast`);
   }
 }

@@ -1,7 +1,7 @@
 import { Router, type Request } from 'express';
 import { ValidationError } from '../../domain/error/DomainErrors.js';
 import type { Container } from '../../infrastructure/config/container.js';
-import { toZoneDetailDto } from '../dto/dtos.js';
+import { toZoneDetailDto, toZoneForecastDto } from '../dto/dtos.js';
 
 function requireParam(req: Request, name: string): string {
   const value = req.params[name];
@@ -26,6 +26,10 @@ export function createRouter(container: Container): Router {
   router.get('/zones/:id', async (req, res) => {
     const detail = await container.getZoneDetail.execute(requireParam(req, 'id'));
     res.json(toZoneDetailDto(detail));
+  });
+
+  router.get('/zones/:id/forecast', async (req, res) => {
+    res.json(toZoneForecastDto(await container.getZoneForecast.execute(requireParam(req, 'id'))));
   });
 
   router.get('/fires', async (req, res) => {

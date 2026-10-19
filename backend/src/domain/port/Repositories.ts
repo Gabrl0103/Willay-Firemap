@@ -1,5 +1,6 @@
 import type { FireEvent, FireSource, NewFireEvent, StoredFireEvent } from '../model/FireEvent.js';
-import type { Hotspot, NewHotspot } from '../model/Hotspot.js';
+import type { DailyWeather } from '../model/DailyWeather.js';
+import type { Hotspot, NewHotspot, RawDetection } from '../model/Hotspot.js';
 import type { WeatherSnapshot } from '../model/WeatherSnapshot.js';
 import type { Zone } from '../model/Zone.js';
 
@@ -30,4 +31,25 @@ export interface HotspotRepository {
   findAll(): Promise<Hotspot[]>;
   /** Hotspots are "recent detections": each ingestion replaces the previous window. */
   replaceAll(hotspots: readonly NewHotspot[]): Promise<void>;
+}
+
+/** Daily weather of the last FORECAST_HISTORY_DAYS days (inputs of the 72 h forecast). */
+export interface DailyWeatherRepository {
+  /** Stored days of a zone between `from` and `to` (local YYYY-MM-DD, inclusive), oldest first. */
+  findRange(zoneId: string, from: string, to: string): Promise<DailyWeather[]>;
+  /** Inserts or replaces each zone-day, then deletes days before `keepFrom`. */
+  upsertMany(days: readonly DailyWeather[], keepFrom: string): Promise<void>;
+}
+
+/** Raw VIIRS detections (one per satellite pass) of the last FORECAST_HISTORY_DAYS days. */
+export interface HotspotDetectionRepository {
+  /** Detections at or after `since` (ISO date-time). */
+  findSince(since: string): Promise<RawDetection[]>;
+  /**
+   * Adds the detections not stored yet (same source, place and time = same detection), records
+   * `completeUtcDays` as fully fetched from FIRMS, and deletes what is older than `keepFrom` (UTC day).
+   */
+  saveFetch(detections: readonly RawDetection[], completeUtcDays: readonly string[], keepFrom: string): Promise<void>;
+  /** UTC days (YYYY-MM-DD) fully fetched from FIRMS, from `from` on. */
+  findCompleteDays(from: string): Promise<string[]>;
 }
