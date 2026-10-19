@@ -35,3 +35,5 @@ h1 { margin: 0; display: flex; line-height: 1; }
   padding: 10px 12px; border-radius: 10px; background: var(--risk-extreme); color: #fff; font-size: 11px; box-shadow: var(--shadow-soft);
 }
 .error-banner button { padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.2); font-size: 10px; font-weight: 700; }
+.banner-actions { display: flex; flex-shrink: 0; gap: 6px; }
+.location-button:disabled { opacity: 0.7; }
