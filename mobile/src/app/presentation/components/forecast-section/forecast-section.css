@@ -1,0 +1,31 @@
+/* Pronóstico 72 h de la hoja de zona: vidrio, Manrope para el texto y Roboto Mono para las cifras. */
+:host { display: block; margin-top: 24px; }
+.forecast { padding: 18px 16px; }
+h3 { margin: 0 0 14px; font-size: 15px; font-weight: 600; color: var(--text-2); }
+
+.forecast-rows { margin: 0; padding: 0; list-style: none; }
+.forecast-row + .forecast-row { margin-top: 14px; }
+.forecast-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; }
+.forecast-when { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.forecast-when b { font-size: 16px; font-weight: 700; }
+.forecast-when small { overflow: hidden; font-size: 13px; color: var(--text-2); white-space: nowrap; text-overflow: ellipsis; }
+.forecast-value { min-width: 48px; text-align: right; font-size: 15px; font-weight: 700; }
+.forecast-track { height: 8px; margin-top: 7px; overflow: hidden; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.1); }
+.forecast-track span { display: block; height: 100%; border-radius: inherit; background: var(--risk); }
+
+.forecast-note { margin: 14px 0 0; font-size: 12px; line-height: 1.35; color: var(--text-2); }
+
+.forecast-state { margin: 0; font-size: 15px; line-height: 1.35; color: var(--text-2); }
+.forecast-state p { margin: 0; }
+.forecast-state.is-error { display: grid; gap: 12px; justify-items: start; color: var(--text); }
+.forecast-state.is-error button {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-pill);
+  background: var(--text);
+  color: var(--ink);
+  font-weight: 700;
+}
+.forecast-state.is-fallback { display: grid; gap: 10px; }
+.forecast-current { display: flex; align-items: center; gap: 10px; }
+.forecast-current b { font-size: 20px; font-weight: 700; color: var(--text); }

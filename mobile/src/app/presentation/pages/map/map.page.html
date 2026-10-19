@@ -44,6 +44,9 @@
     [detail]="detail"
     [updatedAt]="store.updatedAt()"
     [firesPerYear]="firesPerYear()"
+    [forecast]="store.detailForecast()"
+    [forecastStatus]="store.forecastStatus()"
+    (forecastRetry)="store.retryForecast()"
     (closed)="closeSheet()"
     (historyRequested)="openHistory(detail.id)"
   />

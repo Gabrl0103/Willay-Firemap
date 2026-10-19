@@ -1,5 +1,5 @@
 import type { Observable } from 'rxjs';
-import type { FireHistory, Hotspot, ZoneDetail, ZoneRiskSummary } from '../model/risk';
+import type { FireHistory, Hotspot, ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../model/risk';
 
 /** Ports of the app. Abstract classes double as Angular DI tokens. */
 export abstract class ZoneRepository {
@@ -13,4 +13,8 @@ export abstract class FireRepository {
 
 export abstract class HotspotRepository {
   abstract list(): Observable<Hotspot[]>;
+}
+
+export abstract class ForecastRepository {
+  abstract forecast(zoneId: string): Observable<ZoneForecast>;
 }

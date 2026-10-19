@@ -3,8 +3,8 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular';
 import { errorInterceptor } from './core/error/error.interceptor';
-import { HttpFireRepository, HttpHotspotRepository, HttpZoneRepository } from './data/http-repositories';
-import { FireRepository, HotspotRepository, ZoneRepository } from './domain/repository/repositories';
+import { HttpFireRepository, HttpForecastRepository, HttpHotspotRepository, HttpZoneRepository } from './data/http-repositories';
+import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from './domain/repository/repositories';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -17,5 +17,6 @@ export const appConfig: ApplicationConfig = {
     { provide: ZoneRepository, useClass: HttpZoneRepository },
     { provide: FireRepository, useClass: HttpFireRepository },
     { provide: HotspotRepository, useClass: HttpHotspotRepository },
+    { provide: ForecastRepository, useClass: HttpForecastRepository },
   ],
 };
