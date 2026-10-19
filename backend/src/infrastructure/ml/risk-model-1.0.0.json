@@ -1,0 +1,381 @@
+{
+  "version": "1.0.0",
+  "label": "VIIRS hotspot <= 25 km of the municipal seat in the next 72 h",
+  "trainedAt": "2026-10-03T22:32:28+00:00",
+  "trainedFromCommit": "e451b6a",
+  "sourceSha256": "24a5fa043890732f478021d5721a7df23153c81ab6fbb85b3aac5595dca077f0",
+  "features": [
+    "rain_1d_mm",
+    "rain_3d_mm",
+    "rain_7d_mm",
+    "rain_14d_mm",
+    "rain_30d_mm",
+    "dry_days",
+    "temperature_mean_c",
+    "temperature_max_c",
+    "temperature_range_c",
+    "temperature_trend_7d_c",
+    "humidity_mean_pct",
+    "humidity_7d_pct",
+    "wind_max_ms",
+    "wind_7d_ms",
+    "evapotranspiration_mm",
+    "water_balance_30d_mm",
+    "surface_soil_wetness",
+    "hotspots_zone_1d",
+    "hotspots_zone_7d",
+    "hotspots_zone_30d",
+    "hotspots_ring_7d",
+    "hotspots_ring_30d",
+    "day_of_year_sin",
+    "day_of_year_cos",
+    "zone_hotspot_days_per_year"
+  ],
+  "logFeatures": [
+    "hotspots_zone_1d",
+    "hotspots_zone_7d",
+    "hotspots_zone_30d",
+    "hotspots_ring_7d",
+    "hotspots_ring_30d",
+    "zone_hotspot_days_per_year"
+  ],
+  "mean": [
+    3.3971529299014236,
+    10.188437585569545,
+    23.706963906763416,
+    47.230435891292444,
+    100.20014401355421,
+    1.7301393072289157,
+    17.29584294564622,
+    21.977746525876235,
+    8.027138297508214,
+    0.00124882647473009,
+    83.80507521563526,
+    83.79298725747145,
+    3.1174881058324204,
+    1.680113783054295,
+    1.7613828895125958,
+    47.2365903956736,
+    0.7215593339266155,
+    0.0727665629028039,
+    0.37046586376463614,
+    0.9775736908809396,
+    0.6966062205959486,
+    1.648472152409242,
+    5.004763062711844e-06,
+    -0.00013688469333927975,
+    2.7291544534134453
+  ],
+  "scale": [
+    5.0577003535800955,
+    11.65131058063113,
+    21.27766997152892,
+    34.18064467276355,
+    58.511735518040076,
+    3.8689915649298343,
+    4.503135672522384,
+    4.420070747494033,
+    2.478727520800059,
+    0.5246518867775958,
+    5.032310998808524,
+    4.272613643093447,
+    1.2979889282465875,
+    0.7727974219130299,
+    1.0383928646392642,
+    60.95905559604047,
+    0.0980539414095774,
+    0.30537125509688035,
+    0.7180029191160382,
+    1.1546259233108784,
+    0.9756503165974046,
+    1.3512254338727223,
+    0.7071551473610943,
+    0.7070583984355479,
+    0.9831987914390194
+  ],
+  "coefficients": [
+    -0.1722755459311431,
+    -0.19458854762115,
+    0.13455942859921846,
+    0.015377773899453356,
+    -0.20869245641711265,
+    0.032755338128547314,
+    0.019646353715569866,
+    -0.09479606954459313,
+    -0.2236442240893615,
+    0.0073989823932458934,
+    -0.48197158454086153,
+    -0.4106954315124959,
+    0.1686085337388133,
+    0.1940994334898459,
+    0.309677368911402,
+    0.41241509284518546,
+    -0.03123145625605253,
+    0.029470191832173413,
+    0.06062682306952541,
+    0.26572574279630384,
+    0.058143921032878715,
+    0.33595061529327225,
+    -0.09204295735944132,
+    0.13379422784958128,
+    1.2314453964314274
+  ],
+  "intercept": -0.8664107238818639,
+  "platt": {
+    "slope": 0.9723661129704759,
+    "intercept": -1.640427495071753
+  },
+  "weather": {
+    "dryDayMm": 1.0,
+    "mappingFitYear": 2024,
+    "openMeteoToPower": {
+      "precipitation_mm": {
+        "openMeteo": "precipitation_sum",
+        "unitIn": "mm",
+        "unitOut": "mm/day",
+        "slope": 0.16278933481979377,
+        "intercept": 2.1606723673591683,
+        "min": 0,
+        "max": null,
+        "fitRows": 17568,
+        "correlation": 0.35763964606025545
+      },
+      "temperature_mean_c": {
+        "openMeteo": "temperature_2m_mean",
+        "unitIn": "C at 2 m",
+        "unitOut": "C at 2 m",
+        "slope": 0.8052886082439037,
+        "intercept": 4.140271353568704,
+        "min": null,
+        "max": null,
+        "fitRows": 17568,
+        "correlation": 0.8882187199458841
+      },
+      "temperature_max_c": {
+        "openMeteo": "temperature_2m_max",
+        "unitIn": "C at 2 m",
+        "unitOut": "C at 2 m",
+        "slope": 0.7343831108925558,
+        "intercept": 6.71590966701658,
+        "min": null,
+        "max": null,
+        "fitRows": 17568,
+        "correlation": 0.7899357961646039
+      },
+      "temperature_min_c": {
+        "openMeteo": "temperature_2m_min",
+        "unitIn": "C at 2 m",
+        "unitOut": "C at 2 m",
+        "slope": 0.7927680728863152,
+        "intercept": 3.657583214095277,
+        "min": null,
+        "max": null,
+        "fitRows": 17568,
+        "correlation": 0.8934186427977227
+      },
+      "humidity_mean_pct": {
+        "openMeteo": "relative_humidity_2m_mean",
+        "unitIn": "% at 2 m",
+        "unitOut": "% at 2 m",
+        "slope": 0.263867048380544,
+        "intercept": 61.67583900578212,
+        "min": 0,
+        "max": 100,
+        "fitRows": 17568,
+        "correlation": 0.48397368038795346
+      },
+      "wind_max_ms": {
+        "openMeteo": "wind_speed_10m_max",
+        "unitIn": "km/h at 10 m",
+        "unitOut": "m/s at 2 m",
+        "slope": 0.17717856517683983,
+        "intercept": 1.304442514132248,
+        "min": 0,
+        "max": null,
+        "fitRows": 17568,
+        "correlation": 0.5305688383006053
+      },
+      "wind_mean_ms": {
+        "openMeteo": "wind_speed_10m_mean",
+        "unitIn": "km/h at 10 m",
+        "unitOut": "m/s at 2 m",
+        "slope": 0.24058833957952652,
+        "intercept": 0.3950312348632916,
+        "min": 0,
+        "max": null,
+        "fitRows": 17568,
+        "correlation": 0.6868178206314798
+      },
+      "evapotranspiration_mm": {
+        "openMeteo": "et0_fao_evapotranspiration",
+        "unitIn": "mm (reference ET0)",
+        "unitOut": "MJ/m2/day (actual)",
+        "slope": 0.3077971910508424,
+        "intercept": 1.0728484896130792,
+        "min": 0,
+        "max": null,
+        "fitRows": 17568,
+        "correlation": 0.21791905510982745
+      }
+    },
+    "surfaceSoilWetness": 0.7215593339266155
+  },
+  "hotspots": {
+    "radiusKm": 25,
+    "ringRadiusKm": 50,
+    "sources": [
+      "VIIRS_SNPP_NRT",
+      "VIIRS_NOAA20_NRT"
+    ],
+    "localUtcOffsetHours": -5,
+    "staticSourceKm": 1.0,
+    "staticSources": [
+      [
+        1.1948,
+        -79.0399
+      ],
+      [
+        1.195,
+        -79.0376
+      ],
+      [
+        1.1996,
+        -79.0456
+      ],
+      [
+        1.2249,
+        -78.966
+      ],
+      [
+        1.268,
+        -79.0089
+      ],
+      [
+        1.766,
+        -78.6207
+      ],
+      [
+        1.7694,
+        -78.6238
+      ],
+      [
+        1.7806,
+        -78.8231
+      ],
+      [
+        1.8565,
+        -78.5392
+      ],
+      [
+        2.0429,
+        -78.6735
+      ],
+      [
+        2.3625,
+        -78.3219
+      ],
+      [
+        2.5999,
+        -78.4094
+      ],
+      [
+        2.6011,
+        -78.4123
+      ]
+    ]
+  },
+  "zoneHotspotDaysPerYear": {
+    "alban": 30.75,
+    "aldana": 8.5,
+    "ancuya": 30.0,
+    "arboleda": 36.5,
+    "barbacoas": 1.0,
+    "belen": 29.0,
+    "buesaco": 31.75,
+    "chachagui": 31.0,
+    "colon": 33.5,
+    "consaca": 28.0,
+    "contadero": 9.5,
+    "cordoba": 8.25,
+    "cuaspud-carlosama": 9.5,
+    "cumbal": 14.0,
+    "cumbitara": 27.0,
+    "el-charco": 0.5,
+    "el-penol": 37.0,
+    "el-rosario": 37.75,
+    "el-tablon-de-gomez": 26.75,
+    "el-tambo": 38.25,
+    "francisco-pizarro": 0.5,
+    "funes": 12.5,
+    "guachucal": 13.25,
+    "guaitarilla": 22.25,
+    "gualmatan": 9.75,
+    "iles": 12.0,
+    "imues": 16.5,
+    "ipiales": 5.5,
+    "la-cruz": 26.25,
+    "la-florida": 35.75,
+    "la-llanada": 28.25,
+    "la-tola": 1.75,
+    "la-union": 36.25,
+    "leiva": 37.0,
+    "linares": 33.25,
+    "los-andes": 30.75,
+    "magui": 1.25,
+    "mallama": 12.25,
+    "mosquera": 1.75,
+    "narino": 32.75,
+    "olaya-herrera": 2.5,
+    "ospina": 19.25,
+    "pasto": 24.5,
+    "policarpa": 33.25,
+    "potosi": 6.0,
+    "providencia": 26.0,
+    "puerres": 8.75,
+    "pupiales": 8.25,
+    "ricaurte": 4.25,
+    "roberto-payan": 1.5,
+    "samaniego": 27.0,
+    "san-bernardo": 30.5,
+    "san-lorenzo": 37.5,
+    "san-pablo": 32.75,
+    "san-pedro-de-cartago": 35.25,
+    "sandona": 33.75,
+    "santa-barbara": 0.5,
+    "santacruz": 22.0,
+    "sapuyes": 18.0,
+    "taminango": 39.75,
+    "tangua": 16.0,
+    "tumaco": 1.5,
+    "tuquerres": 20.75,
+    "yacuanquer": 16.5
+  },
+  "evaluationTest": {
+    "period": [
+      "2025-01-01",
+      "2026-09-29"
+    ],
+    "power": {
+      "rows": 40768,
+      "positive_rate": 0.1555,
+      "roc_auc": 0.8531,
+      "pr_auc": 0.5116,
+      "brier": 0.0996,
+      "precision_at_5": 0.3168,
+      "recall_at_5": 0.2145,
+      "precision_at_10": 0.2995,
+      "recall_at_10": 0.3753
+    },
+    "openMeteoMapped": {
+      "rows": 40176,
+      "positive_rate": 0.1561,
+      "roc_auc": 0.8424,
+      "pr_auc": 0.496,
+      "brier": 0.1004,
+      "precision_at_5": 0.2794,
+      "recall_at_5": 0.1773,
+      "precision_at_10": 0.2817,
+      "recall_at_10": 0.3441
+    }
+  }
+}
