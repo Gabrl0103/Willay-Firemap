@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { HotspotConfidence, HotspotDetection } from '../../domain/model/Hotspot.js';
 import type { HotspotHistoryProvider, HotspotProvider } from '../../domain/port/DataSources.js';
 import { HOTSPOT_WINDOW_DAYS } from '../../domain/service/hotspotRecency.js';
+import { retry } from './retry.js';
 
 const FIRMS_AREA_URL = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv';
 /** Nariño bounding box: west, south, east, north. */
@@ -21,8 +22,9 @@ export const firmsAreaUrlFrom = (mapKey: string, source: string, startDate: stri
 /** GET that returns the body as text (axios by default; tests pass a fake). */
 export type TextGetter = (url: string) => Promise<string>;
 
-const axiosGetText: TextGetter = async (url) =>
-  (await axios.get<string>(url, { timeout: 30_000, responseType: 'text' })).data;
+/** FIRMS is sometimes slow: timeouts, network errors and 5xx are retried (2 s, then 5 s). */
+const axiosGetText: TextGetter = (url) =>
+  retry(async () => (await axios.get<string>(url, { timeout: 30_000, responseType: 'text' })).data);
 
 /** VIIRS writes l / n / h (MODIS writes 0-100). Missing or unknown values count as nominal. */
 export function parseConfidence(raw: string | undefined): HotspotConfidence {
