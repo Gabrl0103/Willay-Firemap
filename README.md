@@ -61,15 +61,15 @@ npm start
 Abre http://localhost:4200 (con el backend encendido).
 Pruebas unitarias de la app (Vitest): `npm test`.
 
-### 3. App en el emulador de Android
+### 3. App en Android (emulador o celular)
 ```
 cd mobile
 npm install
 npx cap add android        # solo la primera vez
 npm run build:android
-npm run open:android       # abre Android Studio; pulsa Run con un emulador
+npm run open:android       # abre Android Studio; pulsa Run con un emulador o un celular conectado por USB
 ```
-El emulador llega al backend de tu PC por `10.0.2.2:3000` (ya está configurado).
+La app en Android usa el backend desplegado (`https://willay-api.onrender.com/api`), no el de tu PC.
 Para generar el APK: Android Studio → Build → Build APK(s).
 
 ## Modelo de riesgo
