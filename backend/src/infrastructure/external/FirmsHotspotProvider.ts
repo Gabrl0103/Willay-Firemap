@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { HotspotConfidence, HotspotDetection } from '../../domain/model/Hotspot.js';
-import type { HotspotProvider } from '../../domain/port/DataSources.js';
+import type { HotspotHistoryProvider, HotspotProvider } from '../../domain/port/DataSources.js';
 import { HOTSPOT_WINDOW_DAYS } from '../../domain/service/hotspotRecency.js';
 
 const FIRMS_AREA_URL = 'https://firms.modaps.eosdis.nasa.gov/api/area/csv';
@@ -13,6 +13,10 @@ export const FIRMS_DAY_RANGE = HOTSPOT_WINDOW_DAYS;
 
 export const firmsAreaUrl = (mapKey: string, source: string): string =>
   `${FIRMS_AREA_URL}/${mapKey}/${source}/${NARINO_BBOX}/${FIRMS_DAY_RANGE}`;
+
+/** `days` UTC days (1-5) starting on `startDate` (YYYY-MM-DD). FIRMS keeps NRT data for about 2 months. */
+export const firmsAreaUrlFrom = (mapKey: string, source: string, startDate: string, days: number): string =>
+  `${FIRMS_AREA_URL}/${mapKey}/${source}/${NARINO_BBOX}/${days}/${startDate}`;
 
 /** GET that returns the body as text (axios by default; tests pass a fake). */
 export type TextGetter = (url: string) => Promise<string>;
@@ -68,16 +72,24 @@ export function parseFirmsCsv(csv: string, source: string): HotspotDetection[] {
 }
 
 /** NASA FIRMS area API. Needs a free MAP_KEY: https://firms.modaps.eosdis.nasa.gov/api/map_key/ */
-export class FirmsHotspotProvider implements HotspotProvider {
+export class FirmsHotspotProvider implements HotspotProvider, HotspotHistoryProvider {
   constructor(
     private readonly mapKey: string,
     private readonly getText: TextGetter = axiosGetText,
   ) {}
 
   async fetchRecent(): Promise<HotspotDetection[]> {
+    return this.fetchEachSource((source) => firmsAreaUrl(this.mapKey, source));
+  }
+
+  async fetchDays(startDate: string, days: number): Promise<HotspotDetection[]> {
+    return this.fetchEachSource((source) => firmsAreaUrlFrom(this.mapKey, source, startDate, days));
+  }
+
+  private async fetchEachSource(url: (source: string) => string): Promise<HotspotDetection[]> {
     const results: HotspotDetection[] = [];
     for (const source of FIRMS_SOURCES) {
-      results.push(...parseFirmsCsv(await this.getText(firmsAreaUrl(this.mapKey, source)), source));
+      results.push(...parseFirmsCsv(await this.getText(url(source)), source));
     }
     return results;
   }

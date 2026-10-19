@@ -3,7 +3,9 @@ import { GetFireHistoryUseCase } from '../../application/useCase/GetFireHistoryU
 import { GetHotspotsUseCase } from '../../application/useCase/GetHotspotsUseCase.js';
 import { GetZoneDetailUseCase } from '../../application/useCase/GetZoneDetailUseCase.js';
 import { GetZonesRiskUseCase } from '../../application/useCase/GetZonesRiskUseCase.js';
+import { IngestDailyWeatherUseCase } from '../../application/useCase/IngestDailyWeatherUseCase.js';
 import { IngestFireEventsUseCase } from '../../application/useCase/IngestFireEventsUseCase.js';
+import { IngestHotspotHistoryUseCase } from '../../application/useCase/IngestHotspotHistoryUseCase.js';
 import { IngestHotspotsUseCase } from '../../application/useCase/IngestHotspotsUseCase.js';
 import { IngestWeatherUseCase } from '../../application/useCase/IngestWeatherUseCase.js';
 import type {
@@ -16,6 +18,7 @@ import type {
 } from '../../domain/port/Repositories.js';
 import { RiskScoringService } from '../../domain/service/RiskScoringService.js';
 import { FirmsHotspotProvider } from '../external/FirmsHotspotProvider.js';
+import { OpenMeteoArchiveProvider } from '../external/OpenMeteoArchiveProvider.js';
 import { OpenMeteoWeatherProvider } from '../external/OpenMeteoWeatherProvider.js';
 import {
   InMemoryDailyWeatherRepository,
@@ -104,6 +107,11 @@ export function buildContainer(config: Env = env): Container {
 
 function buildIngestionJobs(repositories: RepositorySet, config: Env): IngestionJob[] {
   const ingestWeather = new IngestWeatherUseCase(repositories.zones, new OpenMeteoWeatherProvider(), repositories.weather);
+  const ingestDailyWeather = new IngestDailyWeatherUseCase(
+    repositories.zones,
+    new OpenMeteoArchiveProvider(),
+    repositories.dailyWeather,
+  );
 
   const jobs: IngestionJob[] = [
     {
@@ -112,23 +120,37 @@ function buildIngestionJobs(repositories: RepositorySet, config: Env): Ingestion
       runOnStart: true,
       run: async () => `${await ingestWeather.execute()} weather snapshots saved`,
     },
+    {
+      // Daily weather of the last 35 days for the 72 h forecast (Open-Meteo historical weather).
+      name: 'weather-daily',
+      schedule: '20 2 * * *', // once a day
+      runOnStart: true,
+      run: async () => `${await ingestDailyWeather.execute()} zone-days of daily weather saved`,
+    },
   ];
 
   if (config.firmsMapKey) {
-    const ingestHotspots = new IngestHotspotsUseCase(
-      new FirmsHotspotProvider(config.firmsMapKey),
-      repositories.hotspots,
-      repositories.hotspotDetections,
-    );
-    jobs.push({
-      name: 'hotspots',
-      schedule: '15 */3 * * *', // every 3 hours
-      runOnStart: true,
-      run: async () => {
-        const { detected, stored } = await ingestHotspots.execute();
-        return `${detected} detections, ${stored} hotspots stored after removing satellite duplicates`;
+    const firms = new FirmsHotspotProvider(config.firmsMapKey);
+    const ingestHotspots = new IngestHotspotsUseCase(firms, repositories.hotspots, repositories.hotspotDetections);
+    const ingestHotspotHistory = new IngestHotspotHistoryUseCase(firms, repositories.hotspotDetections);
+    jobs.push(
+      {
+        name: 'hotspots',
+        schedule: '15 */3 * * *', // every 3 hours
+        runOnStart: true,
+        run: async () => {
+          const { detected, stored } = await ingestHotspots.execute();
+          return `${detected} detections, ${stored} hotspots stored after removing satellite duplicates`;
+        },
       },
-    });
+      {
+        // The 35 days of raw detections the forecast needs; daily, so days missed while asleep come back.
+        name: 'hotspots-history',
+        schedule: '40 2 * * *', // once a day
+        runOnStart: true,
+        run: async () => `${await ingestHotspotHistory.execute()} detections of the last 35 days saved`,
+      },
+    );
   } else {
     console.log('Hotspots: MAP_KEY is not set, NASA FIRMS ingestion is off');
   }

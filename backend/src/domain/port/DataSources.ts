@@ -16,6 +16,12 @@ export interface HotspotProvider {
   fetchRecent(): Promise<HotspotDetection[]>;
 }
 
+/** Past detections, to load the 30 days the forecast needs. */
+export interface HotspotHistoryProvider {
+  /** Detections of `days` UTC days (at most 5) starting on `startDate` (YYYY-MM-DD). */
+  fetchDays(startDate: string, days: number): Promise<HotspotDetection[]>;
+}
+
 export interface DailyWeatherProvider {
   /** Daily weather of each zone for the local days `from`..`to` (YYYY-MM-DD, inclusive). */
   fetchDaily(zones: readonly Zone[], from: string, to: string): Promise<DailyWeather[]>;
