@@ -57,9 +57,6 @@
             ],
             "styles": [
               "src/styles.css"
-            ],
-            "allowedCommonJsDependencies": [
-              "leaflet"
             ]
           },
           "configurations": {
