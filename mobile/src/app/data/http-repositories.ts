@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/config/api-config';
-import type { FireHistory, Hotspot, ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../domain/model/risk';
+import type { FireHistory, Hotspot, ZoneBoundaries, ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../domain/model/risk';
 import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from '../domain/repository/repositories';
 
 @Injectable()
@@ -16,6 +16,10 @@ export class HttpZoneRepository extends ZoneRepository {
 
   detail(zoneId: string): Observable<ZoneDetail> {
     return this.http.get<ZoneDetail>(`${this.baseUrl}/zones/${encodeURIComponent(zoneId)}`);
+  }
+
+  boundaries(): Observable<ZoneBoundaries> {
+    return this.http.get<ZoneBoundaries>(`${this.baseUrl}/zones/boundaries`);
   }
 }
 
