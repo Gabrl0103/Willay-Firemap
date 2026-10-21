@@ -280,7 +280,7 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
   - Rendimiento (Chrome de escritorio, 390×844, 64 polígonos y hasta 49 marcadores): 1,4–2,0 ms por cuadro de GL y
     3,4 ms moviendo la cámara con los marcadores. El Chrome controlado por la extensión limita los cuadros por
     segundo, así que los fps reales quedan por medir en un Android (`[map] globo: N fps` en la consola).
-  - Peso: chunk del mapa 1,09 MB (245 KB con gzip), perezoso; carga inicial 600 KB.
+  - Peso: chunk del mapa 1,10 MB (247 KB con gzip), perezoso; carga inicial 600 KB.
 - **2026-10-21 (v0.23, rama `feat/municipal-boundaries`):** límites reales de los 64 municipios, coloreados por riesgo.
   - Fuente: DANE, MGN 2025, capa `MGN_ADM_MPIO_GRAFICO` (zip bajado a mano del Geoportal, sha256 `a3c01393…bc141f`).
     Se descartó el IGAC (Resolución 616 de 2020, sin descarga directa de una capa municipal).

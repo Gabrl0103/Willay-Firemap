@@ -88,7 +88,7 @@ dice y la búsqueda y «Mi ubicación» siguen abriendo la hoja de zona.
 
 Nada se baja de un CDN: el CSS y el worker de MapLibre (`maplibre/maplibre-gl-worker.mjs`, copiado por
 `angular.json`) van en la app; solo los tiles vienen de internet. El chunk del mapa (carga perezosa en
-`/map`) pesa 1,09 MB (245 KB con gzip).
+`/map`) pesa 1,10 MB (247 KB con gzip).
 
 ### 3. App en Android (emulador o celular)
 ```
