@@ -1,6 +1,11 @@
 :host { position: absolute; inset: 0; display: block; background: var(--bg); overflow: hidden; }
 .map-canvas { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
 .map-element { position: absolute; inset: 0; z-index: 0; }
+/* Resplandor naranja tenue en el borde del globo; map.page.ts lo ubica y lo apaga al acercar. */
+.globe-glow {
+  position: absolute; z-index: 1; left: 0; top: 0; border-radius: 50%; opacity: 0; pointer-events: none; mix-blend-mode: screen;
+  background: radial-gradient(circle closest-side, transparent calc(var(--edge, 80%) - 1.5%), rgba(255, 138, 43, 0.4) var(--edge, 80%), rgba(255, 90, 31, 0.12) calc(var(--edge, 80%) + 5%), transparent 100%);
+}
 .map-unavailable {
   position: absolute; z-index: 1; left: 24px; right: 24px; top: 38%; margin: 0; display: flex; gap: 10px; align-items: flex-start;
   padding: 14px 16px; border-radius: 22px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-2); font-size: 13px; line-height: 1.45;

@@ -18,7 +18,7 @@ import { SearchBox } from '../../components/search-box/search-box';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
   FLY_MS, GLOBE_START, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, PITCH, SPIN_MS, ZONE_FLY_MS, ZONE_ZOOM,
-  hasWebGL, introPlan, measureFps, prefersReducedMotion, shouldUseFlatMap, spinCenter,
+  globeHalo, hasWebGL, introPlan, measureFps, prefersReducedMotion, shouldUseFlatMap, spinCenter,
 } from './map-camera';
 import {
   BOUNDARIES_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYER, boundariesSource, boundaryLayers,
@@ -34,6 +34,8 @@ const WORKER_PATH = 'maplibre/maplibre-gl-worker.mjs';
 let introPlayed = false;
 /** Room for the header (top) when framing the department; the bottom adds the overview sheet's height. */
 const NARINO_PADDING = { top: 110, bottom: 24, left: 24, right: 24 };
+/** How far (px) the globe's orange halo reaches beyond its edge. */
+const GLOW_WIDTH = 44;
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
 const SEAT_OFFSET: [number, number] = [0, -150];
 
@@ -57,6 +59,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
+  private readonly glow = viewChild.required<ElementRef<HTMLDivElement>>('glow');
+  private projection: MapProjection = 'globe';
   private map?: MapLibreMap;
   private colors?: MapColors;
   private readonly markers = new Map<string, ShownMarker>();
@@ -126,6 +130,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   }
 
   private createMap(projection: MapProjection): void {
+    this.projection = projection;
     setWorkerUrl(new URL(WORKER_PATH, document.baseURI).href);
     const element = this.mapElement().nativeElement;
     const colors = readMapColors(element);
@@ -161,6 +166,9 @@ export class MapPage implements AfterViewInit, OnDestroy {
     map.on('zoom', updateZoomClass);
     updateZoomClass();
     map.on('render', () => this.syncMarkers());
+    map.on('move', () => this.placeGlow());
+    map.on('resize', () => this.placeGlow());
+    this.placeGlow();
     map.on('click', ZONE_FILL_LAYER, (event) => this.onPolygonTap(event));
     map.once('load', () => {
       this.addLayers(map, colors);
@@ -397,9 +405,35 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const map = this.map;
     if (!map) return;
     console.info('[map] el globo va lento: se usa el mapa plano');
+    this.projection = 'mercator';
     map.setProjection({ type: 'mercator' });
+    this.placeGlow();
     map.setSky({ 'atmosphere-blend': 0 });
     void this.projectionFlag.rememberFlat();
+  }
+
+  /** The faint orange halo at the edge of the globe (MapLibre's own atmosphere is blue and fixed). */
+  private placeGlow(): void {
+    const map = this.map;
+    const glow = this.glow().nativeElement;
+    const halo = map
+      ? globeHalo({
+          zoom: map.getZoom(),
+          centerLatitude: map.getCenter().lat,
+          width: map.getContainer().clientWidth,
+          height: map.getContainer().clientHeight,
+          projection: this.projection,
+        })
+      : null;
+    if (!halo) {
+      glow.style.opacity = '0';
+      return;
+    }
+    const outer = halo.radius + GLOW_WIDTH;
+    glow.style.opacity = String(halo.opacity);
+    glow.style.width = glow.style.height = `${outer * 2}px`;
+    glow.style.transform = `translate(${halo.x - outer}px, ${halo.y - outer}px)`;
+    glow.style.setProperty('--edge', `${(halo.radius / outer) * 100}%`);
   }
 
   /** Ends the spin; false if it had already ended. */

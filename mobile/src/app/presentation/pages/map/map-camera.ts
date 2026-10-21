@@ -15,8 +15,11 @@ export const PITCH = 50;
 /** Zoom of the flight to a seat: names show from 10 (zone-marker.ts). */
 export const ZONE_ZOOM = 10;
 
-/** Opening view: the whole globe, South America in front, slightly east of Nariño so it spins into view. */
-export const GLOBE_START = { center: [-55, 2] as [number, number], zoom: 1.4, pitch: 0, bearing: 0 };
+/**
+ * Opening view: the whole globe, South America in front, east of Nariño so it spins into view. Looking
+ * a bit south of the equator lifts the globe (and Nariño, at 1° N) above the bottom sheet.
+ */
+export const GLOBE_START = { center: [-55, -14] as [number, number], zoom: 1.4, pitch: 0, bearing: 0 };
 /** The globe turns west this many degrees per second... */
 export const SPIN_DEGREES_PER_SECOND = 10;
 /** ...for this long, then flies to Nariño. */
@@ -48,6 +51,29 @@ export function introPlan(options: {
 export function spinCenter(elapsedMs: number): [number, number] {
   const [longitude, latitude] = GLOBE_START.center;
   return [longitude - (SPIN_DEGREES_PER_SECOND * elapsedMs) / 1000, latitude];
+}
+
+/** The orange halo around the globe fades out from this zoom to GLOW_END_ZOOM. */
+export const GLOW_START_ZOOM = 3;
+export const GLOW_END_ZOOM = 4.5;
+
+/**
+ * Screen circle of the globe (MapLibre draws it with radius worldSize / 2π, worldSize = 512 · 2^zoom)
+ * and how visible its halo is. Null on the flat map or once zoomed in, where there is no globe edge.
+ */
+export function globeHalo(view: {
+  readonly zoom: number;
+  readonly centerLatitude: number;
+  readonly width: number;
+  readonly height: number;
+  readonly projection: MapProjection;
+}): { x: number; y: number; radius: number; opacity: number } | null {
+  if (view.projection !== 'globe' || view.zoom >= GLOW_END_ZOOM) return null;
+  const radius = (512 * 2 ** view.zoom) / (2 * Math.PI);
+  // Looking at latitude φ, the globe's center sits r·sin(φ) below the screen center.
+  const y = view.height / 2 + radius * Math.sin((view.centerLatitude * Math.PI) / 180);
+  const opacity = Math.min(1, Math.max(0, (GLOW_END_ZOOM - view.zoom) / (GLOW_END_ZOOM - GLOW_START_ZOOM)));
+  return { x: view.width / 2, y, radius, opacity };
 }
 
 /** Below this the globe is not smooth enough: the map switches to the flat projection. */

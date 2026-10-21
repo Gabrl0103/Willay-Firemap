@@ -1,5 +1,6 @@
 <div class="map-canvas">
   <div #mapElement class="map-element"></div>
+  <div #glow class="globe-glow" aria-hidden="true"></div>
   @if (mapUnavailable()) {
     <p class="map-unavailable" role="status">
       <app-icon name="alert" [size]="18" />

@@ -1,6 +1,6 @@
 import {
-  GLOBE_START, MAX_BOUNDS, MIN_FPS_SAMPLES, NARINO_BOUNDS, SPIN_DEGREES_PER_SECOND, hasWebGL, introPlan, measureFps,
-  prefersReducedMotion, shouldUseFlatMap, spinCenter,
+  GLOBE_START, GLOW_END_ZOOM, MAX_BOUNDS, MIN_FPS_SAMPLES, NARINO_BOUNDS, SPIN_DEGREES_PER_SECOND, globeHalo, hasWebGL,
+  introPlan, measureFps, prefersReducedMotion, shouldUseFlatMap, spinCenter,
 } from './map-camera';
 
 const frames = (count: number, gapMs: number): number[] => Array.from({ length: count }, (_, i) => i * gapMs);
@@ -32,6 +32,26 @@ describe('map camera: opening', () => {
     const [[west, south], [east, north]] = MAX_BOUNDS as [[number, number], [number, number]];
     const [[nWest, nSouth], [nEast, nNorth]] = NARINO_BOUNDS;
     expect(west < nWest && south < nSouth && east > nEast && north > nNorth).toBe(true);
+  });
+});
+
+describe('map camera: globe halo', () => {
+  const view = { zoom: 1.4, centerLatitude: 0, width: 390, height: 844, projection: 'globe' as const };
+
+  it('circles the globe at its radius, fully visible when far', () => {
+    const halo = globeHalo(view)!;
+    expect(halo.radius).toBeCloseTo((512 * 2 ** 1.4) / (2 * Math.PI));
+    expect([halo.x, halo.y, halo.opacity]).toEqual([195, 422, 1]);
+  });
+
+  it('moves the circle down when looking north of the equator', () => {
+    expect(globeHalo({ ...view, centerLatitude: 10 })!.y).toBeGreaterThan(422);
+  });
+
+  it('fades out when zooming in and is gone on the flat map', () => {
+    expect(globeHalo({ ...view, zoom: 3.75 })!.opacity).toBeCloseTo(0.5);
+    expect(globeHalo({ ...view, zoom: GLOW_END_ZOOM })).toBeNull();
+    expect(globeHalo({ ...view, projection: 'mercator' })).toBeNull();
   });
 });
 
