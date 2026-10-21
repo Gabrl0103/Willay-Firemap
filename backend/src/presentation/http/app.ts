@@ -1,3 +1,4 @@
+import compression from 'compression';
 import cors from 'cors';
 import express, { type Express } from 'express';
 import type { Container } from '../../infrastructure/config/container.js';
@@ -6,6 +7,7 @@ import { createRouter } from './routes.js';
 
 export function createApp(container: Container): Express {
   const app = express();
+  app.use(compression()); // the boundaries are ~150 KB of GeoJSON, ~42 KB gzipped
   app.use(cors());
   app.use(express.json());
   app.use('/api', createRouter(container));

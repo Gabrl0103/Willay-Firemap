@@ -1,7 +1,10 @@
 import { Router, type Request } from 'express';
 import { ValidationError } from '../../domain/error/DomainErrors.js';
 import type { Container } from '../../infrastructure/config/container.js';
-import { toZoneDetailDto, toZoneForecastDto } from '../dto/dtos.js';
+import { toZoneBoundariesDto, toZoneDetailDto, toZoneForecastDto } from '../dto/dtos.js';
+
+/** The boundaries only change with a new build, so phones may keep them a day (Express adds the ETag). */
+const BOUNDARIES_CACHE_CONTROL = 'public, max-age=86400';
 
 function requireParam(req: Request, name: string): string {
   const value = req.params[name];
@@ -21,6 +24,11 @@ export function createRouter(container: Container): Router {
 
   router.get('/zones', async (_req, res) => {
     res.json(await container.getZonesRisk.execute());
+  });
+
+  // Before /zones/:id, or Express would take "boundaries" as a zone id.
+  router.get('/zones/boundaries', (_req, res) => {
+    res.set('Cache-Control', BOUNDARIES_CACHE_CONTROL).json(toZoneBoundariesDto(container.getZoneBoundaries.execute()));
   });
 
   router.get('/zones/:id', async (req, res) => {
