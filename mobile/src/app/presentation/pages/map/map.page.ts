@@ -6,6 +6,7 @@ import {
   AttributionControl, Map as MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent,
 } from 'maplibre-gl';
 import { getUserLocation, locationMessage } from '../../../core/location/user-location';
+import { MapProjectionFlag } from '../../../core/map-projection-flag';
 import { SearchRequest } from '../../../core/search-request';
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 import { averagePerYear } from '../../../domain/util/fire-history';
@@ -17,7 +18,7 @@ import { SearchBox } from '../../components/search-box/search-box';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
   FLY_MS, GLOBE_START, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, PITCH, SPIN_MS, ZONE_FLY_MS, ZONE_ZOOM,
-  hasWebGL, introPlan, prefersReducedMotion, spinCenter,
+  hasWebGL, introPlan, measureFps, prefersReducedMotion, shouldUseFlatMap, spinCenter,
 } from './map-camera';
 import {
   BOUNDARIES_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYER, boundariesSource, boundaryLayers,
@@ -52,6 +53,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   protected readonly store = inject(ZonesStore);
   private readonly router = inject(Router);
   private readonly searchRequest = inject(SearchRequest);
+  private readonly projectionFlag = inject(MapProjectionFlag);
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
@@ -61,6 +63,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private userMarker?: Marker;
   private spinFrame?: number;
   private spinning = false;
+  private destroyed = false;
   private readonly mapReady = signal(false);
   private boundariesShown = false;
   /** No WebGL: MapLibre cannot draw in any projection, so the map area explains it instead. */
@@ -117,11 +120,16 @@ export class MapPage implements AfterViewInit, OnDestroy {
       this.mapUnavailable.set(true);
       return;
     }
+    void this.projectionFlag.projection().then((projection) => {
+      if (!this.destroyed) this.createMap(projection);
+    });
+  }
+
+  private createMap(projection: MapProjection): void {
     setWorkerUrl(new URL(WORKER_PATH, document.baseURI).href);
     const element = this.mapElement().nativeElement;
     const colors = readMapColors(element);
     this.colors = colors;
-    const projection: MapProjection = 'globe';
     const plan = introPlan({
       hasSelection: this.store.selectedId() !== null,
       reducedMotion: prefersReducedMotion(window),
@@ -162,6 +170,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.stopSpin();
     this.map?.remove();
   }
@@ -338,6 +347,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (!map) return;
     const start = performance.now();
     this.spinning = true;
+    this.measureGlobe(SPIN_MS + FLY_MS);
     const interrupt = (): void => {
       if (!this.stopSpin()) return;
       this.jumpToNarino();
@@ -357,6 +367,39 @@ export class MapPage implements AfterViewInit, OnDestroy {
       this.spinFrame = requestAnimationFrame(frame);
     };
     this.spinFrame = requestAnimationFrame(frame);
+  }
+
+  /**
+   * Counts the frames of the opening animation. Below 30 fps this phone gets the flat map, now and
+   * from then on (MapProjectionFlag). A hidden tab throttles frames, so then nothing is decided.
+   * The result goes to the console ([map]) to read it with chrome://inspect on a real phone.
+   */
+  private measureGlobe(durationMs: number): void {
+    const times: number[] = [];
+    let hidden = false;
+    const frame = (now: number): void => {
+      if (this.destroyed) return;
+      hidden ||= document.visibilityState !== 'visible';
+      times.push(now);
+      if (now - times[0]! < durationMs) {
+        requestAnimationFrame(frame);
+        return;
+      }
+      const fps = measureFps(times);
+      console.info(`[map] globo: ${fps === null ? 'sin datos' : fps.toFixed(1) + ' fps'}${hidden ? ' (pestaña oculta, no cuenta)' : ''}`);
+      if (!hidden && shouldUseFlatMap(fps)) this.switchToFlat();
+    };
+    requestAnimationFrame(frame);
+  }
+
+  /** Same map, flat and without the sky: no second map library. */
+  private switchToFlat(): void {
+    const map = this.map;
+    if (!map) return;
+    console.info('[map] el globo va lento: se usa el mapa plano');
+    map.setProjection({ type: 'mercator' });
+    map.setSky({ 'atmosphere-blend': 0 });
+    void this.projectionFlag.rememberFlat();
   }
 
   /** Ends the spin; false if it had already ended. */
