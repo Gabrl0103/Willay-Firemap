@@ -6,7 +6,10 @@
   padding: 14px 16px; border-radius: 22px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-2); font-size: 13px; line-height: 1.45;
 }
 
-.map-header { position: absolute; z-index: 50; inset: 0 0 auto; padding: calc(14px + env(safe-area-inset-top)) 14px 0; pointer-events: none; }
+.map-header {
+  position: absolute; z-index: 50; inset: 0 0 auto; padding: calc(14px + env(safe-area-inset-top)) 14px 0; pointer-events: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
 .map-header > * { pointer-events: auto; }
 /* Con la hoja de zona abierta, su botón "Nariño" ocupa este lugar. */
 .map-header { transition: opacity 0.32s; }
@@ -22,15 +25,20 @@ h1 { margin: 0; padding: 4px 10px 0; color: var(--text); font-family: var(--font
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-soft);
 }
 
-.location-button {
-  position: absolute; z-index: 40; right: 14px; top: calc(136px + env(safe-area-inset-top)); height: 40px; padding: 0 12px; gap: 7px;
-  display: flex; align-items: center; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--glass-strong); color: var(--text); backdrop-filter: var(--glass-blur);
-  box-shadow: 0 8px 24px rgba(9, 20, 24, 0.22); font-size: 11px;
-}
 .error-banner {
-  position: absolute; z-index: 80; left: 14px; right: 14px; top: calc(80px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  position: absolute; z-index: 80; left: 14px; right: 14px; top: calc(84px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 10px 12px; border-radius: 10px; background: var(--risk-extreme); color: #fff; font-size: 11px; box-shadow: var(--shadow-soft);
 }
 .error-banner button { padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.2); font-size: 10px; font-weight: 700; }
 .banner-actions { display: flex; flex-shrink: 0; gap: 6px; }
-.location-button:disabled { opacity: 0.7; }
+/* «Mi ubicación»: botón redondo de vidrio arriba a la derecha. */
+.location-button {
+  width: 56px; height: 56px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  border: 1px solid var(--glass-border); background: var(--glass-strong); color: var(--text);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.location-button:disabled { opacity: 0.75; }
+.location-button app-icon { display: block; }
+.location-button.is-locating app-icon { animation: locating 1.2s linear infinite; }
+@keyframes locating { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .location-button.is-locating app-icon { animation: none; } }

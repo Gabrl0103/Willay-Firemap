@@ -10,6 +10,18 @@
 
 <header class="map-header" [class.is-covered]="store.detail()">
   <h1>Mapa</h1>
+  <button
+    type="button"
+    class="location-button"
+    [class.is-locating]="locating()"
+    [disabled]="locating()"
+    [attr.aria-label]="locating() ? 'Buscando tu ubicación' : 'Mi ubicación'"
+    [attr.aria-busy]="locating()"
+    [title]="locating() ? 'Buscando tu ubicación' : 'Mi ubicación'"
+    (click)="locateMe()"
+  >
+    <app-icon name="crosshair" [size]="24" />
+  </button>
 </header>
 
 @if (searchOpen()) {
@@ -19,9 +31,6 @@
   </div>
 }
 
-<button type="button" class="location-button" [disabled]="locating()" (click)="locateMe()">
-  <app-icon name="crosshair" [size]="16" /><span>{{ locating() ? 'Buscando…' : 'Mi ubicación' }}</span>
-</button>
 
 @if (!store.detail()) {
   <app-map-overview-sheet
