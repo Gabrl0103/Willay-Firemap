@@ -29,6 +29,7 @@
     "@ionic/angular": "^9.0.6",
     "ionicons": "^8.1.0",
     "leaflet": "^1.9.4",
+    "maplibre-gl": "6.13.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
