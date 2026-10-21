@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import type { ZoneDetail, ZoneForecast } from '../domain/model/risk';
+import type { ZoneBoundaries, ZoneDetail, ZoneForecast } from '../domain/model/risk';
 import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from '../domain/repository/repositories';
 import { ZonesStore } from './zones.store';
 
@@ -13,17 +13,29 @@ const FORECAST: ZoneForecast = {
   horizons: [{ hours: 24, baseDate: '2026-10-18', probability: 0.24, score: 24, level: 'low' }],
 };
 
-function setup(forecast: ForecastRepository['forecast']) {
+const BOUNDARIES: ZoneBoundaries = {
+  type: 'FeatureCollection',
+  source: 'DANE, Marco Geoestadístico Nacional 2025',
+  features: [{
+    type: 'Feature',
+    id: 'pasto',
+    properties: { id: 'pasto', divipola: 52001, name: 'Pasto' },
+    geometry: { type: 'Polygon', coordinates: [[[-77.3, 1.2], [-77.2, 1.2], [-77.2, 1.3], [-77.3, 1.2]]] },
+  }],
+};
+
+function setup(forecast: ForecastRepository['forecast'], boundaries: ZoneRepository['boundaries'] = () => of(BOUNDARIES)) {
   const repository = { forecast: vi.fn(forecast) };
+  const zoneRepository = { list: () => of([]), detail: () => of(DETAIL), boundaries: vi.fn(boundaries) };
   TestBed.configureTestingModule({
     providers: [
-      { provide: ZoneRepository, useValue: { list: () => of([]), detail: () => of(DETAIL) } },
+      { provide: ZoneRepository, useValue: zoneRepository },
       { provide: FireRepository, useValue: { history: () => of({ events: [], summary: { count: 0, totalHectares: 0, lastDate: null } }) } },
       { provide: HotspotRepository, useValue: { list: () => of([]) } },
       { provide: ForecastRepository, useValue: repository },
     ],
   });
-  return { store: TestBed.inject(ZonesStore), repository };
+  return { store: TestBed.inject(ZonesStore), repository, zoneRepository };
 }
 
 describe('ZonesStore forecast', () => {
@@ -68,5 +80,36 @@ describe('ZonesStore forecast', () => {
     late.next(FORECAST);
     expect(store.detailForecast()).toBeNull();
     expect(store.forecastStatus()).toBe('idle');
+  });
+});
+
+describe('ZonesStore boundaries', () => {
+  it('asks for the boundaries once', () => {
+    const { store, zoneRepository } = setup(() => of(FORECAST));
+    store.loadBoundaries();
+    store.loadBoundaries();
+    expect(zoneRepository.boundaries).toHaveBeenCalledTimes(1);
+    expect(store.boundariesStatus()).toBe('ready');
+    expect(store.boundaries()).toEqual(BOUNDARIES);
+  });
+
+  it('marks only the boundaries as failed, retries them and lets the notice close', () => {
+    let fail = true;
+    const { store, zoneRepository } = setup(
+      () => of(FORECAST),
+      () => (fail ? throwError(() => new Error('No se pudo conectar con el servidor.')) : of(BOUNDARIES)),
+    );
+    store.loadBoundaries();
+    expect(store.boundariesStatus()).toBe('error');
+    expect(store.error()).toBeNull(); // zones and markers keep working
+    expect(store.boundaries()).toBeNull();
+
+    store.dismissBoundariesError();
+    expect(store.boundariesStatus()).toBe('idle');
+
+    fail = false;
+    store.loadBoundaries();
+    expect(zoneRepository.boundaries).toHaveBeenCalledTimes(2);
+    expect(store.boundariesStatus()).toBe('ready');
   });
 });
