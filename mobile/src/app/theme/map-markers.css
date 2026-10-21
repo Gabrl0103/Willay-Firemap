@@ -1,7 +1,7 @@
 /* Elementos que MapLibre crea por fuera de Angular (por eso son globales). */
 .maplibregl-map { font-family: var(--font-sans); }
 /* OSM y DANE siempre visibles, discretos, debajo de la cabecera (las hojas tapan la parte de abajo). */
-.map-element .maplibregl-ctrl-top-left { top: calc(196px + env(safe-area-inset-top)); left: 14px; }
+.map-element .maplibregl-ctrl-top-left { top: calc(64px + env(safe-area-inset-top)); left: 20px; }
 .maplibregl-ctrl-top-left .maplibregl-ctrl-attrib {
   margin: 0;
   padding: 2px 6px;

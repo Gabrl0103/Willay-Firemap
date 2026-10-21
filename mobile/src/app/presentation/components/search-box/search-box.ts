@@ -1,7 +1,6 @@
-import { Component, ElementRef, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, afterNextRender, computed, input, output, signal, viewChild } from '@angular/core';
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
 import { RISK_LABELS } from '../../../domain/util/risk-labels';
-import { SearchRequest } from '../../../core/search-request';
 import { AppIcon } from '../app-icon/app-icon';
 import { RiskBadge } from '../risk-badge/risk-badge';
 
@@ -12,22 +11,27 @@ const normalize = (text: string): string =>
   selector: 'app-search-box',
   imports: [AppIcon, RiskBadge],
   template: `
-    <label class="search-wrap">
-      <app-icon name="search" [size]="18" />
-      <input
-        #field
-        type="search"
-        placeholder="Buscar municipio"
-        autocomplete="off"
-        [value]="query()"
-        (input)="query.set($any($event.target).value)"
-      />
-      @if (query()) {
-        <button type="button" class="clear" aria-label="Borrar búsqueda" (click)="query.set('')">
-          <app-icon name="x" [size]="16" />
-        </button>
-      }
-    </label>
+    <div class="search-row">
+      <label class="search-wrap">
+        <app-icon name="search" [size]="18" />
+        <input
+          #field
+          type="search"
+          placeholder="Buscar municipio"
+          aria-label="Buscar municipio"
+          autocomplete="off"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+          (keydown.escape)="cancelled.emit()"
+        />
+        @if (query()) {
+          <button type="button" class="clear" aria-label="Borrar búsqueda" (click)="query.set('')">
+            <app-icon name="x" [size]="16" />
+          </button>
+        }
+      </label>
+      <button type="button" class="cancel" (click)="cancelled.emit()">Cancelar</button>
+    </div>
     @if (results().length > 0) {
       <div class="results">
         @for (zone of results(); track zone.id) {
@@ -46,17 +50,14 @@ const normalize = (text: string): string =>
 export class SearchBox {
   readonly zones = input.required<readonly ZoneRiskSummary[]>();
   readonly selected = output<ZoneRiskSummary>();
+  /** «Cancelar» or Escape: the map closes the search layer. */
+  readonly cancelled = output<void>();
 
-  private readonly searchRequest = inject(SearchRequest);
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
 
   constructor() {
-    // El botón de búsqueda de la barra inferior pide enfocar este campo.
-    effect(() => {
-      if (!this.searchRequest.pending()) return;
-      this.searchRequest.consume();
-      setTimeout(() => this.field()?.nativeElement.focus(), 50);
-    });
+    // Opens with the keyboard up: the search layer exists only while searching.
+    afterNextRender(() => this.field()?.nativeElement.focus());
   }
 
   protected readonly query = signal('');

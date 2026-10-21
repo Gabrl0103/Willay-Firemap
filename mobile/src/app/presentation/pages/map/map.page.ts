@@ -6,12 +6,12 @@ import {
   AttributionControl, Map as MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent,
 } from 'maplibre-gl';
 import { getUserLocation, locationMessage } from '../../../core/location/user-location';
+import { SearchRequest } from '../../../core/search-request';
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
-import { Logo } from '../../components/logo/logo';
 import { RiskLegend } from '../../components/risk-legend/risk-legend';
 import { SearchBox } from '../../components/search-box/search-box';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
@@ -43,7 +43,7 @@ interface ShownMarker {
 
 @Component({
   selector: 'app-map-page',
-  imports: [AppIcon, Logo, SearchBox, RiskLegend, ZoneSheet],
+  imports: [AppIcon, SearchBox, RiskLegend, ZoneSheet],
   templateUrl: './map.page.html',
   styleUrl: './map.page.css',
   host: { class: 'ion-page' },
@@ -51,6 +51,7 @@ interface ShownMarker {
 export class MapPage implements AfterViewInit, OnDestroy {
   protected readonly store = inject(ZonesStore);
   private readonly router = inject(Router);
+  private readonly searchRequest = inject(SearchRequest);
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private map?: MapLibreMap;
@@ -58,10 +59,13 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly markers = new Map<string, ShownMarker>();
   private userMarker?: Marker;
   private spinFrame?: number;
+  private spinning = false;
   private readonly mapReady = signal(false);
   private boundariesShown = false;
   /** No WebGL: MapLibre cannot draw in any projection, so the map area explains it instead. */
   protected readonly mapUnavailable = signal(false);
+  /** The glass search layer, opened from the magnifier of the bottom nav. */
+  protected readonly searchOpen = signal(false);
   protected readonly locating = signal(false);
   /** Why «Mi ubicación» failed, in Spanish (kept apart from the store error, whose retry reloads zones). */
   protected readonly locationError = signal<string | null>(null);
@@ -80,6 +84,12 @@ export class MapPage implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
+    // The bottom nav's magnifier (on any screen) navigates here and asks for the search.
+    effect(() => {
+      if (!this.searchRequest.pending()) return;
+      this.searchRequest.consume();
+      this.searchOpen.set(true);
+    });
     effect(() => {
       if (!this.mapReady()) return;
       this.setZones(this.store.zones());
@@ -151,13 +161,22 @@ export class MapPage implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.spinFrame !== undefined) cancelAnimationFrame(this.spinFrame);
+    this.stopSpin();
     this.map?.remove();
   }
 
   protected selectZone(zone: ZoneRiskSummary): void {
     this.store.select(zone.id);
     this.flyToSeat(zone.longitude, zone.latitude);
+  }
+
+  protected pickFromSearch(zone: ZoneRiskSummary): void {
+    this.searchOpen.set(false);
+    this.selectZone(zone);
+  }
+
+  protected closeSearch(): void {
+    this.searchOpen.set(false);
   }
 
   protected closeSheet(): void {
@@ -312,24 +331,19 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const map = this.map;
     if (!map) return;
     const start = performance.now();
-    let stopped = false;
-    const stop = (): void => {
-      stopped = true;
-      if (this.spinFrame !== undefined) cancelAnimationFrame(this.spinFrame);
-    };
+    this.spinning = true;
     const interrupt = (): void => {
-      if (stopped) return;
-      stop();
+      if (!this.stopSpin()) return;
       this.jumpToNarino();
     };
     map.once('mousedown', interrupt);
     map.once('touchstart', interrupt);
     map.once('wheel', interrupt);
     const frame = (now: number): void => {
-      if (stopped) return;
+      if (!this.spinning) return;
       const elapsed = now - start;
       if (elapsed >= SPIN_MS) {
-        stop();
+        this.stopSpin();
         this.flyToNarino();
         return;
       }
@@ -337,6 +351,14 @@ export class MapPage implements AfterViewInit, OnDestroy {
       this.spinFrame = requestAnimationFrame(frame);
     };
     this.spinFrame = requestAnimationFrame(frame);
+  }
+
+  /** Ends the spin; false if it had already ended. */
+  private stopSpin(): boolean {
+    if (!this.spinning) return false;
+    this.spinning = false;
+    if (this.spinFrame !== undefined) cancelAnimationFrame(this.spinFrame);
+    return true;
   }
 
   private narinoCamera() {
@@ -365,8 +387,12 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.map?.setMinZoom(MIN_ZOOM_OVER_NARINO);
   }
 
-  /** Non-essential: MapLibre jumps instead of flying when the phone asks for reduced motion. */
+  /**
+   * Non-essential: MapLibre jumps instead of flying when the phone asks for reduced motion. A zone
+   * picked during the spin wins over the flight to Nariño; the camera is limited once it lands.
+   */
   private flyToSeat(longitude: number, latitude: number): void {
+    if (this.stopSpin()) this.map?.once('moveend', () => this.limitToNarino());
     this.map?.flyTo({ center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, duration: ZONE_FLY_MS });
   }
 
