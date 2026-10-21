@@ -1,12 +1,10 @@
-:host { position: absolute; inset: 0; display: block; background: var(--map-deep); overflow: hidden; }
-.map-canvas { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(165deg, var(--map), var(--map-deep) 66%); }
-.terrain-lines {
-  position: absolute; inset: -80px; opacity: 0.22; transform: rotate(-8deg);
-  background-image:
-    repeating-radial-gradient(ellipse at 58% 45%, transparent 0 25px, rgba(150, 200, 190, 0.28) 26px 27px),
-    repeating-radial-gradient(ellipse at 14% 70%, transparent 0 38px, rgba(150, 200, 190, 0.22) 39px 40px);
-}
+:host { position: absolute; inset: 0; display: block; background: var(--bg); overflow: hidden; }
+.map-canvas { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
 .map-element { position: absolute; inset: 0; z-index: 0; }
+.map-unavailable {
+  position: absolute; z-index: 1; left: 24px; right: 24px; top: 38%; margin: 0; display: flex; gap: 10px; align-items: flex-start;
+  padding: 14px 16px; border-radius: 22px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-2); font-size: 13px; line-height: 1.45;
+}
 
 .map-header { position: absolute; z-index: 50; inset: 0 0 auto; padding: calc(14px + env(safe-area-inset-top)) 14px 0; pointer-events: none; }
 .map-header > * { pointer-events: auto; }

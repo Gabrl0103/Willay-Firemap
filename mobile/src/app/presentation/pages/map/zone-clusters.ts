@@ -1,3 +1,4 @@
+import type { FeatureCollection, Point } from 'geojson';
 import type { AddLayerObject, Map as MapLibreMap } from 'maplibre-gl';
 import type { RiskLevel, ZoneRiskSummary } from '../../../domain/model/risk';
 import { levelFromScore } from '../../../domain/util/department-summary';
@@ -15,7 +16,19 @@ export const CLUSTER_MAX_ZOOM = 8;
 /** Seats closer than this (px) on screen go into one group: a bit more than two 18 px markers. */
 export const CLUSTER_RADIUS = 44;
 
-/** The seats as GeoJSON points, grouped by MapLibre; a group keeps the highest score of its zones. */
+/** The seats as GeoJSON points (what the zones source holds; setData when the scores change). */
+export function zonePoints(zones: readonly ZoneRiskSummary[]): FeatureCollection<Point, { id: string; score: number }> {
+  return {
+    type: 'FeatureCollection',
+    features: zones.map((zone) => ({
+      type: 'Feature',
+      properties: { id: zone.id, score: zone.score },
+      geometry: { type: 'Point', coordinates: [zone.longitude, zone.latitude] },
+    })),
+  };
+}
+
+/** The seats, grouped by MapLibre; a group keeps the highest score of its zones. */
 export function zonesSource(zones: readonly ZoneRiskSummary[]): SourceSpecification {
   return {
     type: 'geojson',
@@ -23,14 +36,7 @@ export function zonesSource(zones: readonly ZoneRiskSummary[]): SourceSpecificat
     clusterRadius: CLUSTER_RADIUS,
     clusterMaxZoom: CLUSTER_MAX_ZOOM,
     clusterProperties: { maxScore: ['max', ['get', 'score']] },
-    data: {
-      type: 'FeatureCollection',
-      features: zones.map((zone) => ({
-        type: 'Feature',
-        properties: { id: zone.id, score: zone.score },
-        geometry: { type: 'Point', coordinates: [zone.longitude, zone.latitude] },
-      })),
-    },
+    data: zonePoints(zones),
   };
 }
 

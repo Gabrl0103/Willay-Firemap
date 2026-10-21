@@ -1,6 +1,11 @@
 <div class="map-canvas">
-  <div class="terrain-lines"></div>
   <div #mapElement class="map-element"></div>
+  @if (mapUnavailable()) {
+    <p class="map-unavailable" role="status">
+      <app-icon name="alert" [size]="18" />
+      Este celular no puede mostrar el mapa. Puedes buscar un municipio o usar «Mi ubicación» para ver su riesgo.
+    </p>
+  }
 </div>
 
 <header class="map-header" [class.is-covered]="store.detail()">

@@ -2,9 +2,11 @@ import {
   AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import * as L from 'leaflet';
+import {
+  AttributionControl, Map as MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent,
+} from 'maplibre-gl';
 import { getUserLocation, locationMessage } from '../../../core/location/user-location';
-import type { Hotspot, ZoneBoundaries, ZoneBoundaryProperties, ZoneRiskSummary } from '../../../domain/model/risk';
+import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
 import { ZonesStore } from '../../../state/zones.store';
@@ -13,20 +15,31 @@ import { Logo } from '../../components/logo/logo';
 import { RiskLegend } from '../../components/risk-legend/risk-legend';
 import { SearchBox } from '../../components/search-box/search-box';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
-import { readRiskColors, zoneAreaStyle, type RiskColors } from './zone-area';
-import { showsNames, zoneMarkerHtml } from './zone-marker';
+import {
+  FLY_MS, GLOBE_START, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, PITCH, SPIN_MS, ZONE_FLY_MS, ZONE_ZOOM,
+  hasWebGL, introPlan, prefersReducedMotion, spinCenter,
+} from './map-camera';
+import {
+  BOUNDARIES_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYER, boundariesSource, boundaryLayers,
+  hotspotLayers, hotspotPoints, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
+} from './map-layers';
+import { mapStyle, type MapProjection } from './map-style';
+import { ZONES_SOURCE, diffMarkers, markerItems, zonePoints, zonesHitLayer, zonesSource, type MarkerItem } from './zone-clusters';
+import { clusterLabel, clusterMarkerHtml, showsNames, zoneMarkerHtml } from './zone-marker';
 
-/** Center of Nariño (approx.) and starting zoom, until the zones or their boundaries arrive. */
-const NARINO_CENTER: L.LatLngTuple = [1.3, -77.7];
-const NARINO_ZOOM = 8;
-/** Standard OpenStreetMap tiles (no API key). The dark look comes from a CSS filter in theme/map-markers.css. */
-const TILES_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const TILES_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-const BOUNDARIES_ATTRIBUTION = 'Límites: <a href="https://www.dane.gov.co">DANE</a> (MGN 2025)';
-/** Municipal polygons go under the markers (markerPane is 600, overlayPane 400). */
-const AREA_PANE = 'zone-areas';
-/** Whole department in view, clear of the header (top) and the legend (bottom). */
-const DEPARTMENT_FIT: L.FitBoundsOptions = { paddingTopLeft: [34, 190], paddingBottomRight: [34, 150], maxZoom: 9 };
+/** MapLibre's worker, copied next to the app by angular.json (it cannot come from a CDN). */
+const WORKER_PATH = 'maplibre/maplibre-gl-worker.mjs';
+/** The globe spins and flies once per app session; later visits open straight over Nariño. */
+let introPlayed = false;
+/** Room for the header (top) and the bottom sheet (bottom) when framing the department. */
+const NARINO_PADDING = { top: 150, bottom: 260, left: 24, right: 24 };
+/** A flown-to seat sits this far above the center, clear of the zone sheet. */
+const SEAT_OFFSET: [number, number] = [0, -150];
+
+interface ShownMarker {
+  readonly marker: Marker;
+  readonly item: MarkerItem;
+}
 
 @Component({
   selector: 'app-map-page',
@@ -40,14 +53,15 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
-  private map?: L.Map;
-  private readonly zoneLayer = L.layerGroup();
-  private readonly hotspotLayer = L.layerGroup();
-  private areaLayer?: L.GeoJSON<ZoneBoundaryProperties>;
-  private riskColors?: RiskColors;
-  private userMarker?: L.Marker;
+  private map?: MapLibreMap;
+  private colors?: MapColors;
+  private readonly markers = new Map<string, ShownMarker>();
+  private userMarker?: Marker;
+  private spinFrame?: number;
   private readonly mapReady = signal(false);
-  private fitted = false;
+  private boundariesShown = false;
+  /** No WebGL: MapLibre cannot draw in any projection, so the map area explains it instead. */
+  protected readonly mapUnavailable = signal(false);
   protected readonly locating = signal(false);
   /** Why «Mi ubicación» failed, in Spanish (kept apart from the store error, whose retry reloads zones). */
   protected readonly locationError = signal<string | null>(null);
@@ -68,52 +82,82 @@ export class MapPage implements AfterViewInit, OnDestroy {
   constructor() {
     effect(() => {
       if (!this.mapReady()) return;
-      this.drawZones(this.store.zones(), this.store.selectedId());
+      this.setZones(this.store.zones());
     });
     effect(() => {
       if (!this.mapReady()) return;
-      this.drawHotspots(this.store.hotspots());
+      this.source(HOTSPOTS_SOURCE)?.setData(hotspotPoints(this.store.hotspots()));
     });
     effect(() => {
       if (!this.mapReady()) return;
       const boundaries = this.store.boundaries();
-      if (boundaries && !this.areaLayer) this.drawAreas(boundaries);
-      this.styleAreas(this.store.zones(), this.store.selectedId());
+      if (boundaries && !this.boundariesShown) this.showBoundaries(boundaries);
+    });
+    effect(() => {
+      if (!this.mapReady()) return;
+      this.styleSelection(this.store.zones(), this.store.selectedId(), this.store.boundaries());
     });
   }
 
   ngAfterViewInit(): void {
-    this.map = L.map(this.mapElement().nativeElement, {
-      center: NARINO_CENTER,
-      zoom: NARINO_ZOOM,
-      zoomControl: false,
-      zoomSnap: 0.25,
-      attributionControl: true,
-    });
-    L.tileLayer(TILES_URL, { attribution: TILES_ATTRIBUTION, maxZoom: 14 }).addTo(this.map);
-    this.map.createPane(AREA_PANE).style.zIndex = '350';
-    this.riskColors = readRiskColors(this.mapElement().nativeElement);
-    this.zoneLayer.addTo(this.map);
-    this.hotspotLayer.addTo(this.map);
-    this.map.attributionControl.setPrefix(false);
-    // Names only when zoomed in (or on the selected zone), so 64 markers do not pile up.
-    const updateZoomClass = (): void => {
-      this.mapElement().nativeElement.classList.toggle('show-names', showsNames(this.map?.getZoom() ?? 0));
-    };
-    this.map.on('zoomend', updateZoomClass);
-    updateZoomClass();
-    this.mapReady.set(true);
     if (this.store.zones().length === 0) this.store.load();
     this.store.loadBoundaries();
+    if (!hasWebGL(document)) {
+      this.mapUnavailable.set(true);
+      return;
+    }
+    setWorkerUrl(new URL(WORKER_PATH, document.baseURI).href);
+    const element = this.mapElement().nativeElement;
+    const colors = readMapColors(element);
+    this.colors = colors;
+    const projection: MapProjection = 'globe';
+    const plan = introPlan({
+      hasSelection: this.store.selectedId() !== null,
+      reducedMotion: prefersReducedMotion(window),
+      firstVisit: !introPlayed,
+      projection,
+    });
+    introPlayed = true;
+
+    const map = new MapLibreMap({
+      container: element,
+      style: mapStyle(projection),
+      ...GLOBE_START,
+      maxZoom: MAX_ZOOM,
+      maxPitch: PITCH,
+      attributionControl: false,
+      // The view keeps north up: tilt comes from the camera, not from the fingers.
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
+    });
+    this.map = map;
+    map.touchZoomRotate.disableRotation();
+    // Always expanded: OpenStreetMap and DANE ask to be credited where the map is seen.
+    map.addControl(new AttributionControl({ compact: false }), 'top-left');
+
+    const updateZoomClass = (): void => {
+      element.classList.toggle('show-names', showsNames(map.getZoom()));
+    };
+    map.on('zoom', updateZoomClass);
+    updateZoomClass();
+    map.on('render', () => this.syncMarkers());
+    map.on('click', ZONE_FILL_LAYER, (event) => this.onPolygonTap(event));
+    map.once('load', () => {
+      this.addLayers(map, colors);
+      this.mapReady.set(true);
+      this.openCamera(plan);
+    });
   }
 
   ngOnDestroy(): void {
+    if (this.spinFrame !== undefined) cancelAnimationFrame(this.spinFrame);
     this.map?.remove();
   }
 
   protected selectZone(zone: ZoneRiskSummary): void {
     this.store.select(zone.id);
-    this.focusOn(zone.latitude, zone.longitude, 10);
+    this.flyToSeat(zone.longitude, zone.latitude);
   }
 
   protected closeSheet(): void {
@@ -138,86 +182,205 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.showUser(latitude, longitude);
     const zone = nearestZone(this.store.zones(), latitude, longitude);
     if (zone) this.store.select(zone.id);
-    this.focusOn(latitude, longitude, 10);
+    this.flyToSeat(longitude, latitude);
   }
 
-  private focusOn(latitude: number, longitude: number, zoom: number): void {
-    if (!this.map) return;
-    // Shift the center so the point stays visible above the bottom sheet.
-    const point = this.map.project([latitude, longitude], zoom);
-    point.y += 150;
-    this.map.flyTo(this.map.unproject(point, zoom), zoom, { duration: 0.6 });
+  /** The base style is ready: add the zones, hotspots and (when they arrive) the municipal polygons. */
+  private addLayers(map: MapLibreMap, colors: MapColors): void {
+    map.addSource(HOTSPOTS_SOURCE, hotspotsSource([]));
+    for (const layer of hotspotLayers(colors)) map.addLayer(layer);
+    map.addSource(ZONES_SOURCE, zonesSource([]));
+    map.addLayer(zonesHitLayer);
+  }
+
+  /** Polygons go under the hotspots and the markers. Added once: risk and selection only restyle them. */
+  private showBoundaries(boundaries: ZoneBoundaries): void {
+    const map = this.map;
+    if (!map || !this.colors) return;
+    this.boundariesShown = true;
+    map.addSource(BOUNDARIES_SOURCE, boundariesSource(boundaries));
+    for (const layer of boundaryLayers(this.colors)) map.addLayer(layer, 'hotspot-halo');
+    this.styleSelection(this.store.zones(), this.store.selectedId(), boundaries);
+  }
+
+  /** New scores regroup the seats: the markers are rebuilt from the next render. */
+  private setZones(zones: readonly ZoneRiskSummary[]): void {
+    for (const { marker } of this.markers.values()) marker.remove();
+    this.markers.clear();
+    this.source(ZONES_SOURCE)?.setData(zonePoints(zones));
+  }
+
+  private styleSelection(zones: readonly ZoneRiskSummary[], selectedId: string | null, boundaries: ZoneBoundaries | null): void {
+    const map = this.map;
+    if (!map) return;
+    if (boundaries && this.boundariesShown) {
+      for (const { id, state } of zoneStates(boundaries, zones, selectedId)) map.setFeatureState({ source: BOUNDARIES_SOURCE, id }, state);
+      map.setFilter(ZONE_SELECTED_LAYER, selectedZoneFilter(selectedId));
+    }
+    // Markers already on screen take the new score, level or selection.
+    for (const { marker, item } of this.markers.values()) {
+      if (item.kind === 'zone') this.paintZoneMarker(marker, item.zoneId);
+    }
+  }
+
+  /** Same as tapping the marker. A tap that started on a marker (or group) is the marker's, not the polygon's. */
+  private onPolygonTap(event: MapLayerMouseEvent): void {
+    const target = event.originalEvent.target;
+    if (target instanceof Element && target.closest('.maplibregl-marker')) return;
+    const id = event.features?.[0]?.properties['id'];
+    const zone = this.store.zones().find((z) => z.id === id);
+    // Zones without a score yet have no sheet to open.
+    if (zone) this.selectZone(zone);
+  }
+
+  /** Shows one HTML marker per group or lone seat that the zones source has, reusing those already shown. */
+  private syncMarkers(): void {
+    const map = this.map;
+    if (!map || !map.getSource(ZONES_SOURCE) || !map.isSourceLoaded(ZONES_SOURCE)) return;
+    const { add, remove } = diffMarkers(new Set(this.markers.keys()), markerItems(map.querySourceFeatures(ZONES_SOURCE)));
+    for (const key of remove) {
+      this.markers.get(key)?.marker.remove();
+      this.markers.delete(key);
+    }
+    for (const item of add) {
+      const marker = item.kind === 'zone' ? this.zoneMarker(item.zoneId) : this.clusterMarker(item);
+      if (!marker) continue;
+      marker.setLngLat(item.lngLat).addTo(map);
+      this.markers.set(item.key, { marker, item });
+    }
+  }
+
+  private zoneMarker(zoneId: string): Marker | null {
+    const zone = this.store.zones().find((z) => z.id === zoneId);
+    if (!zone) return null;
+    const element = document.createElement('div');
+    element.className = 'zone-icon';
+    element.title = zone.name;
+    element.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const current = this.store.zones().find((z) => z.id === zoneId);
+      if (current) this.selectZone(current);
+    });
+    const marker = new Marker({ element });
+    this.paintZoneMarker(marker, zoneId);
+    return marker;
+  }
+
+  private paintZoneMarker(marker: Marker, zoneId: string): void {
+    const zone = this.store.zones().find((z) => z.id === zoneId);
+    if (!zone) return;
+    const selected = zone.id === this.store.selectedId();
+    const element = marker.getElement();
+    element.innerHTML = zoneMarkerHtml(zone, selected);
+    // The selected marker goes on top, so its name is not hidden under its neighbours.
+    element.style.zIndex = selected ? '2' : '';
+  }
+
+  private clusterMarker(item: Extract<MarkerItem, { kind: 'cluster' }>): Marker {
+    const element = document.createElement('button');
+    element.type = 'button';
+    element.className = 'cluster-icon';
+    element.setAttribute('aria-label', clusterLabel(item.count));
+    element.innerHTML = clusterMarkerHtml(item.count, item.level);
+    element.addEventListener('click', (event) => {
+      event.stopPropagation();
+      void this.zoomIntoCluster(item);
+    });
+    return new Marker({ element });
+  }
+
+  private async zoomIntoCluster(item: Extract<MarkerItem, { kind: 'cluster' }>): Promise<void> {
+    const map = this.map;
+    const source = this.source(ZONES_SOURCE);
+    if (!map || !source) return;
+    const zoom = await source.getClusterExpansionZoom(item.clusterId);
+    map.easeTo({ center: item.lngLat, zoom: zoom + 0.25, duration: 500 });
+  }
+
+  private openCamera(plan: ReturnType<typeof introPlan>): void {
+    if (plan === 'spin-fly') {
+      this.spin();
+      return;
+    }
+    this.jumpToNarino();
+    const selected = this.store.zones().find((z) => z.id === this.store.selectedId());
+    if (plan === 'zone' && selected) this.flyToSeat(selected.longitude, selected.latitude);
+  }
+
+  /** The globe turns slowly, then flies to Nariño. Touching the map skips straight to Nariño. */
+  private spin(): void {
+    const map = this.map;
+    if (!map) return;
+    const start = performance.now();
+    let stopped = false;
+    const stop = (): void => {
+      stopped = true;
+      if (this.spinFrame !== undefined) cancelAnimationFrame(this.spinFrame);
+    };
+    const interrupt = (): void => {
+      if (stopped) return;
+      stop();
+      this.jumpToNarino();
+    };
+    map.once('mousedown', interrupt);
+    map.once('touchstart', interrupt);
+    map.once('wheel', interrupt);
+    const frame = (now: number): void => {
+      if (stopped) return;
+      const elapsed = now - start;
+      if (elapsed >= SPIN_MS) {
+        stop();
+        this.flyToNarino();
+        return;
+      }
+      map.setCenter(spinCenter(elapsed));
+      this.spinFrame = requestAnimationFrame(frame);
+    };
+    this.spinFrame = requestAnimationFrame(frame);
+  }
+
+  private narinoCamera() {
+    return this.map?.cameraForBounds(NARINO_BOUNDS, { padding: NARINO_PADDING, pitch: PITCH });
+  }
+
+  private flyToNarino(): void {
+    const map = this.map;
+    const camera = this.narinoCamera();
+    if (!map || !camera) return;
+    map.once('moveend', () => this.limitToNarino());
+    map.flyTo({ ...camera, pitch: PITCH, duration: FLY_MS, essential: true });
+  }
+
+  private jumpToNarino(): void {
+    const map = this.map;
+    const camera = this.narinoCamera();
+    if (!map || !camera) return;
+    map.jumpTo({ ...camera, pitch: PITCH });
+    this.limitToNarino();
+  }
+
+  /** Once over Nariño the camera stays around it. */
+  private limitToNarino(): void {
+    this.map?.setMaxBounds(MAX_BOUNDS);
+    this.map?.setMinZoom(MIN_ZOOM_OVER_NARINO);
+  }
+
+  /** Non-essential: MapLibre jumps instead of flying when the phone asks for reduced motion. */
+  private flyToSeat(longitude: number, latitude: number): void {
+    this.map?.flyTo({ center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, duration: ZONE_FLY_MS });
   }
 
   private showUser(latitude: number, longitude: number): void {
-    if (!this.map) return;
+    const map = this.map;
+    if (!map) return;
     this.userMarker?.remove();
-    this.userMarker = L.marker([latitude, longitude], {
-      icon: L.divIcon({ className: 'user-icon', html: '<span class="user-dot"></span>', iconSize: [14, 14] }),
-      interactive: false,
-    }).addTo(this.map);
+    const element = document.createElement('div');
+    element.className = 'user-icon';
+    element.innerHTML = '<span class="user-dot"></span>';
+    this.userMarker = new Marker({ element }).setLngLat([longitude, latitude]).addTo(map);
   }
 
-  private drawZones(zones: readonly ZoneRiskSummary[], selectedId: string | null): void {
-    this.zoneLayer.clearLayers();
-    if (!this.fitted && zones.length > 0 && this.map) {
-      this.fitted = true;
-      // Llegando con una zona ya elegida (p. ej. desde Inicio): enfocarla en vez de mostrar todo Nariño.
-      const selected = zones.find((zone) => zone.id === selectedId);
-      if (selected) this.focusOn(selected.latitude, selected.longitude, 10);
-      else this.map.fitBounds(L.latLngBounds(zones.map((z) => [z.latitude, z.longitude] as L.LatLngTuple)), DEPARTMENT_FIT);
-    }
-    for (const zone of zones) {
-      const selected = zone.id === selectedId;
-      const icon = L.divIcon({ className: 'zone-icon', iconSize: [18, 18], html: zoneMarkerHtml(zone, selected) });
-      // The selected marker goes on top, so its name is not hidden under its neighbours.
-      L.marker([zone.latitude, zone.longitude], { icon, title: zone.name, zIndexOffset: selected ? 1000 : 0 })
-        .on('click', () => this.selectZone(zone))
-        .addTo(this.zoneLayer);
-    }
-  }
-
-  /** Built once: risk and selection changes only restyle the polygons (styleAreas). */
-  private drawAreas(boundaries: ZoneBoundaries): void {
-    if (!this.map) return;
-    this.areaLayer = L.geoJSON<ZoneBoundaryProperties>(boundaries, {
-      pane: AREA_PANE,
-      attribution: BOUNDARIES_ATTRIBUTION,
-      onEachFeature: (feature, layer) => {
-        // Same as tapping the marker. Zones without a score yet have no sheet to open.
-        layer.on('click', () => {
-          const zone = this.store.zones().find((z) => z.id === feature.properties.id);
-          if (zone) this.selectZone(zone);
-        });
-      },
-    }).addTo(this.map);
-    if (!this.fitted && !this.store.selectedId()) {
-      this.fitted = true;
-      this.map.fitBounds(this.areaLayer.getBounds(), DEPARTMENT_FIT);
-    }
-  }
-
-  private styleAreas(zones: readonly ZoneRiskSummary[], selectedId: string | null): void {
-    const colors = this.riskColors;
-    if (!this.areaLayer || !colors) return;
-    const levels = new Map(zones.map((zone) => [zone.id, zone.level]));
-    this.areaLayer.setStyle((feature) => {
-      const id = feature?.properties.id;
-      return zoneAreaStyle(id ? levels.get(id) : undefined, id === selectedId, colors);
-    });
-    // The selected outline on top of its neighbours'.
-    this.areaLayer.eachLayer((layer) => {
-      if ((layer as L.Polygon).feature?.properties.id === selectedId) (layer as L.Polygon).bringToFront();
-    });
-  }
-
-  private drawHotspots(hotspots: readonly Hotspot[]): void {
-    this.hotspotLayer.clearLayers();
-    for (const hotspot of hotspots) {
-      L.marker([hotspot.latitude, hotspot.longitude], {
-        icon: L.divIcon({ className: 'hotspot-icon', html: '<span class="hotspot"></span>', iconSize: [7, 7] }),
-        interactive: false,
-      }).addTo(this.hotspotLayer);
-    }
+  private source(id: string): GeoJSONSource | undefined {
+    return this.map?.getSource<GeoJSONSource>(id);
   }
 }

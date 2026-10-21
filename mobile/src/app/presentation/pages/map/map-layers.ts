@@ -1,3 +1,4 @@
+import type { FeatureCollection, Point } from 'geojson';
 import type { AddLayerObject, Map as MapLibreMap } from 'maplibre-gl';
 import type { Hotspot, RiskLevel, ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 
@@ -106,18 +107,19 @@ export function zoneStates(
 }
 
 /** NASA FIRMS hotspots as GeoJSON points. */
-export function hotspotsSource(hotspots: readonly Hotspot[]): SourceSpecification {
+export function hotspotPoints(hotspots: readonly Hotspot[]): FeatureCollection<Point, { id: string }> {
   return {
-    type: 'geojson',
-    data: {
-      type: 'FeatureCollection',
-      features: hotspots.map((hotspot) => ({
-        type: 'Feature',
-        properties: { id: hotspot.id },
-        geometry: { type: 'Point', coordinates: [hotspot.longitude, hotspot.latitude] },
-      })),
-    },
+    type: 'FeatureCollection',
+    features: hotspots.map((hotspot) => ({
+      type: 'Feature',
+      properties: { id: hotspot.id },
+      geometry: { type: 'Point', coordinates: [hotspot.longitude, hotspot.latitude] },
+    })),
   };
+}
+
+export function hotspotsSource(hotspots: readonly Hotspot[]): SourceSpecification {
+  return { type: 'geojson', data: hotspotPoints(hotspots) };
 }
 
 /** A small orange dot with a halo, drawn by the GPU (not DOM markers): they never take a tap. */
