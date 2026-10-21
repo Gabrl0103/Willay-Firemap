@@ -29,7 +29,7 @@ App **solo móvil** que muestra el riesgo de incendio forestal por zonas de Nari
 | Backend | Node.js + Express + TypeScript | Sencillo; mismo lenguaje que la app. |
 | Scraping | `axios` + `cheerio`, programado con `node-cron`, dentro del backend | Un solo lenguaje, sin servicios extra. |
 | Base de datos | PostgreSQL + PostGIS en **Neon** | PostGIS soportado (`CREATE EXTENSION postgis;`). El plan gratis duerme a los 5 min sin uso y reactiva en unos cientos de ms. |
-| Mapa | OpenStreetMap + Leaflet | Gratis, sin facturación (Google Maps descartado). |
+| Mapa | OpenStreetMap + MapLibre GL JS (globo; Leaflet hasta v0.23) | Gratis, sin facturación (Google Maps descartado). |
 | Ubicación | Plugin Geolocation de Capacitor | Botón "Mi ubicación". |
 | Estilos | CSS con variables (los tokens de Lovable); Tailwind opcional | Reutiliza el prototipo. |
 | Hosting | Render o Railway (backend); APK para la app | Vercel descartado. |
@@ -228,7 +228,7 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 **Componentes reutilizables (componentes de Angular):** `RiskBadge`, `ZoneMarker`, `RiskLegend`, `SearchBar`, `StatColumn`, `RiskFactorBar`, `FireEventTile`, `SourceTag`, `AppButton`, `BottomNavBar`.
 
 **Observaciones sobre el prototipo:**
-- El contorno de Nariño en el prototipo es una silueta simplificada; desde v0.23 la app dibuja los 64 municipios del MGN del DANE sobre Leaflet, coloreados por nivel de riesgo.
+- El contorno de Nariño en el prototipo es una silueta simplificada; desde v0.23 la app dibuja los 64 municipios del MGN del DANE, coloreados por nivel de riesgo (sobre MapLibre desde v0.24).
 - El prototipo de Lovable ya es web: su CSS se reutiliza casi directo en Ionic/Angular.
 - Los datos son simulados; se reemplazan con los endpoints reales.
 - El mapa real necesitará un estilo oscuro compatible (tiles de OpenStreetMap con tema oscuro) para acercarse a este look.
@@ -262,6 +262,25 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-21 (v0.24, rama `feat/map-globe`):** fase 4 del rediseño: mapa con globo en MapLibre GL JS 6.13 (reemplaza a Leaflet).
+  - Estilo: fondo `#0B0604`, tiles raster de OSM oscurecidos con pintura del raster (brillo invertido, tono 180°,
+    poca saturación) y resplandor naranja tenue en el borde del globo (halo CSS: la atmósfera de MapLibre es azul y
+    no deja cambiar el color).
+  - Entrada: el globo gira 2 s y vuela 2,6 s a Nariño con inclinación 50°; luego `maxBounds` y zoom mínimo 6. Solo
+    la primera vez por sesión; con `prefers-reduced-motion`, en visitas siguientes o en el mapa plano salta directo.
+    Llegando desde Inicio con una zona elegida, va a su cabecera sin girar.
+  - Capas: polígonos del DANE con `feature-state` (nivel y selección), focos como círculos de la GPU, cabeceras
+    como marcadores HTML agrupados con el cluster de MapLibre (radio 44 px, hasta zoom 8; el grupo toma el color del
+    peor puntaje y al tocarlo se acerca). Nombres desde zoom 10. Atribuciones de OSM y DANE siempre visibles.
+  - Pantalla: título «Mapa»; buscador en capa de vidrio que abre la lupa de la barra inferior; «Mi ubicación» en el
+    botón redondo de arriba a la derecha; hoja «Departamento de Nariño» con conteos reales, los 4 niveles, la clave
+    de focos, la nota de estimación y «Acercar a Nariño». Se borran `RiskLegend` y `zone-area.ts`.
+  - Respaldo: menos de 30 fps en la entrada → `mercator` sin cielo, recordado en Preferences. Sin WebGL no hay mapa
+    posible (MapLibre lo necesita en ambas proyecciones): se avisa y la búsqueda y «Mi ubicación» siguen funcionando.
+  - Rendimiento (Chrome de escritorio, 390×844, 64 polígonos y hasta 49 marcadores): 1,4–2,0 ms por cuadro de GL y
+    3,4 ms moviendo la cámara con los marcadores. El Chrome controlado por la extensión limita los cuadros por
+    segundo, así que los fps reales quedan por medir en un Android (`[map] globo: N fps` en la consola).
+  - Peso: chunk del mapa 1,09 MB (245 KB con gzip), perezoso; carga inicial 600 KB.
 - **2026-10-21 (v0.23, rama `feat/municipal-boundaries`):** límites reales de los 64 municipios, coloreados por riesgo.
   - Fuente: DANE, MGN 2025, capa `MGN_ADM_MPIO_GRAFICO` (zip bajado a mano del Geoportal, sha256 `a3c01393…bc141f`).
     Se descartó el IGAC (Resolución 616 de 2020, sin descarga directa de una capa municipal).

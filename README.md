@@ -77,6 +77,19 @@ npm start
 Abre http://localhost:4200 (con el backend encendido).
 Pruebas unitarias de la app (Vitest): `npm test`.
 
+#### Mapa (MapLibre GL, globo)
+El mapa usa **MapLibre GL JS 6.13** con proyección `globe` y tiles raster de OpenStreetMap oscurecidos con
+propiedades de pintura (sin filtro CSS). La primera vez por sesión el globo gira y vuela a Nariño
+(2–3 s, inclinación 50°); después la cámara queda dentro de Nariño (`maxBounds`). Con
+`prefers-reduced-motion` salta directo. Los municipios cercanos se agrupan hasta zoom 8 y los nombres salen
+desde zoom 10. Si el globo va a menos de 30 fps en la entrada, el mapa pasa a plano (`mercator`) y lo
+recuerda para ese celular (en la consola sale `[map] globo: N fps`). Sin WebGL no hay mapa: la pantalla lo
+dice y la búsqueda y «Mi ubicación» siguen abriendo la hoja de zona.
+
+Nada se baja de un CDN: el CSS y el worker de MapLibre (`maplibre/maplibre-gl-worker.mjs`, copiado por
+`angular.json`) van en la app; solo los tiles vienen de internet. El chunk del mapa (carga perezosa en
+`/map`) pesa 1,09 MB (245 KB con gzip).
+
 ### 3. App en Android (emulador o celular)
 ```
 cd mobile
