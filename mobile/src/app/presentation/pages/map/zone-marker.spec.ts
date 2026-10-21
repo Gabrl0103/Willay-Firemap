@@ -1,5 +1,5 @@
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
-import { NAME_MIN_ZOOM, showsNames, zoneMarkerHtml } from './zone-marker';
+import { NAME_MIN_ZOOM, clusterLabel, clusterMarkerHtml, showsNames, zoneMarkerHtml } from './zone-marker';
 
 const zone = (name: string): ZoneRiskSummary => ({
   id: 'x', name, latitude: 1, longitude: -77, score: 63, level: 'high',
@@ -26,5 +26,10 @@ describe('zone marker', () => {
 
   it('escapes the name', () => {
     expect(zoneMarkerHtml(zone('<img src=x>'), false)).toContain('<b>&lt;img src=x&gt;</b>');
+  });
+
+  it('draws a group with its count, in the color of its worst zone', () => {
+    expect(clusterMarkerHtml(7, 'extreme')).toBe('<div class="zone-cluster risk-extreme"><b>7</b></div>');
+    expect(clusterLabel(7)).toBe('7 municipios. Toca para acercar');
   });
 });

@@ -1,4 +1,4 @@
-import type { ZoneRiskSummary } from '../../../domain/model/risk';
+import type { RiskLevel, ZoneRiskSummary } from '../../../domain/model/risk';
 import { RISK_LABELS } from '../../../domain/util/risk-labels';
 
 /**
@@ -23,4 +23,14 @@ export function zoneMarkerHtml(zone: ZoneRiskSummary, selected: boolean): string
     `<span class="zone-label"><b>${escapeHtml(zone.name)}</b><small>${zone.score} · ${RISK_LABELS[zone.level]}</small></span>` +
     `</div>`
   );
+}
+
+/** A group of nearby seats at low zoom: how many, in the color of the worst one. Tapping it zooms in. */
+export function clusterMarkerHtml(count: number, level: RiskLevel): string {
+  return `<div class="zone-cluster risk-${level}"><b>${count}</b></div>`;
+}
+
+/** Spoken name of a group marker (it is a button for screen readers). */
+export function clusterLabel(count: number): string {
+  return `${count} municipios. Toca para acercar`;
 }
