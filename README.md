@@ -41,6 +41,18 @@ de la cabecera municipal tal como los publica el DANE (datos.gov.co, dataset `gd
 ("Tumaco", "Magüí Payán") para reconocer el municipio en noticias y en el dataset de la UNGRD.
 Los 12 ids originales (`pasto`, `ipiales`, `tumaco`…) se conservan.
 
+#### Límites municipales (mapa)
+El mapa colorea los 64 municipios con sus límites del **Marco Geoestadístico Nacional 2025 del DANE**
+(capa `MGN_ADM_MPIO_GRAFICO`, "Versión MGN2025-Nivel Municipio", Shapefile). Se sirven desde un archivo
+estático versionado, `backend/src/infrastructure/geo/narino-boundaries-mgn2025.json` (149 KB, 42 KB con
+gzip), unido con las zonas por código DIVIPOLA. No usan la base de datos (`zone.boundary` sigue vacía).
+
+Para regenerarlo: bajar el zip a mano desde geoportal.dane.gov.co (su `robots.txt` pide pausas de 120 s y
+visitas de noche) a `backend/data/raw/` (fuera de git) y correr `npm run geo:boundaries`. El script
+(mapshaper) toma el departamento 52, simplifica al 2,7 % y falla si los 64 códigos no coinciden.
+
+Fuente: Departamento Administrativo Nacional de Estadística: www.dane.gov.co
+
 #### Ingesta de datos
 Con `npm run dev` el backend programa la ingesta (node-cron, hora de Colombia) y trae el clima al arrancar.
 Para correrla una vez a mano: `npm run ingest` (todas) o `npm run ingest weather` (una).
@@ -99,9 +111,9 @@ Detalle, ajuste y limitaciones en `docs/ML.md` (sección 7); cómo reproducirlo 
 - `GET /api/zones` — municipios con puntaje y nivel de riesgo.
 - `GET /api/zones/:id` — detalle: clima y factores.
 - `GET /api/zones/:id/forecast` — pronóstico de 72 h con el modelo de ML (filas de 24, 48 y 72 h), o respaldo con el puntaje actual.
+- `GET /api/zones/boundaries` — límites de los 64 municipios (GeoJSON, `feature.id` = id de la zona; caché de un día con ETag).
 - `GET /api/fires?zoneId=pasto` — historial de incendios y resumen.
 - `GET /api/hotspots` — focos de calor.
 
 ## Qué falta
-- Polígonos de los municipios (GeoJSON IGAC/DANE) para dibujar los límites.
 - Desplegar el backend (Render/Railway) y cambiar `API_BASE_URL` en `mobile/src/app/core/config/api-config.ts`.

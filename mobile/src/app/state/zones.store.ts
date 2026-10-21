@@ -1,10 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
-import type { FireHistory, Hotspot, ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../domain/model/risk';
+import type { FireHistory, Hotspot, ZoneBoundaries, ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../domain/model/risk';
 import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from '../domain/repository/repositories';
 
 /** Where the 72 h forecast of the selected zone is: asking, answered, or the request failed. */
 export type ForecastStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+/** Same steps for the municipal boundaries; 'idle' again once their notice is closed. */
+export type BoundariesStatus = ForecastStatus;
 
 /** State of the map screen (zones, heat spots and the selected zone). Signals = simple and reactive. */
 @Injectable({ providedIn: 'root' })
@@ -23,6 +26,9 @@ export class ZonesStore {
   /** 72 h forecast of the selected zone (the model, or its fallback to the current score). */
   readonly detailForecast = signal<ZoneForecast | null>(null);
   readonly forecastStatus = signal<ForecastStatus>('idle');
+  /** Municipal outlines for the map; without them the map keeps working with the markers. */
+  readonly boundaries = signal<ZoneBoundaries | null>(null);
+  readonly boundariesStatus = signal<BoundariesStatus>('idle');
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly updatedAt = signal<Date | null>(null);
@@ -45,6 +51,25 @@ export class ZonesStore {
         this.loading.set(false);
       },
     });
+  }
+
+  /** Asks for the boundaries once; again only after a failure (the notice's "Reintentar"). */
+  loadBoundaries(): void {
+    const status = this.boundariesStatus();
+    if (status === 'loading' || status === 'ready') return;
+    this.boundariesStatus.set('loading');
+    this.zoneRepository.boundaries().subscribe({
+      next: (boundaries) => {
+        this.boundaries.set(boundaries);
+        this.boundariesStatus.set('ready');
+      },
+      // Only the boundaries notice shows it: zones and markers do not depend on them.
+      error: () => this.boundariesStatus.set('error'),
+    });
+  }
+
+  dismissBoundariesError(): void {
+    if (this.boundariesStatus() === 'error') this.boundariesStatus.set('idle');
   }
 
   select(zoneId: string): void {

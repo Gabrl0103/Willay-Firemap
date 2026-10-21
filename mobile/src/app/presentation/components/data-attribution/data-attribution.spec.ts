@@ -15,4 +15,13 @@ describe('DataAttribution', () => {
     expect(links).toContain('https://www.datos.gov.co/d/rgre-6ak4');
     expect(links).toContain('https://creativecommons.org/licenses/by/4.0/deed.es');
   });
+
+  it('cites DANE for the municipal boundaries, with the wording its terms ask for', () => {
+    const fixture = TestBed.createComponent(DataAttribution);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent!.replace(/\s+/g, ' ');
+
+    expect(text).toContain('Fuente: Departamento Administrativo Nacional de Estadística: www.dane.gov.co');
+    expect(text).toContain('Marco Geoestadístico Nacional 2025');
+  });
 });

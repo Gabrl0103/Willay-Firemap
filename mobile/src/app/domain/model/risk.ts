@@ -1,3 +1,5 @@
+import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson';
+
 export type RiskLevel = 'low' | 'medium' | 'high' | 'extreme';
 
 export interface ZoneRiskSummary {
@@ -30,6 +32,19 @@ export interface ZoneDetail {
     readonly count: number;
     readonly latestDetectedAt: string | null;
   };
+}
+
+/** Municipal boundary of a zone (GET /api/zones/boundaries); feature.id is the zone id. */
+export interface ZoneBoundaryProperties {
+  readonly id: string;
+  /** DIVIPOLA code (DANE). */
+  readonly divipola: number;
+  readonly name: string;
+}
+
+export interface ZoneBoundaries extends FeatureCollection<Polygon | MultiPolygon, ZoneBoundaryProperties> {
+  /** Who made the boundaries, to credit on the map (DANE's MGN). */
+  readonly source: string;
 }
 
 export interface Hotspot {

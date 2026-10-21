@@ -17,7 +17,10 @@ export const UNGRD_DATASETS: readonly Dataset[] = [
   { years: '2025', url: 'https://www.datos.gov.co/d/2343-nuqp', license: 'CC BY 4.0', licenseUrl: CC_BY_4 },
 ];
 
-/** Credit required by the CC licenses of the UNGRD data: author, source, license and changes made. */
+/**
+ * Credit required by the CC licenses of the UNGRD data (author, source, license and changes made) and
+ * by DANE's terms of use for the municipal boundaries of the map (its literal citation).
+ */
 @Component({
   selector: 'app-data-attribution',
   template: `
@@ -35,6 +38,11 @@ export const UNGRD_DATASETS: readonly Dataset[] = [
         }
       </ul>
       <p>Atalaya solo toma los incendios forestales de Nariño y une los reportes del mismo día y municipio.</p>
+      <p class="boundaries">
+        Límites municipales del mapa: Marco Geoestadístico Nacional 2025, simplificados para el celular.
+        Fuente: Departamento Administrativo Nacional de Estadística:
+        <a href="https://www.dane.gov.co" target="_blank" rel="noopener">www.dane.gov.co</a>
+      </p>
     </footer>
   `,
   styles: `
@@ -48,6 +56,7 @@ export const UNGRD_DATASETS: readonly Dataset[] = [
       color: var(--text-2);
     }
     p { margin: 0; }
+    .boundaries { margin-top: 10px; }
     ul { margin: 8px 0; padding-left: 16px; }
     li { font-family: var(--font-mono); font-size: 11px; line-height: 1.8; }
     a { color: var(--amber); text-underline-offset: 2px; }

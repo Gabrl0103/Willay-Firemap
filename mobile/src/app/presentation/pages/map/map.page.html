@@ -37,6 +37,14 @@
       <button type="button" (click)="locationError.set(null)">Cerrar</button>
     </div>
   </div>
+} @else if (store.boundariesStatus() === 'error') {
+  <div class="error-banner" role="alert">
+    <span>No se pudieron cargar los límites municipales. El mapa muestra solo los puntos.</span>
+    <div class="banner-actions">
+      <button type="button" (click)="store.loadBoundaries()">Reintentar</button>
+      <button type="button" (click)="store.dismissBoundariesError()">Cerrar</button>
+    </div>
+  </div>
 }
 
 @if (store.detail(); as detail) {

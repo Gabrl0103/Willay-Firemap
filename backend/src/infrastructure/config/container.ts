@@ -1,6 +1,7 @@
 import { ZoneRiskCalculator } from '../../application/service/ZoneRiskCalculator.js';
 import { GetFireHistoryUseCase } from '../../application/useCase/GetFireHistoryUseCase.js';
 import { GetHotspotsUseCase } from '../../application/useCase/GetHotspotsUseCase.js';
+import { GetZoneBoundariesUseCase } from '../../application/useCase/GetZoneBoundariesUseCase.js';
 import { GetZoneDetailUseCase } from '../../application/useCase/GetZoneDetailUseCase.js';
 import { GetZoneForecastUseCase } from '../../application/useCase/GetZoneForecastUseCase.js';
 import { GetZonesRiskUseCase } from '../../application/useCase/GetZonesRiskUseCase.js';
@@ -22,6 +23,7 @@ import { FirmsHotspotProvider } from '../external/FirmsHotspotProvider.js';
 import { OpenMeteoArchiveProvider } from '../external/OpenMeteoArchiveProvider.js';
 import { OpenMeteoForecastProvider } from '../external/OpenMeteoForecastProvider.js';
 import { OpenMeteoWeatherProvider } from '../external/OpenMeteoWeatherProvider.js';
+import { BOUNDARY_SOURCE, NARINO_BOUNDARIES } from '../geo/narinoBoundaries.js';
 import {
   InMemoryDailyWeatherRepository,
   InMemoryFireEventRepository,
@@ -49,6 +51,7 @@ export interface Container {
   readonly getZonesRisk: GetZonesRiskUseCase;
   readonly getZoneDetail: GetZoneDetailUseCase;
   readonly getZoneForecast: GetZoneForecastUseCase;
+  readonly getZoneBoundaries: GetZoneBoundariesUseCase;
   readonly getFireHistory: GetFireHistoryUseCase;
   readonly getHotspots: GetHotspotsUseCase;
   /** Scheduled by the server (node-cron) and runnable once with `npm run ingest`. */
@@ -111,6 +114,7 @@ export function buildContainer(config: Env = env): Container {
       new OpenMeteoForecastProvider(),
       RISK_MODEL,
     ),
+    getZoneBoundaries: new GetZoneBoundariesUseCase({ source: BOUNDARY_SOURCE, boundaries: NARINO_BOUNDARIES.boundaries }),
     getFireHistory: new GetFireHistoryUseCase(repositories.fireEvents, repositories.zones),
     getHotspots: new GetHotspotsUseCase(repositories.hotspots),
     ingestionJobs: buildIngestionJobs(repositories, config),

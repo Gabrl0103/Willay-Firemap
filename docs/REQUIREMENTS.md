@@ -87,7 +87,7 @@ willay/
 
 **APIs abiertas (tiempo real):** NASA FIRMS (focos de calor: VIIRS SNPP, NOAA-20 y NOAA-21 NRT, últimos 5 días UTC, bbox de Nariño `-79.1,0.35,-76.8,2.7`), Open-Meteo (clima, sin API key).
 
-**Límites de zonas:** GeoJSON de municipios/veredas de Nariño (IGAC o DANE). *Bloqueante actual: sin esto no se puebla la tabla de zonas.*
+**Límites de zonas:** desde v0.23, límites municipales del Marco Geoestadístico Nacional 2025 del DANE (`MGN_ADM_MPIO_GRAFICO`), simplificados al 2,7 % (149 KB) y servidos como archivo estático por `GET /api/zones/boundaries`. Términos de uso del DANE: uso y transformación con la cita "Fuente: Departamento Administrativo Nacional de Estadística: www.dane.gov.co" (en Historial y en el README); licencia de usuario final, sin comercialización. Veredas: sin fuente todavía.
 
 **Notas:**
 - Las noticias hay que procesarlas: extraer texto, detectar municipio/lugar y guardarlo como evento histórico.
@@ -228,7 +228,7 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 **Componentes reutilizables (componentes de Angular):** `RiskBadge`, `ZoneMarker`, `RiskLegend`, `SearchBar`, `StatColumn`, `RiskFactorBar`, `FireEventTile`, `SourceTag`, `AppButton`, `BottomNavBar`.
 
 **Observaciones sobre el prototipo:**
-- El contorno de Nariño en el prototipo es una silueta simplificada; en la app real se dibuja con el GeoJSON de IGAC/DANE sobre Leaflet.
+- El contorno de Nariño en el prototipo es una silueta simplificada; desde v0.23 la app dibuja los 64 municipios del MGN del DANE sobre Leaflet, coloreados por nivel de riesgo.
 - El prototipo de Lovable ya es web: su CSS se reutiliza casi directo en Ionic/Angular.
 - Los datos son simulados; se reemplazan con los endpoints reales.
 - El mapa real necesitará un estilo oscuro compatible (tiles de OpenStreetMap con tema oscuro) para acercarse a este look.
@@ -262,6 +262,22 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-21 (v0.23, rama `feat/municipal-boundaries`):** límites reales de los 64 municipios, coloreados por riesgo.
+  - Fuente: DANE, MGN 2025, capa `MGN_ADM_MPIO_GRAFICO` (zip bajado a mano del Geoportal, sha256 `a3c01393…bc141f`).
+    Se descartó el IGAC (Resolución 616 de 2020, sin descarga directa de una capa municipal).
+  - `npm run geo:boundaries` (mapshaper 0.7.79): filtra el departamento 52, simplifica con Visvalingam y
+    `keep-shapes`, deja código y nombre, redondea a 0,0001° y verifica 64 de 64 códigos. Comparación
+    (KB sin/con gzip): 2,7 % → 149/42, 3 % → 163/46, 5 % → 261/75, 8 % → 408/115, 12 % → 600/165. Se eligió
+    2,7 % (~8.100 vértices): la costa pacífica y la bahía de Tumaco se reconocen; solo se pierden islotes de
+    unos cientos de metros. 5 %, 8 % y 12 % pasaban la meta de ~150 KB.
+  - Archivo estático versionado, no PostGIS: funciona sin base de datos y `zone.boundary` sigue vacía.
+  - `GET /api/zones/boundaries`: GeoJSON unido por DIVIPOLA (nunca por nombre), `Cache-Control` de un día,
+    ETag y gzip para toda la API (`compression`).
+  - App: capa de polígonos debajo de los marcadores con los colores `--risk-*` al 28 %, contorno fino y la
+    zona elegida resaltada; tocar un polígono abre la hoja de zona. Si los límites fallan, el mapa sigue con
+    los marcadores y avisa en español (Reintentar / Cerrar). Cita del DANE en Historial y en el mapa.
+  - Rendimiento (Chrome de escritorio, 64 polígonos SVG): ninguna tarea de más de 50 ms al hacer zoom y
+    desplazar; falta medir en un Android real.
 - **2026-10-18 (v0.22, rama `feat/ml-forecast`):** pronóstico de 72 h con la regresión logística v1.0.0 (fase 4 del ML).
   - Se fusiona `feat/ml` (código de `ml/`, `docs/ML.md`).
   - `ml/willay_ml/export_backend.py` exporta el modelo a `backend/src/infrastructure/ml/risk-model-1.0.0.json`
