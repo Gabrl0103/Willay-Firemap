@@ -12,7 +12,7 @@ import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
-import { RiskLegend } from '../../components/risk-legend/risk-legend';
+import { MapOverviewSheet } from '../../components/map-overview-sheet/map-overview-sheet';
 import { SearchBox } from '../../components/search-box/search-box';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
@@ -31,8 +31,8 @@ import { clusterLabel, clusterMarkerHtml, showsNames, zoneMarkerHtml } from './z
 const WORKER_PATH = 'maplibre/maplibre-gl-worker.mjs';
 /** The globe spins and flies once per app session; later visits open straight over Nariño. */
 let introPlayed = false;
-/** Room for the header (top) and the bottom sheet (bottom) when framing the department. */
-const NARINO_PADDING = { top: 150, bottom: 260, left: 24, right: 24 };
+/** Room for the header (top) when framing the department; the bottom adds the overview sheet's height. */
+const NARINO_PADDING = { top: 110, bottom: 24, left: 24, right: 24 };
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
 const SEAT_OFFSET: [number, number] = [0, -150];
 
@@ -43,7 +43,7 @@ interface ShownMarker {
 
 @Component({
   selector: 'app-map-page',
-  imports: [AppIcon, SearchBox, RiskLegend, ZoneSheet],
+  imports: [AppIcon, MapOverviewSheet, SearchBox, ZoneSheet],
   templateUrl: './map.page.html',
   styleUrl: './map.page.css',
   host: { class: 'ion-page' },
@@ -54,6 +54,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly searchRequest = inject(SearchRequest);
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
+  private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
   private map?: MapLibreMap;
   private colors?: MapColors;
   private readonly markers = new Map<string, ShownMarker>();
@@ -177,6 +178,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   protected closeSearch(): void {
     this.searchOpen.set(false);
+  }
+
+  /** «Acercar a Nariño»: back to the whole department (a jump with reduced motion). */
+  protected zoomToNarino(): void {
+    this.flyToNarino(false);
   }
 
   protected closeSheet(): void {
@@ -362,15 +368,18 @@ export class MapPage implements AfterViewInit, OnDestroy {
   }
 
   private narinoCamera() {
-    return this.map?.cameraForBounds(NARINO_BOUNDS, { padding: NARINO_PADDING, pitch: PITCH });
+    const sheet = this.overview()?.nativeElement.querySelector('.overview')?.getBoundingClientRect().height ?? 0;
+    const padding = { ...NARINO_PADDING, bottom: NARINO_PADDING.bottom + sheet };
+    return this.map?.cameraForBounds(NARINO_BOUNDS, { padding, pitch: PITCH });
   }
 
-  private flyToNarino(): void {
+  /** The intro flight is essential (reduced motion never gets here); the button's is not. */
+  private flyToNarino(essential = true): void {
     const map = this.map;
     const camera = this.narinoCamera();
     if (!map || !camera) return;
     map.once('moveend', () => this.limitToNarino());
-    map.flyTo({ ...camera, pitch: PITCH, duration: FLY_MS, essential: true });
+    map.flyTo({ ...camera, pitch: PITCH, duration: FLY_MS, essential });
   }
 
   private jumpToNarino(): void {

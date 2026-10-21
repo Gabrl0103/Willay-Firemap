@@ -27,8 +27,6 @@ h1 { margin: 0; padding: 4px 10px 0; color: var(--text); font-family: var(--font
   display: flex; align-items: center; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--glass-strong); color: var(--text); backdrop-filter: var(--glass-blur);
   box-shadow: 0 8px 24px rgba(9, 20, 24, 0.22); font-size: 11px;
 }
-.legend-slot { position: absolute; z-index: 40; left: 14px; bottom: calc(var(--nav-height) + var(--nav-bottom) + 28px + env(safe-area-inset-bottom, 0px)); }
-.map-note { position: absolute; z-index: 40; bottom: calc(var(--nav-height) + var(--nav-bottom) + 28px + env(safe-area-inset-bottom, 0px)); right: 14px; margin: 0; display: flex; align-items: center; gap: 5px; color: rgba(225, 235, 238, 0.72); font-size: 8px; }
 .error-banner {
   position: absolute; z-index: 80; left: 14px; right: 14px; top: calc(80px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 10px 12px; border-radius: 10px; background: var(--risk-extreme); color: #fff; font-size: 11px; box-shadow: var(--shadow-soft);

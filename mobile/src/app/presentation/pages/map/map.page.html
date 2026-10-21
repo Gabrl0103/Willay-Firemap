@@ -23,9 +23,16 @@
   <app-icon name="crosshair" [size]="16" /><span>{{ locating() ? 'Buscando…' : 'Mi ubicación' }}</span>
 </button>
 
-<app-risk-legend class="legend-slot" />
-
-<p class="map-note"><app-icon name="alert" [size]="11" />Estimación de riesgo, no predicción exacta</p>
+@if (!store.detail()) {
+  <app-map-overview-sheet
+    #overview
+    [zoneCount]="store.zones().length"
+    [hotspotCount]="store.hotspots().length"
+    [updatedLabel]="updatedLabel()"
+    [canZoom]="!mapUnavailable()"
+    (zoomRequested)="zoomToNarino()"
+  />
+}
 
 @if (store.error(); as message) {
   <div class="error-banner" role="alert">
