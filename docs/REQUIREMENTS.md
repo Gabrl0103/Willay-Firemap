@@ -262,6 +262,18 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-21 (v0.25, rama `feat/map-globe`):** el mapa ajustado a la captura aprobada (`docs/design/4 · Mapa (globo)`).
+  - Antes: abriendo directo en `/map`, el giro y el vuelo pasaban debajo de la splash (2,5 s + 0,45 s) y nadie los
+    veía; el globo quedaba medio tapado por la hoja, que ocupaba el 52 % de la pantalla; Nariño salía chico.
+  - Entrada: el globo entero, con su halo, espera entre el título y la hoja a que se vayan la splash y la
+    introducción (`AppCurtain`); gira 3 s a 8°/s y vuela 2,6 s a Nariño con inclinación 50°.
+  - Siempre globo: se quita el paso a plano por menos de 30 fps y `MapProjectionFlag`. Sin WebGL sigue sin haber
+    mapa (MapLibre lo necesita en las dos proyecciones).
+  - Encuadre: Nariño lo más grande posible entre la cabecera y la hoja; «Acercar a Nariño» deja el mismo encuadre
+    y plegar o desplegar la hoja lo vuelve a encuadrar si nadie movió el mapa.
+  - Créditos de OSM y DANE: letra pequeña abajo a la derecha del mapa, justo encima de la hoja (antes, debajo del título).
+  - Hoja: más compacta (42 % de 844 px, plegable con la manija); los 4 niveles en una fila con sus rangos
+    (0–24, 25–49, 50–74, 75–100) y la clave del foco de calor.
 - **2026-10-21 (v0.24, rama `feat/map-globe`):** fase 4 del rediseño: mapa con globo en MapLibre GL JS 6.13 (reemplaza a Leaflet).
   - Estilo: fondo `#0B0604`, tiles raster de OSM oscurecidos con pintura del raster (brillo invertido, tono 180°,
     poca saturación) y resplandor naranja tenue en el borde del globo (halo CSS: la atmósfera de MapLibre es azul y
