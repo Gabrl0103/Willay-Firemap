@@ -1,15 +1,16 @@
 /* Elementos que MapLibre crea por fuera de Angular (por eso son globales). */
 .maplibregl-map { font-family: var(--font-sans); }
-/* OSM y DANE siempre visibles, discretos, debajo de la cabecera (las hojas tapan la parte de abajo). */
-.map-element .maplibregl-ctrl-top-left { top: calc(76px + env(safe-area-inset-top)); left: 20px; }
-.maplibregl-ctrl-top-left .maplibregl-ctrl-attrib {
-  margin: 0;
-  padding: 2px 6px;
-  border-radius: 8px;
-  background: rgba(11, 6, 4, 0.55);
-  color: rgba(233, 240, 238, 0.6);
+/* OSM y DANE siempre visibles: texto pequeño en la esquina inferior derecha del mapa, justo encima de la hoja
+   (--sheet-inset lo pone map.page.ts con el alto de la hoja; la barra queda debajo de la hoja). */
+.map-element .maplibregl-ctrl-bottom-right { right: 0; bottom: var(--sheet-inset, 0px); transition: bottom 0.32s; }
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
+  margin: 0 14px 6px 0;
+  padding: 0;
+  background: none;
+  color: rgba(233, 240, 238, 0.55);
   font-size: 8px;
   line-height: 1.4;
+  text-shadow: 0 1px 4px rgba(11, 6, 4, 0.95);
 }
 .maplibregl-ctrl-attrib a { color: rgba(233, 240, 238, 0.78); }
 

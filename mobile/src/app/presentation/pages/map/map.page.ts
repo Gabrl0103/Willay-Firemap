@@ -15,6 +15,7 @@ import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
 import { MapOverviewSheet } from '../../components/map-overview-sheet/map-overview-sheet';
 import { SearchBox } from '../../components/search-box/search-box';
+import { MID_HEIGHT } from '../../components/zone-sheet/sheet-snap';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
   FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, SPIN_MS, ZONE_FLY_MS, ZONE_ZOOM,
@@ -30,10 +31,10 @@ import { clusterLabel, clusterMarkerHtml, showsNames, zoneMarkerHtml } from './z
 
 /** MapLibre's worker, copied next to the app by angular.json (it cannot come from a CDN). */
 const WORKER_PATH = 'maplibre/maplibre-gl-worker.mjs';
-/** The globe spins and flies once per app session; later visits open straight over NariÃ±o. */
+/** The globe spins and flies once per app session; later visits open straight over Nariño. */
 let introPlayed = false;
-/** Room for the header (top) when framing the department; the bottom adds the overview sheet's height. */
-const NARINO_PADDING = { top: 110, bottom: 24, left: 24, right: 24 };
+/** Room for the header (top) when framing the department; the bottom adds the sheet's height. */
+const NARINO_PADDING = { top: 84, bottom: 12, left: 12, right: 12 };
 /** How far (px) the globe's orange halo reaches beyond its edge. */
 const GLOW_WIDTH = 44;
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
@@ -49,7 +50,8 @@ interface ShownMarker {
   imports: [AppIcon, MapOverviewSheet, SearchBox, ZoneSheet],
   templateUrl: './map.page.html',
   styleUrl: './map.page.css',
-  host: { class: 'ion-page' },
+  // --sheet-inset: how much of the map the sheet covers, so the credits sit just above it.
+  host: { class: 'ion-page', '[style.--sheet-inset.px]': 'sheetInset()' },
 })
 export class MapPage implements AfterViewInit, OnDestroy {
   protected readonly store = inject(ZonesStore);
@@ -69,19 +71,22 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private destroyed = false;
   private readonly mapReady = signal(false);
   private boundariesShown = false;
+  /** The camera shows the whole department (intro, «Acercar a Nariño»), untouched since. */
+  private framingNarino = false;
+  protected readonly sheetInset = signal(0);
   /** No WebGL: MapLibre cannot draw in any projection, so the map area explains it instead. */
   protected readonly mapUnavailable = signal(false);
   /** The glass search layer, opened from the magnifier of the bottom nav. */
   protected readonly searchOpen = signal(false);
   protected readonly locating = signal(false);
-  /** Why Â«Mi ubicaciÃ³nÂ» failed, in Spanish (kept apart from the store error, whose retry reloads zones). */
+  /** Why «Mi ubicación» failed, in Spanish (kept apart from the store error, whose retry reloads zones). */
   protected readonly locationError = signal<string | null>(null);
 
   protected readonly updatedLabel = computed(() => {
     const date = this.store.updatedAt();
     return date
       ? `Actualizado ${date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`
-      : 'Cargandoâ€¦';
+      : 'Cargando…';
   });
 
   /** Fires per year of the selected zone, from its records (null until they arrive). */
@@ -113,6 +118,22 @@ export class MapPage implements AfterViewInit, OnDestroy {
     effect(() => {
       if (!this.mapReady()) return;
       this.styleSelection(this.store.zones(), this.store.selectedId(), this.store.boundaries());
+    });
+    // The overview sheet folds and unfolds: the credits follow it and Nariño is framed again above it.
+    effect((onCleanup) => {
+      const overview = this.overview()?.nativeElement;
+      if (!overview) {
+        // The zone sheet opens at MID_HEIGHT of the screen.
+        const detailOpen = this.store.detail() !== null;
+        this.sheetInset.set(detailOpen ? Math.round(this.mapElement().nativeElement.clientHeight * MID_HEIGHT) : 0);
+        return;
+      }
+      const observer = new ResizeObserver(() => {
+        this.sheetInset.set(overview.offsetHeight);
+        if (this.framingNarino) this.reframeNarino();
+      });
+      observer.observe(overview);
+      onCleanup(() => observer.disconnect());
     });
   }
 
@@ -153,7 +174,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.map = map;
     map.touchZoomRotate.disableRotation();
     // Always expanded: OpenStreetMap and DANE ask to be credited where the map is seen.
-    map.addControl(new AttributionControl({ compact: false }), 'top-left');
+    map.addControl(new AttributionControl({ compact: false }), 'bottom-right');
 
     const updateZoomClass = (): void => {
       element.classList.toggle('show-names', showsNames(map.getZoom()));
@@ -165,6 +186,10 @@ export class MapPage implements AfterViewInit, OnDestroy {
     map.on('resize', () => this.placeGlow());
     this.placeGlow();
     map.on('click', ZONE_FILL_LAYER, (event) => this.onPolygonTap(event));
+    // A finger (or the wheel) moving the map ends the department framing; camera flights do not.
+    map.on('movestart', (event) => {
+      if (event.originalEvent) this.framingNarino = false;
+    });
     map.once('load', () => {
       this.addLayers(map, colors);
       this.mapReady.set(true);
@@ -192,7 +217,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.searchOpen.set(false);
   }
 
-  /** Â«Acercar a NariÃ±oÂ»: back to the whole department (a jump with reduced motion). */
+  /** «Acercar a Nariño»: back to the whole department (a jump with reduced motion). */
   protected zoomToNarino(): void {
     this.flyToNarino(false);
   }
@@ -331,6 +356,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const source = this.source(ZONES_SOURCE);
     if (!map || !source) return;
     const zoom = await source.getClusterExpansionZoom(item.clusterId);
+    this.framingNarino = false;
     map.easeTo({ center: item.lngLat, zoom: zoom + 0.25, duration: 500 });
   }
 
@@ -347,7 +373,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (plan === 'zone' && selected) this.flyToSeat(selected.longitude, selected.latitude);
   }
 
-  /** The globe turns slowly, then flies to NariÃ±o. Touching the map skips straight to NariÃ±o. */
+  /** The globe turns slowly, then flies to Nariño. Touching the map skips straight to Nariño. */
   private spin(): void {
     const map = this.map;
     if (!map) return;
@@ -411,7 +437,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     return this.overview()?.nativeElement.offsetHeight ?? 0;
   }
 
-  /** The globe starts with padding (globeStart); the flights over Nariño clear it. */
+  /** Nariño as large as fits between the header and the sheet, tilted. Same for the intro and the button. */
   private narinoCamera() {
     const padding = { ...NARINO_PADDING, bottom: NARINO_PADDING.bottom + this.sheetHeight() };
     const camera = this.map?.cameraForBounds(NARINO_BOUNDS, { padding, pitch: PITCH });
@@ -423,8 +449,18 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const map = this.map;
     const camera = this.narinoCamera();
     if (!map || !camera) return;
-    map.once('moveend', () => this.limitToNarino());
+    this.framingNarino = false;
+    map.once('moveend', () => {
+      this.limitToNarino();
+      this.framingNarino = true;
+    });
     map.flyTo({ ...camera, duration: FLY_MS, essential });
+  }
+
+  /** The sheet changed height while showing the department: frame it again above the sheet. */
+  private reframeNarino(): void {
+    const camera = this.narinoCamera();
+    if (camera) this.map?.easeTo({ ...camera, duration: 350 });
   }
 
   private jumpToNarino(): void {
@@ -433,9 +469,10 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (!map || !camera) return;
     map.jumpTo(camera);
     this.limitToNarino();
+    this.framingNarino = true;
   }
 
-  /** Once over NariÃ±o the camera stays around it. */
+  /** Once over Nariño the camera stays around it. */
   private limitToNarino(): void {
     this.map?.setMaxBounds(MAX_BOUNDS);
     this.map?.setMinZoom(MIN_ZOOM_OVER_NARINO);
@@ -443,10 +480,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   /**
    * Non-essential: MapLibre jumps instead of flying when the phone asks for reduced motion. A zone
-   * picked during the spin wins over the flight to NariÃ±o; the camera is limited once it lands.
+   * picked during the spin wins over the flight to Nariño; the camera is limited once it lands.
    */
   private flyToSeat(longitude: number, latitude: number): void {
     if (this.stopSpin()) this.map?.once('moveend', () => this.limitToNarino());
+    this.framingNarino = false;
     this.map?.flyTo({
       center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, padding: NO_PADDING, duration: ZONE_FLY_MS,
     });
