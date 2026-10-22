@@ -3,9 +3,6 @@ import type { MapOptions } from 'maplibre-gl';
 /** A MapLibre style object (MapOptions also accepts a URL, which the app never uses: nothing from a CDN). */
 export type MapStyle = Exclude<MapOptions['style'], string | undefined>;
 
-/** Globe by default; flat when the phone cannot keep the globe above 30 fps (see map-camera.ts). */
-export type MapProjection = 'globe' | 'mercator';
-
 /** Standard OpenStreetMap raster tiles (no API key), loaded only as the camera needs them. */
 const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 export const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
@@ -38,12 +35,12 @@ export const GLOBE_SKY = {
   'atmosphere-blend': 0,
 } as const;
 
-/** Base style: background and dark OSM tiles. Zones, boundaries and hotspots are added by map-layers.ts. */
-export function mapStyle(projection: MapProjection): MapStyle {
+/** Base style: the globe, background and dark OSM tiles. Zones, boundaries and hotspots are added by map-layers.ts. */
+export function mapStyle(): MapStyle {
   return {
     version: 8,
-    projection: { type: projection },
-    ...(projection === 'globe' ? { sky: { ...GLOBE_SKY } } : {}),
+    projection: { type: 'globe' },
+    sky: { ...GLOBE_SKY },
     sources: {
       [OSM_SOURCE]: { type: 'raster', tiles: [OSM_TILES], tileSize: 256, maxzoom: 19, attribution: OSM_ATTRIBUTION },
     },

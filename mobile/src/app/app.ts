@@ -1,5 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { IonApp, IonRouterOutlet } from '@ionic/angular';
+import { AppCurtain } from './core/app-curtain';
 import { OnboardingFlag } from './core/onboarding-flag';
 import { BottomNav } from './presentation/components/bottom-nav/bottom-nav';
 import { Onboarding } from './presentation/components/onboarding/onboarding';
@@ -35,5 +36,9 @@ export class App {
     void inject(OnboardingFlag)
       .isDone()
       .then((done) => this.showOnboarding.set(!done));
+    const curtain = inject(AppCurtain);
+    effect(() => {
+      if (!this.showSplash() && !this.showOnboarding()) curtain.lift();
+    });
   }
 }
