@@ -1,5 +1,6 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import type { RiskLevel } from '../../../domain/model/risk';
+import { RISK_RANGES } from '../../../domain/util/risk-labels';
 import { AppIcon } from '../app-icon/app-icon';
 import { RiskBadge } from '../risk-badge/risk-badge';
 
@@ -33,11 +34,11 @@ export function overviewCounts(zoneCount: number, hotspotCount: number): string 
       <h2 id="overview-title">Departamento de Nariño</h2>
       <p class="counts">{{ counts() }}</p>
       @if (!folded()) {
-        <div class="legend" aria-label="Leyenda de riesgo">
+        <ul class="legend" aria-label="Leyenda de riesgo">
           @for (level of levels; track level) {
-            <app-risk-badge [level]="level" />
+            <li><app-risk-badge [level]="level" /><small class="range mono">{{ ranges[level] }}</small></li>
           }
-        </div>
+        </ul>
         <p class="hotspot-key"><span class="dot"></span>Foco de calor (NASA FIRMS, últimos 5 días)</p>
         @if (canZoom()) {
           <button type="button" class="zoom" (click)="zoomRequested.emit()">Acercar a Nariño</button>
@@ -63,6 +64,7 @@ export class MapOverviewSheet {
   readonly zoomRequested = output<void>();
 
   protected readonly levels = LEVELS;
+  protected readonly ranges = RISK_RANGES;
   protected readonly folded = signal(false);
   protected readonly counts = computed(() =>
     this.zoneCount() === 0 ? 'Cargando municipios…' : overviewCounts(this.zoneCount(), this.hotspotCount()),

@@ -27,9 +27,10 @@ describe('MapOverviewSheet', () => {
     expect(text(host.querySelector('.counts'))).toBe('Cargando municipios…');
   });
 
-  it('shows the four risk levels, the hotspot key and the disclaimer', () => {
+  it('shows the four risk levels with their ranges, the hotspot key and the disclaimer', () => {
     const { host } = setup({ zoneCount: 64, hotspotCount: 12 });
     expect([...host.querySelectorAll('app-risk-badge')].map(text)).toEqual(['Bajo', 'Medio', 'Alto', 'Extremo']);
+    expect([...host.querySelectorAll('.range')].map(text)).toEqual(['0–24', '25–49', '50–74', '75–100']);
     expect(text(host.querySelector('.hotspot-key'))).toContain('Foco de calor');
     expect(text(host.querySelector('.note'))).toContain('Estimación de riesgo, no predicción exacta');
   });

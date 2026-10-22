@@ -1,21 +1,20 @@
 import {
-  GLOBE_START, GLOW_END_ZOOM, MAX_BOUNDS, MIN_FPS_SAMPLES, NARINO_BOUNDS, SPIN_DEGREES_PER_SECOND, globeHalo, hasWebGL,
-  introPlan, measureFps, prefersReducedMotion, shouldUseFlatMap, spinCenter,
+  GLOBE_MARGIN, GLOBE_START_CENTER, GLOBE_TOP, GLOW_END_ZOOM, MAX_BOUNDS, NARINO_BOUNDS, SPIN_DEGREES_PER_SECOND,
+  globeHalo, globeStart, hasWebGL, introPlan, prefersReducedMotion, spinCenter,
 } from './map-camera';
 
-const frames = (count: number, gapMs: number): number[] => Array.from({ length: count }, (_, i) => i * gapMs);
+const globeRadius = (zoom: number): number => (512 * 2 ** zoom) / (2 * Math.PI);
 
 describe('map camera: opening', () => {
-  const base = { hasSelection: false, reducedMotion: false, firstVisit: true, projection: 'globe' as const };
+  const base = { hasSelection: false, reducedMotion: false, firstVisit: true };
 
   it('spins the globe and flies to Nariño on the first visit', () => {
     expect(introPlan(base)).toBe('spin-fly');
   });
 
-  it('jumps straight to Nariño with reduced motion, on later visits and on the flat map', () => {
+  it('jumps straight to Nariño with reduced motion and on later visits', () => {
     expect(introPlan({ ...base, reducedMotion: true })).toBe('jump');
     expect(introPlan({ ...base, firstVisit: false })).toBe('jump');
-    expect(introPlan({ ...base, projection: 'mercator' })).toBe('jump');
   });
 
   it('goes to the selected zone when arriving from Inicio, without spinning', () => {
@@ -24,8 +23,25 @@ describe('map camera: opening', () => {
   });
 
   it('turns the globe west from its start', () => {
-    expect(spinCenter(0)).toEqual(GLOBE_START.center);
-    expect(spinCenter(1000)).toEqual([GLOBE_START.center[0] - SPIN_DEGREES_PER_SECOND, GLOBE_START.center[1]]);
+    expect(spinCenter(0)).toEqual(GLOBE_START_CENTER);
+    expect(spinCenter(1000)).toEqual([GLOBE_START_CENTER[0] - SPIN_DEGREES_PER_SECOND, GLOBE_START_CENTER[1]]);
+  });
+
+  it('starts with the whole globe between the title and the sheet, as large as fits', () => {
+    // Phone 390 × 844 with a 360 px sheet: the width limits the globe.
+    const start = globeStart({ width: 390, height: 844, bottom: 360 });
+    expect(globeRadius(start.zoom)).toBeCloseTo(390 / 2 - GLOBE_MARGIN);
+    expect(start.padding).toEqual({ top: GLOBE_TOP, bottom: 360, left: 0, right: 0 });
+    expect(start.pitch).toBe(0);
+    // A tall sheet leaves less height than width: then the height limits it.
+    const short = globeStart({ width: 390, height: 844, bottom: 500 });
+    expect(globeRadius(short.zoom)).toBeCloseTo((844 - GLOBE_TOP - 500) / 2 - GLOBE_MARGIN);
+  });
+
+  it('starts east of Nariño so the spin brings it into view', () => {
+    const [[west], [east]] = NARINO_BOUNDS;
+    expect(GLOBE_START_CENTER[0]).toBeGreaterThan(east);
+    expect(spinCenter(3000)[0]).toBeGreaterThan(west);
   });
 
   it('keeps Nariño inside the bounds the camera may move in', () => {
@@ -36,7 +52,7 @@ describe('map camera: opening', () => {
 });
 
 describe('map camera: globe halo', () => {
-  const view = { zoom: 1.4, centerLatitude: 0, width: 390, height: 844, projection: 'globe' as const };
+  const view = { zoom: 1.4, centerLatitude: 0, width: 390, height: 844, padding: {} };
 
   it('circles the globe at its radius, fully visible when far', () => {
     const halo = globeHalo(view)!;
@@ -48,32 +64,17 @@ describe('map camera: globe halo', () => {
     expect(globeHalo({ ...view, centerLatitude: 10 })!.y).toBeGreaterThan(422);
   });
 
-  it('fades out when zooming in and is gone on the flat map', () => {
+  it('follows the padding that lifts the globe above the sheet', () => {
+    expect(globeHalo({ ...view, padding: { top: 64, bottom: 360 } })!.y).toBe(422 + (64 - 360) / 2);
+  });
+
+  it('fades out when zooming in', () => {
     expect(globeHalo({ ...view, zoom: 3.75 })!.opacity).toBeCloseTo(0.5);
     expect(globeHalo({ ...view, zoom: GLOW_END_ZOOM })).toBeNull();
-    expect(globeHalo({ ...view, projection: 'mercator' })).toBeNull();
   });
 });
 
-describe('map camera: flat fallback', () => {
-  it('waits for enough frames before judging', () => {
-    expect(measureFps(frames(MIN_FPS_SAMPLES - 1, 16))).toBeNull();
-    expect(shouldUseFlatMap(null)).toBe(false);
-  });
-
-  it('keeps the globe at 60 fps and drops it below 30', () => {
-    expect(Math.round(measureFps(frames(60, 1000 / 60))!)).toBe(60);
-    expect(shouldUseFlatMap(measureFps(frames(60, 1000 / 60)))).toBe(false);
-    expect(shouldUseFlatMap(measureFps(frames(60, 50)))).toBe(true); // 20 fps
-  });
-
-  it('is not decided by one slow frame', () => {
-    const times = frames(60, 16);
-    times.splice(30, 0, times[29]! + 400);
-    for (let i = 31; i < times.length; i++) times[i]! += 400;
-    expect(shouldUseFlatMap(measureFps(times))).toBe(false);
-  });
-
+describe('map camera: environment', () => {
   it('detects WebGL and reduced motion', () => {
     const canvas = { getContext: (kind: string) => (kind === 'webgl' ? {} : null) };
     expect(hasWebGL({ createElement: () => canvas } as unknown as Document)).toBe(true);
