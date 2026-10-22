@@ -1,0 +1,140 @@
+import type { FeatureCollection, Point } from 'geojson';
+import type { AddLayerObject, Map as MapLibreMap } from 'maplibre-gl';
+import type { Hotspot, RiskLevel, ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
+
+type SourceSpecification = Parameters<MapLibreMap['addSource']>[1];
+type LayerOf<T extends AddLayerObject['type']> = Extract<AddLayerObject, { type: T }>;
+type FilterSpecification = NonNullable<LayerOf<'line'>['filter']>;
+
+export const BOUNDARIES_SOURCE = 'zone-boundaries';
+export const ZONE_FILL_LAYER = 'zone-fill';
+const ZONE_OUTLINE_LAYER = 'zone-outline';
+export const ZONE_SELECTED_LAYER = 'zone-selected';
+export const HOTSPOTS_SOURCE = 'hotspots';
+export const BOUNDARIES_ATTRIBUTION = 'Límites: <a href="https://www.dane.gov.co">DANE</a> (MGN 2025)';
+
+/** Colors the GL layers need as values: they come from the CSS tokens (theme/tokens.css). */
+export interface MapColors {
+  readonly risk: Readonly<Record<RiskLevel, string>>;
+  /** --primary: hotspots. */
+  readonly hotspot: string;
+}
+
+const LEVELS: readonly RiskLevel[] = ['low', 'medium', 'high', 'extreme'];
+
+export function readMapColors(element: Element): MapColors {
+  const style = getComputedStyle(element);
+  const token = (name: string): string => style.getPropertyValue(name).trim();
+  return {
+    risk: Object.fromEntries(LEVELS.map((level) => [level, token(`--risk-${level}`)])) as Record<RiskLevel, string>,
+    hotspot: token('--primary'),
+  };
+}
+
+/** Thin light outline shared by neighbours, so two risk colors never fight on the same edge. */
+const OUTLINE = 'rgba(255, 243, 234, 0.4)';
+/** Zones without a score yet (the weather has not arrived): the prototype's Nariño fill. */
+export const NO_RISK_FILL = '#35655c';
+export const FILL_OPACITY = { normal: 0.28, selected: 0.45, noRisk: 0.3 } as const;
+
+/** The municipal polygons from GET /api/zones/boundaries; feature-state is keyed by zone id. */
+export function boundariesSource(boundaries: ZoneBoundaries): SourceSpecification {
+  return { type: 'geojson', data: boundaries, promoteId: 'id', attribution: BOUNDARIES_ATTRIBUTION };
+}
+
+/**
+ * Fill by risk level, translucent so the terrain and the markers on top still read; the selected
+ * zone is a bit stronger and gets a white outline on top of its neighbours'. Level and selection
+ * live in feature-state (zoneStates), so a new score or a tap never re-uploads the polygons.
+ */
+export function boundaryLayers(colors: MapColors): AddLayerObject[] {
+  const fill: LayerOf<'fill'> = {
+    id: ZONE_FILL_LAYER,
+    type: 'fill',
+    source: BOUNDARIES_SOURCE,
+    paint: {
+      'fill-color': ['match', levelState(), 'low', colors.risk.low, 'medium', colors.risk.medium, 'high', colors.risk.high, 'extreme', colors.risk.extreme, NO_RISK_FILL],
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false], FILL_OPACITY.selected,
+        ['==', levelState(), ''], FILL_OPACITY.noRisk,
+        FILL_OPACITY.normal,
+      ],
+    },
+  };
+  const outline: LayerOf<'line'> = {
+    id: ZONE_OUTLINE_LAYER,
+    type: 'line',
+    source: BOUNDARIES_SOURCE,
+    paint: { 'line-color': OUTLINE, 'line-width': 0.8 },
+  };
+  const selected: LayerOf<'line'> = {
+    id: ZONE_SELECTED_LAYER,
+    type: 'line',
+    source: BOUNDARIES_SOURCE,
+    filter: selectedZoneFilter(null),
+    paint: { 'line-color': '#fff3ea', 'line-width': 2, 'line-opacity': 0.9 },
+  };
+  return [fill, outline, selected];
+}
+
+/** The zone's level from feature-state as text; '' when it has none (no score yet). */
+function levelState(): ['to-string', ['feature-state', string]] {
+  return ['to-string', ['feature-state', 'level']];
+}
+
+/** Only the selected zone's outline (none when nothing is selected). */
+export function selectedZoneFilter(selectedId: string | null): FilterSpecification {
+  return ['==', ['get', 'id'], selectedId ?? ''];
+}
+
+export interface ZoneFeatureState {
+  readonly id: string;
+  readonly state: { readonly level: RiskLevel | null; readonly selected: boolean };
+}
+
+/** feature-state for every polygon: its level (null = no score yet) and whether it is selected. */
+export function zoneStates(
+  boundaries: ZoneBoundaries,
+  zones: readonly ZoneRiskSummary[],
+  selectedId: string | null,
+): ZoneFeatureState[] {
+  const levels = new Map(zones.map((zone) => [zone.id, zone.level]));
+  return boundaries.features.map(({ properties: { id } }) => ({
+    id,
+    state: { level: levels.get(id) ?? null, selected: id === selectedId },
+  }));
+}
+
+/** NASA FIRMS hotspots as GeoJSON points. */
+export function hotspotPoints(hotspots: readonly Hotspot[]): FeatureCollection<Point, { id: string }> {
+  return {
+    type: 'FeatureCollection',
+    features: hotspots.map((hotspot) => ({
+      type: 'Feature',
+      properties: { id: hotspot.id },
+      geometry: { type: 'Point', coordinates: [hotspot.longitude, hotspot.latitude] },
+    })),
+  };
+}
+
+export function hotspotsSource(hotspots: readonly Hotspot[]): SourceSpecification {
+  return { type: 'geojson', data: hotspotPoints(hotspots) };
+}
+
+/** A small orange dot with a halo, drawn by the GPU (not DOM markers): they never take a tap. */
+export function hotspotLayers(colors: MapColors): AddLayerObject[] {
+  const halo: LayerOf<'circle'> = {
+    id: 'hotspot-halo',
+    type: 'circle',
+    source: HOTSPOTS_SOURCE,
+    paint: { 'circle-radius': 7.5, 'circle-color': colors.hotspot, 'circle-opacity': 0.3, 'circle-blur': 0.4 },
+  };
+  const dot: LayerOf<'circle'> = {
+    id: 'hotspot-dot',
+    type: 'circle',
+    source: HOTSPOTS_SOURCE,
+    paint: { 'circle-radius': 3.5, 'circle-color': colors.hotspot, 'circle-stroke-width': 1, 'circle-stroke-color': '#f9f9f4' },
+  };
+  return [halo, dot];
+}

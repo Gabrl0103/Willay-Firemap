@@ -1,28 +1,48 @@
 <div class="map-canvas">
-  <div class="terrain-lines"></div>
   <div #mapElement class="map-element"></div>
+  <div #glow class="globe-glow" aria-hidden="true"></div>
+  @if (mapUnavailable()) {
+    <p class="map-unavailable" role="status">
+      <app-icon name="alert" [size]="18" />
+      Este celular no puede mostrar el mapa. Puedes buscar un municipio o usar «Mi ubicación» para ver su riesgo.
+    </p>
+  }
 </div>
 
 <header class="map-header" [class.is-covered]="store.detail()">
-  <div class="brand-row">
-    <div>
-      <h1><app-logo variant="light" [size]="20" /></h1>
-      <p>Nariño, Colombia</p>
-    </div>
-    <span class="update-status"><span class="status-dot"></span>{{ updatedLabel() }}</span>
-  </div>
-  <app-search-box [zones]="store.zones()" (selected)="selectZone($event)" />
+  <h1>Mapa</h1>
+  <button
+    type="button"
+    class="location-button"
+    [class.is-locating]="locating()"
+    [disabled]="locating()"
+    [attr.aria-label]="locating() ? 'Buscando tu ubicación' : 'Mi ubicación'"
+    [attr.aria-busy]="locating()"
+    [title]="locating() ? 'Buscando tu ubicación' : 'Mi ubicación'"
+    (click)="locateMe()"
+  >
+    <app-icon name="crosshair" [size]="24" />
+  </button>
 </header>
 
-<span class="department-label">NARIÑO <small>COLOMBIA</small></span>
+@if (searchOpen()) {
+  <div class="search-backdrop" (click)="closeSearch()"></div>
+  <div class="search-layer anim-up" role="search">
+    <app-search-box [zones]="store.zones()" (selected)="pickFromSearch($event)" (cancelled)="closeSearch()" />
+  </div>
+}
 
-<button type="button" class="location-button" [disabled]="locating()" (click)="locateMe()">
-  <app-icon name="crosshair" [size]="16" /><span>{{ locating() ? 'Buscando…' : 'Mi ubicación' }}</span>
-</button>
 
-<app-risk-legend class="legend-slot" />
-
-<p class="map-note"><app-icon name="alert" [size]="11" />Estimación de riesgo, no predicción exacta</p>
+@if (!store.detail()) {
+  <app-map-overview-sheet
+    #overview
+    [zoneCount]="store.zones().length"
+    [hotspotCount]="store.hotspots().length"
+    [updatedLabel]="updatedLabel()"
+    [canZoom]="!mapUnavailable()"
+    (zoomRequested)="zoomToNarino()"
+  />
+}
 
 @if (store.error(); as message) {
   <div class="error-banner" role="alert">

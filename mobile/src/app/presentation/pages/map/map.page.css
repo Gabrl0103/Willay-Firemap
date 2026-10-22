@@ -1,39 +1,49 @@
-:host { position: absolute; inset: 0; display: block; background: var(--map-deep); overflow: hidden; }
-.map-canvas { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(165deg, var(--map), var(--map-deep) 66%); }
-.terrain-lines {
-  position: absolute; inset: -80px; opacity: 0.22; transform: rotate(-8deg);
-  background-image:
-    repeating-radial-gradient(ellipse at 58% 45%, transparent 0 25px, rgba(150, 200, 190, 0.28) 26px 27px),
-    repeating-radial-gradient(ellipse at 14% 70%, transparent 0 38px, rgba(150, 200, 190, 0.22) 39px 40px);
-}
+:host { position: absolute; inset: 0; display: block; background: var(--bg); overflow: hidden; }
+.map-canvas { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
 .map-element { position: absolute; inset: 0; z-index: 0; }
+/* Resplandor naranja tenue en el borde del globo; map.page.ts lo ubica y lo apaga al acercar. */
+.globe-glow {
+  position: absolute; z-index: 1; left: 0; top: 0; border-radius: 50%; opacity: 0; pointer-events: none; mix-blend-mode: screen;
+  background: radial-gradient(circle closest-side, transparent calc(var(--edge, 80%) - 1.5%), rgba(255, 138, 43, 0.4) var(--edge, 80%), rgba(255, 90, 31, 0.12) calc(var(--edge, 80%) + 5%), transparent 100%);
+}
+.map-unavailable {
+  position: absolute; z-index: 1; left: 24px; right: 24px; top: 38%; margin: 0; display: flex; gap: 10px; align-items: flex-start;
+  padding: 14px 16px; border-radius: 22px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-2); font-size: 13px; line-height: 1.45;
+}
 
-.map-header { position: absolute; z-index: 50; inset: 0 0 auto; padding: calc(14px + env(safe-area-inset-top)) 14px 0; pointer-events: none; }
+.map-header {
+  position: absolute; z-index: 50; inset: 0 0 auto; padding: calc(14px + env(safe-area-inset-top)) 14px 0; pointer-events: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
 .map-header > * { pointer-events: auto; }
 /* Con la hoja de zona abierta, su botón "Nariño" ocupa este lugar. */
 .map-header { transition: opacity 0.32s; }
 .map-header.is-covered { opacity: 0; }
 .map-header.is-covered > * { pointer-events: none; }
-.brand-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 9px; color: var(--map-foreground); }
-h1 { margin: 0; display: flex; line-height: 1; }
-.brand-row p { margin: 4px 0 0; font-size: 10px; color: rgba(225, 235, 238, 0.7); }
-.update-status { display: flex; align-items: center; gap: 6px; padding: 8px 11px; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--glass-strong); color: var(--text); font-family: var(--font-mono); font-size: 10px; font-weight: 600; white-space: nowrap; backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--risk-low); box-shadow: 0 0 8px var(--risk-low); }
+h1 { margin: 0; padding: 4px 10px 0; color: var(--text); font-family: var(--font-display); font-size: 38px; font-weight: 800; letter-spacing: -1.4px; line-height: 1; text-shadow: 0 2px 18px rgba(11, 6, 4, 0.8); }
 
-.department-label { position: absolute; z-index: 10; left: 17px; top: 150px; color: rgba(225, 235, 238, 0.54); writing-mode: vertical-rl; font-family: var(--font-display); font-weight: 800; font-size: 10px; letter-spacing: 0.18em; pointer-events: none; }
-.department-label small { margin-top: 5px; font-size: 7px; font-weight: 500; }
-
-.location-button {
-  position: absolute; z-index: 40; right: 14px; top: calc(136px + env(safe-area-inset-top)); height: 40px; padding: 0 12px; gap: 7px;
-  display: flex; align-items: center; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--glass-strong); color: var(--text); backdrop-filter: var(--glass-blur);
-  box-shadow: 0 8px 24px rgba(9, 20, 24, 0.22); font-size: 11px;
+/* Capa de vidrio del buscador: se abre con la lupa de la barra y se cierra al elegir o cancelar. */
+.search-backdrop { position: absolute; z-index: 85; inset: 0; background: rgba(11, 6, 4, 0.45); }
+.search-layer {
+  position: absolute; z-index: 90; left: 14px; right: 14px; top: calc(12px + env(safe-area-inset-top));
+  padding: 10px; border-radius: 30px; border: 1px solid var(--glass-border); background: var(--glass-strong);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-soft);
 }
-.legend-slot { position: absolute; z-index: 40; left: 14px; bottom: calc(var(--nav-height) + var(--nav-bottom) + 28px + env(safe-area-inset-bottom, 0px)); }
-.map-note { position: absolute; z-index: 40; bottom: calc(var(--nav-height) + var(--nav-bottom) + 28px + env(safe-area-inset-bottom, 0px)); right: 14px; margin: 0; display: flex; align-items: center; gap: 5px; color: rgba(225, 235, 238, 0.72); font-size: 8px; }
+
 .error-banner {
-  position: absolute; z-index: 80; left: 14px; right: 14px; top: calc(128px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  position: absolute; z-index: 80; left: 14px; right: 14px; top: calc(84px + env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 10px 12px; border-radius: 10px; background: var(--risk-extreme); color: #fff; font-size: 11px; box-shadow: var(--shadow-soft);
 }
 .error-banner button { padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.2); font-size: 10px; font-weight: 700; }
 .banner-actions { display: flex; flex-shrink: 0; gap: 6px; }
-.location-button:disabled { opacity: 0.7; }
+/* «Mi ubicación»: botón redondo de vidrio arriba a la derecha. */
+.location-button {
+  width: 56px; height: 56px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  border: 1px solid var(--glass-border); background: var(--glass-strong); color: var(--text);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.location-button:disabled { opacity: 0.75; }
+.location-button app-icon { display: block; }
+.location-button.is-locating app-icon { animation: locating 1.2s linear infinite; }
+@keyframes locating { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .location-button.is-locating app-icon { animation: none; } }
