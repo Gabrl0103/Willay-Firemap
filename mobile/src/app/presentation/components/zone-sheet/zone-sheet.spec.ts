@@ -128,6 +128,23 @@ describe('ZoneSheet', () => {
     expect(text(host, '.factor-head b')).toEqual(['40', '20', '60']);
   });
 
+  it('marks the favorite with the heart and asks the page to change it', () => {
+    const { fixture, host } = render();
+    const heart = host.querySelector<HTMLButtonElement>('.favorite-toggle')!;
+    expect(heart.getAttribute('aria-pressed')).toBe('false');
+    expect(heart.getAttribute('aria-label')).toBe('Agregar a mis municipios');
+    let toggled = 0;
+    fixture.componentInstance.favoriteToggled.subscribe(() => toggled++);
+    heart.click();
+    expect(toggled).toBe(1);
+
+    fixture.componentRef.setInput('favorite', true);
+    fixture.detectChanges();
+    expect(heart.getAttribute('aria-pressed')).toBe('true');
+    expect(heart.getAttribute('aria-label')).toBe('Quitar de mis municipios');
+    expect(heart.classList).toContain('is-on');
+  });
+
   it('says when the data was updated', () => {
     expect(text(render(DETAIL, { updatedAt: new Date() }).host, '.zone-title p')).toEqual(['Nariño · actualizado hoy']);
     expect(text(render().host, '.zone-title p')).toEqual(['Nariño']);

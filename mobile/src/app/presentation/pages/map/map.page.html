@@ -75,6 +75,8 @@
     [firesPerYear]="firesPerYear()"
     [forecast]="store.detailForecast()"
     [forecastStatus]="store.forecastStatus()"
+    [favorite]="favorites.ids().includes(zone.id)"
+    (favoriteToggled)="toggleFavorite(zone.id)"
     (forecastRetry)="store.retryForecast()"
     (closed)="closeSheet()"
     (historyRequested)="openHistory(zone.id)"

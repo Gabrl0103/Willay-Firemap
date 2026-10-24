@@ -2,7 +2,8 @@ import { Component, input } from '@angular/core';
 
 export type IconName =
   | 'search' | 'crosshair' | 'map' | 'history' | 'flame' | 'x' | 'chevron-right' | 'chevron-left'
-  | 'map-pin' | 'calendar' | 'alert' | 'wind' | 'thermometer' | 'droplet' | 'home' | 'bars' | 'wifi';
+  | 'map-pin' | 'calendar' | 'alert' | 'wind' | 'thermometer' | 'droplet' | 'home' | 'bars' | 'wifi'
+  | 'heart' | 'heart-filled';
 
 /** Small inline SVG icon set (24x24, stroke). Keeps the APK free of icon fonts. */
 @Component({
@@ -52,6 +53,8 @@ export type IconName =
           <path d="M12.8 19.6A2 2 0 1 0 14 16H2M17.5 8a2.5 2.5 0 1 1 2 4H2M9.8 4.4A2 2 0 1 1 11 8H2" />
         }
         @case ('thermometer') { <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z" /> }
+        @case ('heart') { <path [attr.d]="heartPath" /> }
+        @case ('heart-filled') { <path [attr.d]="heartPath" fill="currentColor" /> }
         @case ('droplet') {
           <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" />
         }
@@ -63,4 +66,7 @@ export type IconName =
 export class AppIcon {
   readonly name = input.required<IconName>();
   readonly size = input(18);
+
+  protected readonly heartPath =
+    'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z';
 }

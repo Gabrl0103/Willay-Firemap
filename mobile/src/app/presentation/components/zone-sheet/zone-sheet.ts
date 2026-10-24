@@ -70,7 +70,19 @@ interface DragState {
             <div class="zone-title">
               <h2>{{ risk().name }}</h2>
               <p>Nariño{{ updated() }}</p>
-              <app-risk-badge [level]="risk().level" />
+              <div class="zone-meta">
+                <app-risk-badge [level]="risk().level" />
+                <button
+                  type="button"
+                  class="icon-action favorite-toggle"
+                  [class.is-on]="favorite()"
+                  [attr.aria-pressed]="favorite()"
+                  [attr.aria-label]="favorite() ? 'Quitar de mis municipios' : 'Agregar a mis municipios'"
+                  (click)="favoriteToggled.emit()"
+                >
+                  <app-icon [name]="favorite() ? 'heart-filled' : 'heart'" [size]="22" />
+                </button>
+              </div>
             </div>
             <div
               class="score-ring"
@@ -165,6 +177,9 @@ export class ZoneSheet implements OnDestroy {
   readonly forecast = input<ZoneForecast | null>(null);
   readonly forecastStatus = input<ForecastStatus>('idle');
   readonly forecastRetry = output<void>();
+  /** Whether the zone is among «Mis municipios»; the heart only asks the page to change it. */
+  readonly favorite = input(false);
+  readonly favoriteToggled = output<void>();
   readonly closed = output<void>();
   readonly historyRequested = output<void>();
 

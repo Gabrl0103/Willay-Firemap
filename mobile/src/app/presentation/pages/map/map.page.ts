@@ -2,6 +2,7 @@ import {
   AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, untracked, viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import {
   AttributionControl, Map as MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent,
 } from 'maplibre-gl';
@@ -11,6 +12,7 @@ import { SearchRequest } from '../../../core/search-request';
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
+import { FavoritesStore } from '../../../state/favorites.store';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
 import { MapOverviewSheet } from '../../components/map-overview-sheet/map-overview-sheet';
@@ -59,6 +61,7 @@ const SEAT_OFFSET: [number, number] = [0, -150];
 })
 export class MapPage implements AfterViewInit, OnDestroy {
   protected readonly store = inject(ZonesStore);
+  protected readonly favorites = inject(FavoritesStore);
   private readonly router = inject(Router);
   private readonly searchRequest = inject(SearchRequest);
   private readonly curtain = inject(AppCurtain);
@@ -251,6 +254,12 @@ export class MapPage implements AfterViewInit, OnDestroy {
    */
   protected closeSheet(): void {
     this.store.clearSelection();
+  }
+
+  /** The sheet's heart: adds or removes the zone from «Mis municipios», with a light tap on the phone. */
+  protected toggleFavorite(zoneId: string): void {
+    void this.favorites.toggle(zoneId);
+    void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined);
   }
 
   protected openHistory(zoneId: string): void {
