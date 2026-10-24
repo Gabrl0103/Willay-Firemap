@@ -2,8 +2,13 @@
 
 <div class="page-scroll">
   <header class="head anim-up">
-    <span class="brand">Atalaya</span>
-    <h1 class="page-title">{{ 'home.title' | t }}</h1>
+    <div>
+      <span class="brand">Atalaya</span>
+      <h1 class="page-title">{{ 'home.title' | t }}</h1>
+    </div>
+    <button type="button" class="settings-button" [attr.aria-label]="'settings.title' | t" (click)="openSettings()">
+      <app-icon name="settings" [size]="22" />
+    </button>
   </header>
 
   @if (summary(); as s) {

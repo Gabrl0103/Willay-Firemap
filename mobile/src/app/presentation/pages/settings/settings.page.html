@@ -1,0 +1,85 @@
+<app-lava-bg />
+
+<div class="page-scroll">
+  <header class="head anim-up">
+    <button type="button" class="back" [attr.aria-label]="'settings.back' | t" (click)="back()">
+      <app-icon name="chevron-left" [size]="24" />
+    </button>
+    <h1 class="page-title">{{ 'settings.title' | t }}</h1>
+  </header>
+
+  <section class="glass-card group anim-up" style="--i: 1" aria-labelledby="language-title">
+    <h2 id="language-title" class="group-title">{{ 'settings.language' | t }}</h2>
+    <div class="segmented" role="radiogroup" aria-labelledby="language-title">
+      @for (choice of languages; track choice.value) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="settings.language() === choice.value"
+          [attr.lang]="choice.value === 'auto' ? null : choice.value"
+          (click)="choose({ language: choice.value })"
+        >
+          {{ choice.label | t }}
+        </button>
+      }
+    </div>
+    @if (settings.language() === 'auto') {
+      <p class="hint">{{ 'settings.autoHint' | t: { language: (i18n.language() === 'en' ? 'settings.english' : 'settings.spanish') | t } }}</p>
+    }
+  </section>
+
+  <section class="glass-card group anim-up" style="--i: 2" aria-labelledby="units-title">
+    <h2 id="units-title" class="group-title">{{ 'settings.units' | t }}</h2>
+    <div class="row">
+      <span id="temperature-label">{{ 'weather.temperature' | t }}</span>
+      <div class="segmented compact" role="radiogroup" aria-labelledby="temperature-label">
+        @for (choice of temperatures; track choice.value) {
+          <button
+            type="button"
+            role="radio"
+            class="mono"
+            [attr.aria-checked]="settings.temperature() === choice.value"
+            (click)="choose({ temperature: choice.value })"
+          >
+            {{ choice.label | t }}
+          </button>
+        }
+      </div>
+    </div>
+    <div class="row">
+      <span id="wind-label">{{ 'weather.wind' | t }}</span>
+      <div class="segmented compact" role="radiogroup" aria-labelledby="wind-label">
+        @for (choice of winds; track choice.value) {
+          <button
+            type="button"
+            role="radio"
+            class="mono"
+            [attr.aria-checked]="settings.wind() === choice.value"
+            (click)="choose({ wind: choice.value })"
+          >
+            {{ choice.label | t }}
+          </button>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="glass-card group anim-up" style="--i: 3" aria-labelledby="haptics-title">
+    <div class="row">
+      <div>
+        <h2 id="haptics-title" class="group-title">{{ 'settings.haptics' | t }}</h2>
+        <p class="hint">{{ 'settings.hapticsHint' | t }}</p>
+      </div>
+      <button
+        type="button"
+        class="switch"
+        role="switch"
+        [attr.aria-checked]="settings.haptics()"
+        aria-labelledby="haptics-title"
+        (click)="toggleHaptics()"
+      >
+        <span></span>
+      </button>
+    </div>
+  </section>
+</div>

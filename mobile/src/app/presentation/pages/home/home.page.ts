@@ -42,6 +42,10 @@ export class HomePage {
     if (this.store.zones().length === 0 && !this.store.loading()) this.store.load();
   }
 
+  protected openSettings(): void {
+    void this.router.navigateByUrl('/settings');
+  }
+
   /** Abre el mapa con la hoja de la zona (el mapa la muestra cuando llega store.detail). */
   protected openZone(zoneId: string): void {
     this.store.select(zoneId);

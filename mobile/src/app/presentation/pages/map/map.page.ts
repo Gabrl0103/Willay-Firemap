@@ -2,13 +2,13 @@ import {
   AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, untracked, viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import {
   AttributionControl, Map as MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent,
 } from 'maplibre-gl';
 import { getUserLocation, locationMessage } from '../../../core/location/user-location';
 import { AppCurtain } from '../../../core/app-curtain';
 import { API_ERROR_KEYS } from '../../../core/error/api-error';
+import { Haptic } from '../../../core/haptics';
 import { ZoneSharer, type ShareOutcome } from '../../../core/share/share-zone';
 import { SearchRequest } from '../../../core/search-request';
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
@@ -78,6 +78,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly curtain = inject(AppCurtain);
   private readonly sharer = inject(ZoneSharer);
   private readonly i18n = inject(I18n);
+  private readonly haptic = inject(Haptic);
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
@@ -285,7 +286,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   /** The sheet's heart: adds or removes the zone from «Mis municipios», with a light tap on the phone. */
   protected toggleFavorite(zoneId: string): void {
     void this.favorites.toggle(zoneId);
-    void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined);
+    this.haptic.tap();
   }
 
   /**

@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Haptic } from '../../../core/haptics';
 import { SearchRequest } from '../../../core/search-request';
 import { TranslatePipe } from '../../../i18n/t.pipe';
 import { AppIcon } from '../app-icon/app-icon';
@@ -31,9 +31,10 @@ import { AppIcon } from '../app-icon/app-icon';
 export class BottomNav {
   private readonly router = inject(Router);
   private readonly searchRequest = inject(SearchRequest);
+  private readonly haptic = inject(Haptic);
 
   protected tap(): void {
-    void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined);
+    this.haptic.tap();
   }
 
   protected openSearch(): void {

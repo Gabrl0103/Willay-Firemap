@@ -143,5 +143,19 @@
   "weather.humidity": "Humidity",
   "weather.wind": "Wind",
   "weather.dryDays.one": "day without rain",
-  "weather.dryDays.other": "days without rain"
+  "weather.dryDays.other": "days without rain",
+  "settings.title": "Settings",
+  "settings.back": "Back",
+  "settings.language": "Language",
+  "settings.auto": "Automatic",
+  "settings.spanish": "Español",
+  "settings.english": "English",
+  "settings.autoHint": "Uses the phone’s language: {language}.",
+  "settings.units": "Units",
+  "units.celsius": "°C",
+  "units.fahrenheit": "°F",
+  "units.kmh": "km/h",
+  "units.mph": "mph",
+  "settings.haptics": "Vibration",
+  "settings.hapticsHint": "A light tap when you mark a favorite and when you switch tabs."
 }

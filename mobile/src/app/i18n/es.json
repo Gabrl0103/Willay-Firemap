@@ -143,5 +143,19 @@
   "weather.humidity": "Humedad",
   "weather.wind": "Viento",
   "weather.dryDays.one": "día sin lluvia",
-  "weather.dryDays.other": "días sin lluvia"
+  "weather.dryDays.other": "días sin lluvia",
+  "settings.title": "Ajustes",
+  "settings.back": "Volver",
+  "settings.language": "Idioma",
+  "settings.auto": "Automático",
+  "settings.spanish": "Español",
+  "settings.english": "English",
+  "settings.autoHint": "Usa el idioma del teléfono: {language}.",
+  "settings.units": "Unidades",
+  "units.celsius": "°C",
+  "units.fahrenheit": "°F",
+  "units.kmh": "km/h",
+  "units.mph": "mph",
+  "settings.haptics": "Vibración",
+  "settings.hapticsHint": "Un toque ligero al marcar favoritos y al cambiar de pestaña."
 }

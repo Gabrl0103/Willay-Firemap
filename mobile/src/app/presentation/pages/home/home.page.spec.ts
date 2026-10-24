@@ -79,8 +79,11 @@ describe('HomePage', () => {
     expect(host.querySelector('.zone .badge')?.textContent).toBe('High');
   });
 
-  it('has no settings button', () => {
-    const { host } = render();
-    expect(host.querySelectorAll('.head button').length).toBe(0);
+  it('opens Ajustes from the gear of the header', () => {
+    const { host, navigate } = render();
+    const gear = host.querySelector<HTMLButtonElement>('.head .settings-button')!;
+    expect(gear.getAttribute('aria-label')).toBe('Ajustes');
+    gear.click();
+    expect(navigate).toHaveBeenCalledWith('/settings');
   });
 });
