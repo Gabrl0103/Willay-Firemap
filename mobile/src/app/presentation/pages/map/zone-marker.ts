@@ -2,9 +2,10 @@ import type { RiskLevel, ZoneRiskSummary } from '../../../domain/model/risk';
 import { RISK_LABELS } from '../../../domain/util/risk-labels';
 
 /**
- * From this zoom on markers show the municipality name and score, as long as their label does not
- * run into another one (visibleLabels). Below it markers are only the colored dot with the score;
- * the selected one keeps its name.
+ * From this zoom on a municipality is its label (name and score, centered on its seat), as long as
+ * the label does not run into another one (visibleLabels); one that does not fit is a small dot
+ * without number, gone if it falls under a label (coveredDots). Below it markers are the colored
+ * circle with the score; the selected one keeps its label.
  */
 export const NAME_MIN_ZOOM = 8.5;
 
@@ -25,20 +26,24 @@ export function zoneMarkerHtml(zone: ZoneRiskSummary, selected: boolean): string
   );
 }
 
-/** Where a marker's label sits on screen (px) and how much it matters: the higher, the sooner it shows. */
-export interface LabelBox {
-  readonly key: string;
-  readonly priority: number;
+/** A rectangle on screen (px), as getBoundingClientRect gives it. */
+export interface ScreenBox {
   readonly left: number;
   readonly top: number;
   readonly right: number;
   readonly bottom: number;
 }
 
-/** Room (px) kept between two labels. */
+/** Where a marker's label sits on screen and how much it matters: the higher, the sooner it shows. */
+export interface LabelBox extends ScreenBox {
+  readonly key: string;
+  readonly priority: number;
+}
+
+/** Room (px) kept between two labels, or between a label and a dot. */
 const LABEL_GAP = 2;
 
-const overlaps = (a: LabelBox, b: LabelBox): boolean =>
+const overlaps = (a: ScreenBox, b: ScreenBox): boolean =>
   a.left < b.right + LABEL_GAP && b.left < a.right + LABEL_GAP && a.top < b.bottom + LABEL_GAP && b.top < a.bottom + LABEL_GAP;
 
 /**
@@ -51,6 +56,11 @@ export function visibleLabels(boxes: readonly LabelBox[]): Set<string> {
     if (!placed.some((other) => overlaps(other, box))) placed.push(box);
   }
   return new Set(placed.map((box) => box.key));
+}
+
+/** The dots (of municipalities without a label) that a shown label covers: those are not drawn. */
+export function coveredDots(dots: readonly (ScreenBox & { readonly key: string })[], labels: readonly ScreenBox[]): Set<string> {
+  return new Set(dots.filter((dot) => labels.some((label) => overlaps(label, dot))).map((dot) => dot.key));
 }
 
 /** A group of nearby seats at low zoom: how many, in the color of the worst one. Tapping it zooms in. */

@@ -1,5 +1,7 @@
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
-import { NAME_MIN_ZOOM, clusterLabel, clusterMarkerHtml, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox } from './zone-marker';
+import {
+  NAME_MIN_ZOOM, clusterLabel, clusterMarkerHtml, coveredDots, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox,
+} from './zone-marker';
 
 const zone = (name: string): ZoneRiskSummary => ({
   id: 'x', name, latitude: 1, longitude: -77, score: 63, level: 'high',
@@ -40,6 +42,14 @@ describe('zone marker', () => {
       box('tumaco2', 20, 0, 300),
     ]);
     expect([...shown].sort()).toEqual(['selected', 'touching', 'tumaco']);
+  });
+
+  it('drops the dots that fall under a shown label, so each municipality is one element', () => {
+    const label = { left: 100, top: 100, right: 160, bottom: 120 };
+    const dot = (key: string, x: number, y: number) => ({ key, left: x - 4, top: y - 4, right: x + 4, bottom: y + 4 });
+    // "36" sat on Ancuya's label: its dot goes; one clear of every label stays.
+    expect([...coveredDots([dot('36', 150, 110), dot('lejos', 300, 300), dot('borde', 163, 110)], [label])].sort()).toEqual(['36', 'borde']);
+    expect(coveredDots([dot('solo', 10, 10)], []).size).toBe(0);
   });
 
   it('draws a group with its count, in the color of its worst zone', () => {

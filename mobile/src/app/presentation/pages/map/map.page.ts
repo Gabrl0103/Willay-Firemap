@@ -28,7 +28,9 @@ import {
 } from './map-layers';
 import { mapStyle } from './map-style';
 import { ZONES_SOURCE, diffMarkers, markerItems, zonePoints, zonesHitLayer, zonesSource, type MarkerItem } from './zone-clusters';
-import { clusterLabel, clusterMarkerHtml, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox } from './zone-marker';
+import {
+  clusterLabel, clusterMarkerHtml, coveredDots, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox, type ScreenBox,
+} from './zone-marker';
 
 /** MapLibre's worker, copied next to the app by angular.json (it cannot come from a CDN). */
 const WORKER_PATH = 'maplibre/maplibre-gl-worker.mjs';
@@ -41,6 +43,8 @@ let introPlayed = false;
 const SKIP_EVENTS = ['mousedown', 'touchstart', 'wheel'] as const;
 /** How far (px) the globe's orange halo reaches beyond its edge. */
 const GLOW_WIDTH = 44;
+/** Half the size (px) of the dot of a municipality whose label does not fit (map-markers.css). */
+const DOT_RADIUS = 4;
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
 const SEAT_OFFSET: [number, number] = [0, -150];
 
@@ -342,7 +346,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   /**
    * Shows the names (with the score) that fit without overlapping: the selected zone first, then
-   * the riskiest. Measured when the camera stops, so the labels do not flicker while it moves.
+   * the riskiest. The rest are a small dot, dropped when a shown label covers it, so a municipality
+   * is never a label and a dot at once. Measured when the camera stops, so nothing flickers while it moves.
    */
   private placeLabels(): void {
     const map = this.map;
@@ -358,9 +363,19 @@ export class MapPage implements AfterViewInit, OnDestroy {
       boxes.push({ key: item.key, priority, left, top, right, bottom });
     }
     const shown = visibleLabels(boxes);
+    const dots: (ScreenBox & { readonly key: string })[] = [];
     for (const { marker, item } of this.markers.values()) {
-      marker.getElement().classList.toggle('label-hidden', !shown.has(item.key));
+      const element = marker.getElement();
+      element.classList.toggle('label-hidden', !shown.has(item.key));
+      if (item.kind === 'zone' && !shown.has(item.key)) {
+        const { left, top, right, bottom } = element.getBoundingClientRect();
+        const x = (left + right) / 2;
+        const y = (top + bottom) / 2;
+        dots.push({ key: item.key, left: x - DOT_RADIUS, top: y - DOT_RADIUS, right: x + DOT_RADIUS, bottom: y + DOT_RADIUS });
+      }
     }
+    const covered = coveredDots(dots, boxes.filter((box) => shown.has(box.key)));
+    for (const { marker, item } of this.markers.values()) marker.getElement().classList.toggle('dot-hidden', covered.has(item.key));
   }
 
   private hideLabels(): void {
