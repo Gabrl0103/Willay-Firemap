@@ -1,5 +1,7 @@
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
-import { NAME_MIN_ZOOM, coveredDots, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox } from './zone-marker';
+import {
+  NAME_MIN_ZOOM, PINNED_ZONE_ID, coveredDots, labelPriority, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox,
+} from './zone-marker';
 
 const zone = (name: string): ZoneRiskSummary => ({
   id: 'x', name, latitude: 1, longitude: -77, score: 63, level: 'high',
@@ -24,6 +26,14 @@ describe('zone marker', () => {
     expect(zoneMarkerHtml(zone('Pasto'), true)).toContain('class="zone-marker risk-high is-selected"');
   });
 
+  it('puts the selected zone first, then Pasto, then the higher score', () => {
+    expect(PINNED_ZONE_ID).toBe('pasto');
+    expect(labelPriority('ipiales', 30, 'ipiales')).toBe(Infinity);
+    expect(labelPriority('pasto', 5, 'ipiales')).toBeGreaterThan(labelPriority('tumaco', 100, 'ipiales'));
+    expect(labelPriority('tumaco', 80, null)).toBeGreaterThan(labelPriority('ancuya', 31, null));
+    expect(labelPriority('pasto', 5, 'pasto')).toBe(Infinity);
+  });
+
   it('escapes the name', () => {
     expect(zoneMarkerHtml(zone('<img src=x>'), false)).toContain('<b>&lt;img src=x&gt;</b>');
   });
@@ -36,7 +46,7 @@ describe('zone marker', () => {
       box('pasto', 40, 0, 0),
       box('selected', Infinity, 30, 10), // overlaps pasto and wins
       box('tumaco', 10, 200, 0), // far away
-      box('touching', 90, 61, 300), // next to tumaco2 within the gap
+      box('touching', 90, 60.5, 300), // next to tumaco2 within the gap
       box('tumaco2', 20, 0, 300),
     ]);
     expect([...shown].sort()).toEqual(['selected', 'touching', 'tumaco']);

@@ -27,7 +27,9 @@ import {
   departmentSource, hotspotLayers, hotspotPoints, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
 } from './map-layers';
 import { mapStyle } from './map-style';
-import { coveredDots, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox, type ScreenBox } from './zone-marker';
+import {
+  coveredDots, labelPriority, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox, type ScreenBox,
+} from './zone-marker';
 
 /** MapLibre's worker, copied next to the app by angular.json (it cannot come from a CDN). */
 const WORKER_PATH = 'maplibre/maplibre-gl-worker.mjs';
@@ -322,7 +324,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Shows the labels that fit without overlapping: the selected zone first, then the riskiest. The
+   * Shows the labels that fit without overlapping: the selected zone, Pasto, then the riskiest. The
    * rest are a small dot, dropped when a shown label covers it, so a municipality is never a label and
    * a dot at once. Measured when the camera stops, so nothing flickers while it moves; on the globe
    * there are no markers to place.
@@ -337,8 +339,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
       const label = marker.getElement().querySelector('.zone-label');
       if (!label) continue;
       const { left, top, right, bottom } = label.getBoundingClientRect();
-      const priority = zoneId === selectedId ? Infinity : (scores.get(zoneId) ?? 0);
-      boxes.push({ key: zoneId, priority, left, top, right, bottom });
+      boxes.push({ key: zoneId, priority: labelPriority(zoneId, scores.get(zoneId) ?? 0, selectedId), left, top, right, bottom });
     }
     const shown = visibleLabels(boxes, this.labelArea());
     const dots: (ScreenBox & { readonly key: string })[] = [];

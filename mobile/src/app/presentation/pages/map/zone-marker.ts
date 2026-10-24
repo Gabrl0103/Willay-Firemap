@@ -4,13 +4,23 @@ import { RISK_LABELS } from '../../../domain/util/risk-labels';
 /**
  * Over Nariño a municipality is its label, centered on its seat, as long as the label does not run
  * into another one (visibleLabels); one that does not fit is a small dot without number, gone if it
- * falls under a label (coveredDots). There are no groups. From this zoom on the label also says the
- * score and the level.
+ * falls under a label (coveredDots). There are no groups. Below this zoom the label is only the name
+ * (light, with a dark halo); from it on it also says the score and the level, in the risk color.
  */
 export const NAME_MIN_ZOOM = 8.5;
 
 export function showsNames(zoom: number): boolean {
   return zoom >= NAME_MIN_ZOOM;
+}
+
+/** Pasto, the capital: the reference everyone looks for, so its name is always shown. */
+export const PINNED_ZONE_ID = 'pasto';
+
+/** Which label wins a collision: the selected zone, then Pasto, then the higher score. */
+export function labelPriority(zoneId: string, score: number, selectedId: string | null): number {
+  if (zoneId === selectedId) return Infinity;
+  if (zoneId === PINNED_ZONE_ID) return Number.MAX_SAFE_INTEGER;
+  return score;
 }
 
 const HTML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -40,8 +50,8 @@ export interface LabelBox extends ScreenBox {
   readonly priority: number;
 }
 
-/** Room (px) kept between two labels, or between a label and a dot. */
-const LABEL_GAP = 2;
+/** Room (px) kept between two labels, or between a label and a dot: 1 px fits ~21 names over Nariño at 390 px. */
+const LABEL_GAP = 1;
 
 const overlaps = (a: ScreenBox, b: ScreenBox): boolean =>
   a.left < b.right + LABEL_GAP && b.left < a.right + LABEL_GAP && a.top < b.bottom + LABEL_GAP && b.top < a.bottom + LABEL_GAP;

@@ -46,7 +46,8 @@
   padding: 2px 5px 2px 4px;
   border-left: 2px solid currentColor;
   border-radius: 0 5px 5px 0;
-  background: rgba(11, 6, 4, 0.68);
+  /* Opaca lo justo para que el nivel en rojo pase 4,5:1 aun sobre el relleno amarillo. */
+  background: rgba(11, 6, 4, 0.82);
   white-space: nowrap;
   text-shadow: 0 1px 3px var(--map-deep);
   transform: translate(-50%, -50%);
@@ -54,6 +55,17 @@
 .zone-label b { font-size: 9px; line-height: 1; color: var(--map-foreground); }
 /* Puntaje y nivel en el color del riesgo. */
 .zone-label small { margin-top: 2px; font-size: 7px; font-weight: 700; line-height: 1; color: currentColor; }
+/* Encuadre de Nariño y zooms bajos: solo el nombre, claro con halo oscuro para leerse sobre verde y amarillo.
+   El seleccionado mantiene la etiqueta completa. */
+.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-label {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  text-shadow: 0 0 2px var(--map-deep), 0 0 2px var(--map-deep), 0 0 3px var(--map-deep), 0 1px 4px var(--map-deep);
+}
+.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-label b { font-size: 10px; font-weight: 600; }
+.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-label small { display: none; }
 .zone-marker.is-selected .zone-label { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 55%, transparent), 0 0 14px color-mix(in srgb, currentColor 40%, transparent); }
 
 .user-dot {
