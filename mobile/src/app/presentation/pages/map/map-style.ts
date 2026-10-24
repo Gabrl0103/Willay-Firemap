@@ -1,4 +1,4 @@
-import type { MapOptions } from 'maplibre-gl';
+import type { ExpressionSpecification, MapOptions } from 'maplibre-gl';
 
 /** A MapLibre style object (MapOptions also accepts a URL, which the app never uses: nothing from a CDN). */
 export type MapStyle = Exclude<MapOptions['style'], string | undefined>;
@@ -25,6 +25,36 @@ export const DARK_RASTER_PAINT = {
 } as const;
 
 /**
+ * Seen from far (the globe), the same inversion with lighter land and a bit more color, so the
+ * continents stand out from the dark space. It turns into DARK_RASTER_PAINT on the way in.
+ */
+export const GLOBE_RASTER_PAINT = {
+  'raster-brightness-min': 0.56,
+  'raster-brightness-max': 0.2,
+  'raster-hue-rotate': 180,
+  'raster-saturation': -0.45,
+  'raster-contrast': 0,
+  'raster-opacity': 1,
+} as const;
+/** Up to this zoom the tiles are GLOBE_RASTER_PAINT... */
+export const GLOBE_TILES_ZOOM = 3;
+/** ...and from this one DARK_RASTER_PAINT. */
+export const DARK_TILES_ZOOM = 5;
+
+type RasterPaintKey = keyof typeof DARK_RASTER_PAINT;
+
+/** Raster paint that goes from the globe's lighter tiles to the dark ones as the camera comes in. */
+export function rasterPaint(): Record<RasterPaintKey, number | ExpressionSpecification> {
+  const paint = {} as Record<RasterPaintKey, number | ExpressionSpecification>;
+  for (const key of Object.keys(DARK_RASTER_PAINT) as RasterPaintKey[]) {
+    const far = GLOBE_RASTER_PAINT[key];
+    const near = DARK_RASTER_PAINT[key];
+    paint[key] = far === near ? near : ['interpolate', ['linear'], ['zoom'], GLOBE_TILES_ZOOM, far, DARK_TILES_ZOOM, near];
+  }
+  return paint;
+}
+
+/**
  * Space around the globe: dark like the app, with a faint orange glow at the horizon. The physical
  * (blue) atmosphere stays off; the glow comes from the sky's horizon color.
  */
@@ -46,7 +76,7 @@ export function mapStyle(): MapStyle {
     },
     layers: [
       { id: 'background', type: 'background', paint: { 'background-color': MAP_BACKGROUND } },
-      { id: 'osm-tiles', type: 'raster', source: OSM_SOURCE, paint: { ...DARK_RASTER_PAINT } },
+      { id: 'osm-tiles', type: 'raster', source: OSM_SOURCE, paint: rasterPaint() },
     ],
   };
 }

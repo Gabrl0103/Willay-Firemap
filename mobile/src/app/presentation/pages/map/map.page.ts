@@ -27,7 +27,7 @@ import {
 } from './map-layers';
 import { mapStyle } from './map-style';
 import { ZONES_SOURCE, diffMarkers, markerItems, zonePoints, zonesHitLayer, zonesSource, type MarkerItem } from './zone-clusters';
-import { clusterLabel, clusterMarkerHtml, showsNames, zoneMarkerHtml } from './zone-marker';
+import { clusterLabel, clusterMarkerHtml, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox } from './zone-marker';
 
 /** MapLibre's worker, copied next to the app by angular.json (it cannot come from a CDN). */
 const WORKER_PATH = 'maplibre/maplibre-gl-worker.mjs';
@@ -177,11 +177,16 @@ export class MapPage implements AfterViewInit, OnDestroy {
     map.addControl(new AttributionControl({ compact: false }), 'bottom-right');
 
     const updateZoomClass = (): void => {
-      element.classList.toggle('show-names', showsNames(map.getZoom()));
+      const names = showsNames(map.getZoom());
+      if (names === element.classList.contains('show-names')) return;
+      // Crossing into the names: they wait hidden until the camera stops and placeLabels sorts them out.
+      if (names) this.hideLabels();
+      element.classList.toggle('show-names', names);
     };
     map.on('zoom', updateZoomClass);
     updateZoomClass();
     map.on('render', () => this.syncMarkers());
+    map.on('moveend', () => this.placeLabels());
     map.on('move', () => this.placeGlow());
     map.on('resize', () => this.placeGlow());
     this.placeGlow();
@@ -280,10 +285,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
       for (const { id, state } of zoneStates(boundaries, zones, selectedId)) map.setFeatureState({ source: BOUNDARIES_SOURCE, id }, state);
       for (const layer of ZONE_SELECTED_LAYERS) map.setFilter(layer, selectedZoneFilter(selectedId));
     }
-    // Markers already on screen take the new score, level or selection.
+    // Markers already on screen take the new score, level or selection; the selected name goes first.
     for (const { marker, item } of this.markers.values()) {
       if (item.kind === 'zone') this.paintZoneMarker(marker, item.zoneId);
     }
+    this.placeLabels();
   }
 
   /** Same as tapping the marker. A tap that started on a marker (or group) is the marker's, not the polygon's. */
@@ -311,13 +317,42 @@ export class MapPage implements AfterViewInit, OnDestroy {
       marker.setLngLat(item.lngLat).addTo(map);
       this.markers.set(item.key, { marker, item });
     }
+    if (add.length > 0 && !map.isMoving()) this.placeLabels();
+  }
+
+  /**
+   * Shows the names (with the score) that fit without overlapping: the selected zone first, then
+   * the riskiest. Measured when the camera stops, so the labels do not flicker while it moves.
+   */
+  private placeLabels(): void {
+    const map = this.map;
+    if (!map || !showsNames(map.getZoom())) return;
+    const scores = new Map(this.store.zones().map((zone) => [zone.id, zone.score]));
+    const selectedId = this.store.selectedId();
+    const boxes: LabelBox[] = [];
+    for (const { marker, item } of this.markers.values()) {
+      const label = item.kind === 'zone' ? marker.getElement().querySelector('.zone-label') : null;
+      if (!label || item.kind !== 'zone') continue;
+      const { left, top, right, bottom } = label.getBoundingClientRect();
+      const priority = item.zoneId === selectedId ? Infinity : (scores.get(item.zoneId) ?? 0);
+      boxes.push({ key: item.key, priority, left, top, right, bottom });
+    }
+    const shown = visibleLabels(boxes);
+    for (const { marker, item } of this.markers.values()) {
+      marker.getElement().classList.toggle('label-hidden', !shown.has(item.key));
+    }
+  }
+
+  private hideLabels(): void {
+    for (const { marker } of this.markers.values()) marker.getElement().classList.add('label-hidden');
   }
 
   private zoneMarker(zoneId: string): Marker | null {
     const zone = this.store.zones().find((z) => z.id === zoneId);
     if (!zone) return null;
     const element = document.createElement('div');
-    element.className = 'zone-icon';
+    // Its label shows once placeLabels finds room for it.
+    element.className = 'zone-icon label-hidden';
     element.title = zone.name;
     element.addEventListener('click', (event) => {
       event.stopPropagation();

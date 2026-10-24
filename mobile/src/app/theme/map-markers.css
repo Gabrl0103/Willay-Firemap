@@ -53,16 +53,21 @@
 .zone-marker.risk-medium .zone-dot i { color: var(--map-deep); }
 .zone-label {
   position: absolute;
-  left: 14px;
-  top: -3px;
+  left: 15px;
+  top: -2px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  padding: 2px 5px 2px 4px;
+  border-left: 2px solid currentColor;
+  border-radius: 0 5px 5px 0;
+  background: rgba(11, 6, 4, 0.68);
   white-space: nowrap;
   text-shadow: 0 1px 3px var(--map-deep);
 }
 .zone-label b { font-size: 9px; line-height: 1; color: var(--map-foreground); }
-.zone-label small { margin-top: 2px; font-size: 7px; color: rgba(245, 246, 243, 0.82); }
+/* Puntaje y nivel en el color del riesgo. */
+.zone-label small { margin-top: 2px; font-size: 7px; font-weight: 700; line-height: 1; color: currentColor; }
 
 .user-dot {
   display: block;
@@ -74,10 +79,15 @@
   box-shadow: 0 0 0 6px rgba(47, 123, 255, 0.25);
 }
 
-/* Zoomed out: only the colored dot with the score; the selected zone keeps its name. */
+/* Zoomed out, or with no room for its label (map.page.ts placeLabels): only the colored dot with the
+   score. The selected zone always keeps its name. */
 .map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-label { display: none; }
-.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-dot {
+/* Hidden but still laid out, so placeLabels can measure where it would go. */
+.label-hidden .zone-marker:not(.is-selected) .zone-label { visibility: hidden; }
+.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-dot,
+.label-hidden .zone-marker:not(.is-selected) .zone-dot {
   inset: 0; display: grid; place-items: center; border-radius: 50%;
   box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 25%, transparent);
 }
-.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-dot i { display: block; }
+.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-dot i,
+.label-hidden .zone-marker:not(.is-selected) .zone-dot i { display: block; }
