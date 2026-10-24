@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import type { ZoneBoundaries, ZoneDetail, ZoneForecast } from '../domain/model/risk';
 import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from '../domain/repository/repositories';
-import { ZonesStore } from './zones.store';
+import { FORECAST_TTL_MS, ZonesStore } from './zones.store';
 
 const DETAIL = { id: 'pasto', name: 'Pasto', score: 37, level: 'medium' } as ZoneDetail;
 const FORECAST: ZoneForecast = {
@@ -83,6 +83,50 @@ describe('ZonesStore forecast', () => {
     store.retryForecast();
     expect(repository.forecast).toHaveBeenCalledTimes(2);
     expect(store.forecastStatus()).toBe('ready');
+  });
+
+  it('reuses a zone\'s forecast for 10 minutes, then asks again', () => {
+    vi.useFakeTimers({ now: new Date('2026-10-24T12:00:00Z') });
+    const { store, repository } = setup(() => of(FORECAST));
+    store.select('pasto');
+    store.select('ipiales');
+    store.select('pasto');
+    expect(repository.forecast.mock.calls.map(([zone]) => zone)).toEqual(['pasto', 'ipiales']);
+    expect(store.forecastStatus()).toBe('ready');
+    expect(store.detailForecast()).toEqual(FORECAST);
+
+    vi.advanceTimersByTime(FORECAST_TTL_MS);
+    store.select('pasto');
+    expect(repository.forecast).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
+  });
+
+  it('asks again for a fallback answer instead of keeping it', () => {
+    const fallback: ZoneForecast = {
+      zoneId: 'pasto', source: 'fallback', reason: 'model_error', generatedAt: '2026-10-18T15:00:00Z',
+      current: { score: 37, level: 'medium' },
+    };
+    const { store, repository } = setup(() => of(fallback));
+    store.select('pasto');
+    store.select('pasto');
+    expect(repository.forecast).toHaveBeenCalledTimes(2);
+  });
+
+  it('cancels the request of the zone tapped before', () => {
+    const requests: Subject<ZoneForecast>[] = [];
+    const { store } = setup(() => {
+      const request = new Subject<ZoneForecast>();
+      requests.push(request);
+      return request;
+    });
+    store.select('pasto');
+    store.select('ipiales');
+    expect(requests[0]!.observed).toBe(false);
+    expect(requests[1]!.observed).toBe(true);
+    expect(store.forecastStatus()).toBe('loading');
+
+    store.clearSelection();
+    expect(requests[1]!.observed).toBe(false);
   });
 
   it('ignores a late answer for a zone that is no longer selected', () => {
