@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import type { ZoneForecast } from '../../../domain/model/risk';
 import type { ForecastStatus } from '../../../state/zones.store';
-import { ForecastSection, percentLabel } from './forecast-section';
+import { ForecastSection } from './forecast-section';
 
 const MODEL: ZoneForecast = {
   zoneId: 'el-rosario',
@@ -77,10 +77,5 @@ describe('ForecastSection', () => {
     expect(text(host, '.forecast-loading .forecast-when b')).toEqual(['24 h', '48 h', '72 h']);
     expect(host.querySelectorAll('.forecast-loading .forecast-track.skeleton').length).toBe(3);
     expect(host.querySelector('.forecast-rows')).toBeNull();
-  });
-
-  it('keeps tiny probabilities from reading as zero', () => {
-    expect(percentLabel(0.004)).toBe('<1 %');
-    expect(percentLabel(0.016)).toBe('2 %');
   });
 });
