@@ -18,7 +18,7 @@ import { SearchBox } from '../../components/search-box/search-box';
 import { MID_HEIGHT } from '../../components/zone-sheet/sheet-snap';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
-  FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, RETURN_FLY_MS, SPIN_MS, TAP_FLY_MS,
+  FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, SPIN_MS, TAP_FLY_MS,
   ZONE_FLY_MS, ZONE_ZOOM,
   globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed, rememberIntroPlayed, spinCenter,
 } from './map-camera';
@@ -88,8 +88,6 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private boundariesShown = false;
   /** The camera shows the whole department (intro, «Acercar a Nariño»), untouched since. */
   private framingNarino = false;
-  /** The zone sheet just closed: once the overview sheet is laid out (its height known), fly back to Nariño. */
-  private returnToNarino = false;
   protected readonly sheetInset = signal(0);
   /** No WebGL: MapLibre cannot draw in any projection, so the map area explains it instead. */
   protected readonly mapUnavailable = signal(false);
@@ -150,15 +148,9 @@ export class MapPage implements AfterViewInit, OnDestroy {
         this.sheetInset.set(detailOpen ? Math.round(this.mapElement().nativeElement.clientHeight * MID_HEIGHT) : 0);
         return;
       }
-      // Called once right away, with the sheet's real height: the moment to fly back after a zone.
       const observer = new ResizeObserver(() => {
         this.sheetInset.set(overview.offsetHeight);
-        if (this.returnToNarino) {
-          this.returnToNarino = false;
-          this.flyToNarino(false, RETURN_FLY_MS);
-        } else if (this.framingNarino) {
-          this.reframeNarino();
-        }
+        if (this.framingNarino) this.reframeNarino();
       });
       observer.observe(overview);
       onCleanup(() => observer.disconnect());
@@ -257,9 +249,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.flyToNarino(false);
   }
 
-  /** The zone sheet closed (its back button, the backdrop or a drag down): back to the whole department. */
+  /**
+   * The zone sheet closed (its back button, the backdrop or a drag down): the camera stays where it is
+   * and the municipality loses its highlight. Only «Acercar a Nariño» goes back to the whole department.
+   */
   protected closeSheet(): void {
-    this.returnToNarino = true;
     this.store.clearSelection();
   }
 
@@ -538,8 +532,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
     return camera && { ...camera, pitch: PITCH, padding: NO_PADDING };
   }
 
-  /** The intro flight is essential (reduced motion never gets here); the button's and the return are not. */
-  private flyToNarino(essential = true, duration = FLY_MS): void {
+  /** The intro flight is essential (reduced motion never gets here); the button's is not. */
+  private flyToNarino(essential = true): void {
     const map = this.map;
     const camera = this.narinoCamera();
     if (!map || !camera) return;
@@ -552,7 +546,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
       this.limitToNarino();
       this.framingNarino = true;
     });
-    map.flyTo({ ...camera, duration, essential });
+    map.flyTo({ ...camera, duration: FLY_MS, essential });
   }
 
   /** The sheet changed height while showing the department: frame it again above the sheet. */

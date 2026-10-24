@@ -1,7 +1,7 @@
 import {
-  FLY_MS, GLOBE_MARGIN, GLOBE_START_CENTER, GLOBE_TOP, GLOW_END_ZOOM, INTRO_KEY, MAX_BOUNDS, NARINO_BOUNDS, NARINO_PADDING, PITCH,
+  GLOBE_MARGIN, GLOBE_START_CENTER, GLOBE_TOP, GLOW_END_ZOOM, INTRO_KEY, MAX_BOUNDS, NARINO_BOUNDS, NARINO_PADDING, PITCH,
   SPIN_DEGREES_PER_SECOND, globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed,
-  RETURN_FLY_MS, TAP_FLY_MS, ZONE_FLY_MS, ZONE_ZOOM, rememberIntroPlayed, spinCenter,
+  TAP_FLY_MS, ZONE_FLY_MS, ZONE_ZOOM, rememberIntroPlayed, spinCenter,
 } from './map-camera';
 import { NAME_MIN_ZOOM } from './zone-marker';
 
@@ -71,9 +71,8 @@ describe('map camera: opening', () => {
     expect(narinoPadding(0).top).toBe(NARINO_PADDING.top);
   });
 
-  it('flies short to a tapped municipality, where the names already show, and back quickly', () => {
+  it('flies short to a tapped municipality, where the names already show', () => {
     expect(TAP_FLY_MS).toBeLessThan(ZONE_FLY_MS);
-    expect(RETURN_FLY_MS).toBeLessThan(FLY_MS);
     expect(ZONE_ZOOM).toBeGreaterThanOrEqual(NAME_MIN_ZOOM);
   });
 
