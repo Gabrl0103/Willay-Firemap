@@ -262,6 +262,31 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-24 (v0.30, rama `feat/settings-i18n`):** pantalla de Ajustes y la app en inglés.
+  - Idioma: servicio `I18n` con signals y diccionarios `i18n/es.json` / `en.json` en el bundle (sin CDN ni
+    internet), pipe `t` con parámetros y plurales (`Intl.PluralRules`, más `.zero`), `lang` del documento al
+    día. «Automático» usa `navigator.languages[0]` si es es/en; si no, español. Los ajustes se leen con
+    `provideAppInitializer` antes del primer render (sin parpadeo). Fechas, números, porcentajes y horas con
+    `Intl` (`es-CO` / `en-US`); los niveles pasan a Low/Medium/High/Extreme y los rangos no cambian. Una
+    prueba compara las claves y los `{parámetros}` de los dos JSON.
+  - Sin textos del backend: el motivo del respaldo del pronóstico ya era un código; un código desconocido o
+    ausente muestra «el modelo no está disponible». Los errores HTTP pasan a ser códigos (`ApiError.code`) que
+    cada pantalla nombra en su idioma, igual que los mensajes de ubicación.
+  - Mapa: marcadores y créditos se repintan al cambiar de idioma; el crédito del DANE pasa del origen de datos
+    al control de atribución («Límites» / «Boundaries»). La cita literal del DANE queda en español en ambos.
+  - Ajustes (`/settings`, engranaje de 44 px en Inicio): idioma, unidades (°C/°F, km/h/mph), movimiento
+    (Automático/Reducido: clase `reduce-motion` en `<html>` y vuelos de cámara sin animación), vibración
+    (servicio `Haptic`), datos (borrar favoritos con confirmación en la fila; borrar la caché de pronósticos y
+    límites, que se vuelven a pedir), ayuda (ver la introducción otra vez) y acerca de.
+  - Hoja de zona: fila «Clima ahora» (temperatura, humedad, viento y días sin lluvia de `GET /zones/:id`) en
+    las unidades elegidas; un valor ausente se omite.
+  - Acerca de, atribuciones verificadas en la fuente (2026-10-24): NASA FIRMS (cita de su FAQ), Open-Meteo
+    («Weather data by Open-Meteo.com», CC BY 4.0), ERA5/Copernicus (aviso de las cláusulas 5.1.2 y 5.1.3 de
+    la licencia de Copernicus), NASA POWER («POWER's Reference»), Gobernación de Nariño (boletines; sin
+    licencia abierta declarada), OpenStreetMap (ODbL), UNGRD y DANE (sin cambios).
+  - Versión 0.30.0 en `package.json` y en el APK (`versionName "0.30.0"`, `versionCode 30`). TypeScript en
+    modo `strict` (no daba errores).
+  - Verificado en 390 × 844: todas las pantallas en inglés sin textos cortados ni fuera del marco.
 - **2026-10-24 (v0.29, rama `feat/favorites-share`):** municipios favoritos y compartir el riesgo de un municipio.
   - Favoritos: corazón de 44 px en la hoja de zona (`aria-pressed`, «Agregar a mis municipios» / «Quitar de mis
     municipios») con vibración ligera. Ids guardados con `@capacitor/preferences` (`favorites.zoneIds`), solo en

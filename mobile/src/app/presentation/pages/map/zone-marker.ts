@@ -1,5 +1,6 @@
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
-import { RISK_LABELS } from '../../../domain/util/risk-labels';
+import { riskLabel } from '../../../domain/util/risk-labels';
+import type { Language } from '../../../i18n/translate';
 
 /**
  * Over Nariño a municipality is its label, centered on its seat, as long as the label does not run
@@ -27,11 +28,11 @@ const HTML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '
 const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char);
 
 /** Inner HTML of a Leaflet divIcon. Which parts show depends on CSS (map-markers.css). */
-export function zoneMarkerHtml(zone: ZoneRiskSummary, selected: boolean): string {
+export function zoneMarkerHtml(zone: ZoneRiskSummary, selected: boolean, language: Language = 'es'): string {
   return (
     `<div class="zone-marker risk-${zone.level}${selected ? ' is-selected' : ''}">` +
     `<span class="zone-dot"></span>` +
-    `<span class="zone-label"><b>${escapeHtml(zone.name)}</b><small>${zone.score} · ${RISK_LABELS[zone.level]}</small></span>` +
+    `<span class="zone-label"><b>${escapeHtml(zone.name)}</b><small>${zone.score} · ${riskLabel(zone.level, language)}</small></span>` +
     `</div>`
   );
 }

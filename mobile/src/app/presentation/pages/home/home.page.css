@@ -1,4 +1,16 @@
 :host { position: absolute; inset: 0; display: block; background: var(--bg); }
+.head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.settings-button {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  background: var(--glass-bg);
+  color: var(--text);
+}
 .brand { display: block; font-size: 15px; font-weight: 500; color: var(--text-2); }
 h1 { margin-top: 2px; }
 

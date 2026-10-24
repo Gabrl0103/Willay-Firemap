@@ -55,6 +55,25 @@ describe('shareText', () => {
     expect(text.split('\n')[0]).toBe('Pasto: riesgo de incendio Bajo (20 de 100).');
   });
 
+  it('writes it in English when the app is in English', () => {
+    expect(shareText(PASTO, MODEL, UPDATED, 'en')).toBe(
+      [
+        'Pasto: wildfire risk Low (20 of 100).',
+        '72 h forecast:',
+        '• 24 h (today): High, 53%',
+        '• 48 h (tomorrow): Medium, 45%',
+        '• 72 h (day after tomorrow): Low, <1%',
+        'Updated: Oct 24, 2026, 5:07 PM',
+        'Risk estimate, not an exact prediction.',
+        '',
+        'Atalaya · Wildfire risk in Nariño',
+      ].join('\n'),
+    );
+    expect(shareText(PASTO, null, null, 'en')).toBe(
+      ['Pasto: wildfire risk Low (20 of 100).', 'Risk estimate, not an exact prediction.', '', 'Atalaya · Wildfire risk in Nariño'].join('\n'),
+    );
+  });
+
   it('carries no link nor location, and leaves the date out when there is none', () => {
     const text = shareText(PASTO, MODEL, null);
     expect(text).not.toMatch(/https?:|\/api|localhost|latitud|longitud/i);

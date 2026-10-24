@@ -34,6 +34,8 @@ describe('MapOverviewSheet', () => {
   it('counts the municipalities and recent hotspots once up, in singular when there is one', () => {
     expect(overviewCounts(64, 12)).toBe('64 municipios · 12 focos de calor recientes');
     expect(overviewCounts(1, 1)).toBe('1 municipio · 1 foco de calor reciente');
+    expect(overviewCounts(64, 12, 'en')).toBe('64 municipalities · 12 recent heat spots');
+    expect(overviewCounts(1, 1, 'en')).toBe('1 municipality · 1 recent heat spot');
     const { fixture, host } = setup({ zoneCount: 64, hotspotCount: 12 });
     toggle(fixture, host);
     expect(text(host.querySelector('.counts'))).toBe('64 municipios · 12 focos de calor recientes');

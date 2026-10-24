@@ -2,6 +2,8 @@ import { Component, effect, inject, signal } from '@angular/core';
 import { IonApp, IonRouterOutlet } from '@ionic/angular';
 import { AppCurtain } from './core/app-curtain';
 import { OnboardingFlag } from './core/onboarding-flag';
+import { Motion } from './core/motion';
+import { I18n } from './i18n/i18n';
 import { BottomNav } from './presentation/components/bottom-nav/bottom-nav';
 import { Onboarding } from './presentation/components/onboarding/onboarding';
 import { Splash } from './presentation/components/splash/splash';
@@ -32,10 +34,17 @@ export class App {
   protected readonly showOnboarding = signal(false);
 
   constructor() {
+    // Started here so <html lang> follows the language from the first screen.
+    inject(I18n);
+    inject(Motion);
     // Se resuelve mucho antes de que termine la splash, así que la introducción ya está debajo al desvanecerse.
-    void inject(OnboardingFlag)
-      .isDone()
-      .then((done) => this.showOnboarding.set(!done));
+    const onboarding = inject(OnboardingFlag);
+    void onboarding.isDone().then((done) => this.showOnboarding.set(!done));
+    effect(() => {
+      if (!onboarding.replayRequested()) return;
+      onboarding.replayRequested.set(false);
+      this.showOnboarding.set(true);
+    });
     const curtain = inject(AppCurtain);
     effect(() => {
       if (!this.showSplash() && !this.showOnboarding()) curtain.lift();

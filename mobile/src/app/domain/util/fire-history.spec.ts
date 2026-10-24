@@ -89,6 +89,11 @@ describe('fire history', () => {
     );
   });
 
+  it('names the sources and the empty years in English', () => {
+    expect(coverageNote(events, 'en')).toBe('Sources: UNGRD (2019–2022) and local news (2026). No data for 2021 and 2023–2025.');
+    expect(recordPeriod(new Date(2026, 9, 6), 'en')).toEqual({ from: 'Jan 1, 2019', to: 'Oct 6, 2026' });
+  });
+
   it('keeps year ranges on one line', () => {
     expect(keepYearRangesTogether('Sin datos de 2023–2025.')).toBe(`Sin datos de 2023–${WORD_JOINER}2025.`);
   });

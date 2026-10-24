@@ -2,18 +2,24 @@ import {
   AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, untracked, viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import {
   AttributionControl, Map as MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent,
 } from 'maplibre-gl';
 import { getUserLocation, locationMessage } from '../../../core/location/user-location';
 import { AppCurtain } from '../../../core/app-curtain';
+import { API_ERROR_KEYS } from '../../../core/error/api-error';
+import { Haptic } from '../../../core/haptics';
+import { Motion } from '../../../core/motion';
 import { ZoneSharer, type ShareOutcome } from '../../../core/share/share-zone';
 import { SearchRequest } from '../../../core/search-request';
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
+import { formatTime } from '../../../domain/util/format';
 import { shareText } from '../../../domain/util/share-text';
+import { I18n } from '../../../i18n/i18n';
+import { TranslatePipe } from '../../../i18n/t.pipe';
+import type { MessageKey } from '../../../i18n/translate';
 import { FavoritesStore } from '../../../state/favorites.store';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
@@ -24,7 +30,7 @@ import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
   FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, SPIN_MS, TAP_FLY_MS,
   ZONE_FLY_MS, ZONE_ZOOM,
-  globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed, rememberIntroPlayed, spinCenter,
+  globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, readIntroPlayed, rememberIntroPlayed, spinCenter,
 } from './map-camera';
 import {
   BOUNDARIES_SOURCE, DEPARTMENT_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYERS, boundariesSource, boundaryLayers,
@@ -53,13 +59,13 @@ const DOT_RADIUS = 4;
 /** How long (ms) the zone sheet shows «Copiado» or a failed share. */
 const NOTICE_MS = 2000;
 /** What the sheet says after sharing; the menu itself is the feedback when it opens. */
-const SHARE_NOTICES: Partial<Record<ShareOutcome, string>> = { copied: 'Copiado', failed: 'No se pudo compartir' };
+const SHARE_NOTICES: Partial<Record<ShareOutcome, MessageKey>> = { copied: 'share.copied', failed: 'share.failed' };
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
 const SEAT_OFFSET: [number, number] = [0, -150];
 
 @Component({
   selector: 'app-map-page',
-  imports: [AppIcon, MapOverviewSheet, SearchBox, ZoneSheet],
+  imports: [AppIcon, MapOverviewSheet, SearchBox, TranslatePipe, ZoneSheet],
   templateUrl: './map.page.html',
   styleUrl: './map.page.css',
   // --sheet-inset: how much of the map the sheet covers, so the credits sit just above it.
@@ -72,12 +78,17 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly searchRequest = inject(SearchRequest);
   private readonly curtain = inject(AppCurtain);
   private readonly sharer = inject(ZoneSharer);
+  private readonly i18n = inject(I18n);
+  private readonly haptic = inject(Haptic);
+  private readonly motion = inject(Motion);
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
   private readonly glow = viewChild.required<ElementRef<HTMLDivElement>>('glow');
   private readonly header = viewChild.required<ElementRef<HTMLElement>>('header');
   private map?: MapLibreMap;
+  /** The map credits: rebuilt when the boundaries arrive and when the language changes. */
+  private credits?: AttributionControl;
   private colors?: MapColors;
   /** One marker per municipality, by zone id: never grouped. */
   private readonly markers = new Map<string, Marker>();
@@ -99,16 +110,15 @@ export class MapPage implements AfterViewInit, OnDestroy {
   /** The glass search layer, opened from the magnifier of the bottom nav. */
   protected readonly searchOpen = signal(false);
   protected readonly locating = signal(false);
-  /** Why «Mi ubicación» failed, in Spanish (kept apart from the store error, whose retry reloads zones). */
-  protected readonly locationError = signal<string | null>(null);
+  /** Why «Mi ubicación» failed, as a text key (kept apart from the store error, whose retry reloads zones). */
+  protected readonly locationError = signal<MessageKey | null>(null);
+  protected readonly errorKeys = API_ERROR_KEYS;
   protected readonly shareNotice = signal<string | null>(null);
   private noticeTimer?: ReturnType<typeof setTimeout>;
 
   protected readonly updatedLabel = computed(() => {
     const date = this.store.updatedAt();
-    return date
-      ? `Actualizado ${date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`
-      : 'Cargando…';
+    return date ? this.i18n.t('map.updated', { time: formatTime(date, this.i18n.language()) }) : this.i18n.t('map.loading');
   });
 
   /** Fires per year of the selected zone, from its records (null until they arrive). */
@@ -140,6 +150,16 @@ export class MapPage implements AfterViewInit, OnDestroy {
     effect(() => {
       if (!this.mapReady()) return;
       this.styleSelection(this.store.zones(), this.store.selectedId(), this.store.boundaries());
+    });
+    // Markers and credits live outside Angular: a new language redraws them (and their labels take new room).
+    effect(() => {
+      this.i18n.language();
+      if (!this.mapReady()) return;
+      untracked(() => {
+        for (const [zoneId, marker] of this.markers) this.paintZoneMarker(marker, zoneId);
+        this.placeLabels();
+        if (this.map) this.showCredits(this.map);
+      });
     });
     // A sheet that grows covers more map: the labels under it give way (and the ones it uncovers come back).
     effect(() => {
@@ -181,7 +201,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.colors = colors;
     const plan = introPlan({
       hasSelection: this.store.selectedId() !== null,
-      reducedMotion: prefersReducedMotion(window),
+      reducedMotion: this.motion.reduced(),
       firstVisit: !introPlayed && !readIntroPlayed(window),
     });
     introPlayed = true;
@@ -201,8 +221,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     });
     this.map = map;
     map.touchZoomRotate.disableRotation();
-    // Always expanded: OpenStreetMap and DANE ask to be credited where the map is seen.
-    map.addControl(new AttributionControl({ compact: false }), 'bottom-right');
+    this.showCredits(map);
 
     const updateZoomClass = (): void => {
       // The globe (intro): only the colored polygons, no marker piled on Nariño.
@@ -269,7 +288,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   /** The sheet's heart: adds or removes the zone from «Mis municipios», with a light tap on the phone. */
   protected toggleFavorite(zoneId: string): void {
     void this.favorites.toggle(zoneId);
-    void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined);
+    this.haptic.tap();
   }
 
   /**
@@ -280,13 +299,13 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const risk = this.store.detail() ?? zone;
     const forecast = this.store.forecastStatus() === 'ready' ? this.store.detailForecast() : null;
     const outcome = await this.sharer.share({
-      title: `Riesgo de incendio en ${risk.name}`,
-      text: shareText(risk, forecast, this.store.updatedAt()),
+      title: this.i18n.t('share.title', { name: risk.name }),
+      text: shareText(risk, forecast, this.store.updatedAt(), this.i18n.language()),
     });
     const notice = SHARE_NOTICES[outcome];
     if (!notice || this.destroyed) return;
     clearTimeout(this.noticeTimer);
-    this.shareNotice.set(notice);
+    this.shareNotice.set(this.i18n.t(notice));
     this.noticeTimer = setTimeout(() => this.shareNotice.set(null), NOTICE_MS);
   }
 
@@ -325,7 +344,19 @@ export class MapPage implements AfterViewInit, OnDestroy {
     map.addSource(BOUNDARIES_SOURCE, boundariesSource(boundaries));
     map.addSource(DEPARTMENT_SOURCE, departmentSource(boundaries));
     for (const layer of boundaryLayers(this.colors)) map.addLayer(layer, 'hotspot-halo');
+    this.showCredits(map);
     this.styleSelection(this.store.zones(), this.store.selectedId(), boundaries);
+  }
+
+  /**
+   * Always expanded: OpenStreetMap and DANE ask to be credited where the map is seen. OSM's credit
+   * comes with its tiles; DANE's, in the app's language, once the boundaries are on the map.
+   */
+  private showCredits(map: MapLibreMap): void {
+    if (this.credits) map.removeControl(this.credits);
+    const boundaries = this.boundariesShown ? this.i18n.t('map.boundariesCredit') : undefined;
+    this.credits = new AttributionControl({ compact: false, customAttribution: boundaries });
+    map.addControl(this.credits, 'bottom-right');
   }
 
   /** One marker per municipality on its seat; new scores rebuild them. */
@@ -430,7 +461,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (!zone) return;
     const selected = zone.id === this.store.selectedId();
     const element = marker.getElement();
-    element.innerHTML = zoneMarkerHtml(zone, selected);
+    element.innerHTML = zoneMarkerHtml(zone, selected, this.i18n.language());
     // The selected marker goes on top, so its name is not hidden under its neighbours.
     element.style.zIndex = selected ? '2' : '';
   }
@@ -537,13 +568,13 @@ export class MapPage implements AfterViewInit, OnDestroy {
       this.limitToNarino();
       this.framingNarino = true;
     });
-    map.flyTo({ ...camera, duration: FLY_MS, essential });
+    map.flyTo({ ...camera, duration: this.flightMs(FLY_MS), essential });
   }
 
   /** The sheet changed height while showing the department: frame it again above the sheet. */
   private reframeNarino(): void {
     const camera = this.narinoCamera();
-    if (camera) this.map?.easeTo({ ...camera, duration: 350 });
+    if (camera) this.map?.easeTo({ ...camera, duration: this.flightMs(350) });
   }
 
   private jumpToNarino(): void {
@@ -554,6 +585,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
     map.jumpTo(camera);
     this.limitToNarino();
     this.framingNarino = true;
+  }
+
+  /** «Reducido» in Ajustes: the camera jumps (MapLibre already does it when the phone asks for less motion). */
+  private flightMs(duration: number): number {
+    return this.motion.reduced() ? 0 : duration;
   }
 
   /** Once over Nariño the camera stays around it. */
@@ -572,7 +608,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.cameraMove++;
     this.framingNarino = false;
     this.map?.flyTo({
-      center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, padding: NO_PADDING, duration,
+      center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, padding: NO_PADDING,
+      duration: this.flightMs(duration),
     });
     // Cut short, the intro never limited the camera: the seat's flight does it when it lands (registered
     // after flyTo, which ends the intro's own flight with a moveend).

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import type { ZoneDetail, ZoneRiskSummary } from '../../../domain/model/risk';
+import { SettingsStore } from '../../../state/settings.store';
 import { ZoneSheet } from './zone-sheet';
 
 const text = (host: HTMLElement, selector: string): string[] =>
@@ -159,6 +160,28 @@ describe('ZoneSheet', () => {
     fixture.detectChanges();
     expect(host.querySelector('.sheet-notice')!.getAttribute('role')).toBe('status');
     expect(host.querySelector('.notice-pill')?.textContent).toBe('Copiado');
+  });
+
+  it('shows «Clima ahora» in the units of Ajustes, leaving out what did not arrive', async () => {
+    const { fixture, host } = render();
+    const row = () => [...host.querySelectorAll('.weather-row li')].map((li) => `${li.querySelector('b')?.textContent} ${li.querySelector('small')?.textContent}`);
+    expect(text(host, '.weather h3')).toEqual(['Clima ahora']);
+    expect(row()).toEqual(['18 °C Temperatura', '70 % Humedad', '9 km/h Viento', '3 días sin lluvia']);
+
+    await TestBed.inject(SettingsStore).update({ temperature: 'f', wind: 'mph', language: 'en' });
+    fixture.detectChanges();
+    expect(row()).toEqual(['64°F Temperature', '70% Humidity', '6 mph Wind', '3 days without rain']);
+
+    const partial = { ...DETAIL, weather: { temperatureC: 18, daysWithoutRain: 1 } } as unknown as ZoneDetail;
+    fixture.componentRef.setInput('detail', partial);
+    fixture.detectChanges();
+    expect(row()).toEqual(['64°F Temperature', '1 day without rain']);
+  });
+
+  it('keeps the room of «Clima ahora» until the detail arrives', () => {
+    const { host } = render(null);
+    expect(host.querySelector('.weather-skeleton')).not.toBeNull();
+    expect(host.querySelector('.weather-row')).toBeNull();
   });
 
   it('says when the data was updated', () => {

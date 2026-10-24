@@ -1,6 +1,6 @@
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 import {
-  BOUNDARIES_ATTRIBUTION, DEPARTMENT_SOURCE, DEPARTMENT_WIDTH, FILL_OPACITY, NO_RISK_FILL, ZONE_FILL_LAYER, ZONE_SELECTED_LAYER,
+  DEPARTMENT_SOURCE, DEPARTMENT_WIDTH, FILL_OPACITY, NO_RISK_FILL, ZONE_FILL_LAYER, ZONE_SELECTED_LAYER,
   ZONE_SELECTED_LAYERS, boundariesSource, boundaryLayers, departmentOutline, departmentSource, hotspotLayers, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
 } from './map-layers';
 
@@ -35,11 +35,8 @@ const layer = (id: string): LayerData | undefined =>
   (boundaryLayers(COLORS) as readonly LayerData[]).find((candidate) => candidate.id === id);
 
 describe('map layers: municipal polygons', () => {
-  it('keys the polygons by zone id and credits DANE', () => {
-    expect(boundariesSource(BOUNDARIES)).toEqual({
-      type: 'geojson', data: BOUNDARIES, promoteId: 'id', attribution: BOUNDARIES_ATTRIBUTION,
-    });
-    expect(BOUNDARIES_ATTRIBUTION).toContain('DANE');
+  it('keys the polygons by zone id (DANE is credited by the map page, in its language)', () => {
+    expect(boundariesSource(BOUNDARIES)).toEqual({ type: 'geojson', data: BOUNDARIES, promoteId: 'id' });
   });
 
   it('fills each level with its risk color and zones without a score with the neutral fill', () => {

@@ -4,21 +4,21 @@
   @if (mapUnavailable()) {
     <p class="map-unavailable" role="status">
       <app-icon name="alert" [size]="18" />
-      Este celular no puede mostrar el mapa. Puedes buscar un municipio o usar «Mi ubicación» para ver su riesgo.
+      {{ 'map.unavailable' | t }}
     </p>
   }
 </div>
 
 <header #header class="map-header" [class.is-covered]="store.selected()">
-  <h1>Mapa</h1>
+  <h1>{{ 'nav.map' | t }}</h1>
   <button
     type="button"
     class="location-button"
     [class.is-locating]="locating()"
     [disabled]="locating()"
-    [attr.aria-label]="locating() ? 'Buscando tu ubicación' : 'Mi ubicación'"
+    [attr.aria-label]="(locating() ? 'map.locating' : 'map.myLocation') | t"
     [attr.aria-busy]="locating()"
-    [title]="locating() ? 'Buscando tu ubicación' : 'Mi ubicación'"
+    [title]="(locating() ? 'map.locating' : 'map.myLocation') | t"
     (click)="locateMe()"
   >
     <app-icon name="crosshair" [size]="24" />
@@ -44,25 +44,25 @@
   />
 }
 
-@if (store.error(); as message) {
+@if (store.error(); as code) {
   <div class="error-banner" role="alert">
-    <span>{{ message }}</span>
-    <button type="button" (click)="store.load(); store.dismissError()">Reintentar</button>
+    <span>{{ errorKeys[code] | t }}</span>
+    <button type="button" (click)="store.load(); store.dismissError()">{{ 'common.retry' | t }}</button>
   </div>
-} @else if (locationError(); as message) {
+} @else if (locationError(); as key) {
   <div class="error-banner location-error" role="alert">
-    <span>{{ message }}</span>
+    <span>{{ key | t }}</span>
     <div class="banner-actions">
-      <button type="button" (click)="locateMe()">Reintentar</button>
-      <button type="button" (click)="locationError.set(null)">Cerrar</button>
+      <button type="button" (click)="locateMe()">{{ 'common.retry' | t }}</button>
+      <button type="button" (click)="locationError.set(null)">{{ 'common.close' | t }}</button>
     </div>
   </div>
 } @else if (store.boundariesStatus() === 'error') {
   <div class="error-banner" role="alert">
-    <span>No se pudieron cargar los límites municipales. El mapa muestra solo los puntos.</span>
+    <span>{{ 'map.boundariesError' | t }}</span>
     <div class="banner-actions">
-      <button type="button" (click)="store.loadBoundaries()">Reintentar</button>
-      <button type="button" (click)="store.dismissBoundariesError()">Cerrar</button>
+      <button type="button" (click)="store.loadBoundaries()">{{ 'common.retry' | t }}</button>
+      <button type="button" (click)="store.dismissBoundariesError()">{{ 'common.close' | t }}</button>
     </div>
   </div>
 }

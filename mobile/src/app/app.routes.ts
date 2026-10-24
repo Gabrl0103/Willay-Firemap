@@ -14,5 +14,10 @@ export const routes: Routes = [
     path: 'history',
     loadComponent: () => import('./presentation/pages/history/history.page').then((m) => m.HistoryPage),
   },
+  // Not a tab: opened from the gear of Inicio.
+  {
+    path: 'settings',
+    loadComponent: () => import('./presentation/pages/settings/settings.page').then((m) => m.SettingsPage),
+  },
   { path: '**', redirectTo: 'home' },
 ];

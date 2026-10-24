@@ -76,6 +76,13 @@ button { cursor: pointer; border: 0; background: none; color: inherit; padding: 
 .risk-high { --risk: var(--risk-high); }
 .risk-extreme { --risk: var(--risk-extreme); }
 
+/* El teléfono pide menos movimiento, o Ajustes > Movimiento está en «Reducido» (core/motion.ts). */
+:root.reduce-motion *, :root.reduce-motion *::before, :root.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

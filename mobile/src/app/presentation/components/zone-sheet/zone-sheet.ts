@@ -1,11 +1,16 @@
 import {
-  Component, ElementRef, OnDestroy, afterNextRender, computed, input, output, signal, viewChild,
+  Component, ElementRef, OnDestroy, afterNextRender, computed, inject, input, output, signal, viewChild,
 } from '@angular/core';
 import type { ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../../../domain/model/risk';
-import { formatDecimal, formatTimeAgo, formatUpdatedDay } from '../../../domain/util/format';
-import { RISK_LABELS } from '../../../domain/util/risk-labels';
+import { formatDecimal, formatPercent, formatTimeAgo, formatUpdatedDay } from '../../../domain/util/format';
+import { riskLabel } from '../../../domain/util/risk-labels';
+import { formatTemperature, formatWind } from '../../../domain/util/units';
+import { I18n } from '../../../i18n/i18n';
+import { TranslatePipe } from '../../../i18n/t.pipe';
+import type { MessageKey, MessageParams, PluralKey } from '../../../i18n/translate';
+import { SettingsStore } from '../../../state/settings.store';
 import type { ForecastStatus } from '../../../state/zones.store';
-import { AppIcon } from '../app-icon/app-icon';
+import { AppIcon, type IconName } from '../app-icon/app-icon';
 import { ForecastSection } from '../forecast-section/forecast-section';
 import { RiskBadge } from '../risk-badge/risk-badge';
 import { FULL_HEIGHT, clampOffset, resolveSnap, snapOffset, type SheetSnap } from './sheet-snap';
@@ -31,13 +36,23 @@ interface DragState {
   moved: boolean;
 }
 
+/** One value of «Clima ahora»: its icon, the value in the chosen unit and what it is. */
+interface WeatherItem {
+  readonly icon: IconName;
+  readonly value: string;
+  readonly label: MessageKey | PluralKey;
+  readonly params?: MessageParams;
+}
+
+const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+
 @Component({
   selector: 'app-zone-sheet',
-  imports: [AppIcon, ForecastSection, RiskBadge],
+  imports: [AppIcon, ForecastSection, RiskBadge, TranslatePipe],
   template: `
     <div class="sheet-layer" [class.is-closing]="snap() === 'closed'">
-      <button type="button" class="sheet-backdrop" aria-label="Cerrar detalle" (click)="close()"></button>
-      <button type="button" class="sheet-back" aria-label="Volver a Nariño" (click)="close()">
+      <button type="button" class="sheet-backdrop" [attr.aria-label]="'sheet.close' | t" (click)="close()"></button>
+      <button type="button" class="sheet-back" [attr.aria-label]="'sheet.back' | t" (click)="close()">
         <app-icon name="chevron-left" [size]="22" /><span>Nariño</span>
       </button>
       <p class="sheet-notice" role="status">
@@ -52,7 +67,7 @@ interface DragState {
         [class.is-expanded]="snap() === 'full'"
         [style.height.%]="fullHeightPct"
         [style.transform]="transform()"
-        aria-label="Detalle de zona"
+        [attr.aria-label]="'sheet.label' | t"
       >
         <div
           class="sheet-drag-area"
@@ -64,7 +79,7 @@ interface DragState {
           <button
             type="button"
             class="sheet-handle"
-            [attr.aria-label]="snap() === 'full' ? 'Reducir detalle' : 'Expandir detalle'"
+            [attr.aria-label]="(snap() === 'full' ? 'sheet.collapse' : 'sheet.expand') | t"
             [attr.aria-expanded]="snap() === 'full'"
             (click)="toggle()"
           >
@@ -82,12 +97,12 @@ interface DragState {
                   class="icon-action favorite-toggle"
                   [class.is-on]="favorite()"
                   [attr.aria-pressed]="favorite()"
-                  [attr.aria-label]="favorite() ? 'Quitar de mis municipios' : 'Agregar a mis municipios'"
+                  [attr.aria-label]="(favorite() ? 'sheet.removeFavorite' : 'sheet.addFavorite') | t"
                   (click)="favoriteToggled.emit()"
                 >
                   <app-icon [name]="favorite() ? 'heart-filled' : 'heart'" [size]="22" />
                 </button>
-                <button type="button" class="icon-action share-button" aria-label="Compartir" (click)="shareRequested.emit()">
+                <button type="button" class="icon-action share-button" [attr.aria-label]="'sheet.share' | t" (click)="shareRequested.emit()">
                   <app-icon name="share" [size]="20" />
                 </button>
               </div>
@@ -96,7 +111,7 @@ interface DragState {
               class="score-ring"
               [class]="'risk-' + risk().level"
               role="img"
-              [attr.aria-label]="'Puntaje ' + risk().score + ' de 100, ' + riskLabel()"
+              [attr.aria-label]="'sheet.scoreAria' | t: { score: risk().score, level: riskLabel() }"
             >
               <svg viewBox="0 0 92 92" aria-hidden="true">
                 <circle class="ring-track" cx="46" cy="46" [attr.r]="ringRadius" />
@@ -117,11 +132,29 @@ interface DragState {
         </div>
 
         <div class="zone-content">
-          <h3 class="factors-title">De qué depende el puntaje</h3>
+          @if (weather(); as items) {
+            @if (items.length > 0) {
+              <section class="weather" aria-labelledby="weather-title">
+                <h3 id="weather-title" class="factors-title">{{ 'weather.title' | t }}</h3>
+                <ul class="weather-row">
+                  @for (item of items; track item.label) {
+                    <li class="stat-tile">
+                      <app-icon [name]="item.icon" [size]="16" />
+                      <b class="mono">{{ item.value }}</b>
+                      <small>{{ item.label | t: item.params }}</small>
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+          } @else {
+            <div class="weather weather-skeleton skeleton" aria-hidden="true"></div>
+          }
+          <h3 class="factors-title">{{ 'sheet.factorsTitle' | t }}</h3>
           @for (factor of factors(); track factor.label; let i = $index) {
             <div class="factor">
               <div class="factor-head">
-                <span>{{ factor.label }} <small>· <span class="mono">{{ factor.weight }} %</span></small></span>
+                <span>{{ factor.label | t }} <small>· <span class="mono">{{ factor.weight }} %</span></small></span>
                 @if (factor.value !== null) {
                   <b class="mono">{{ factor.value }}</b>
                 } @else {
@@ -136,23 +169,23 @@ interface DragState {
             </div>
           }
 
-          @if (!detail() || detail()?.hotspots || firesPerYear() !== null) {
+          @if (!detail() || detail()?.hotspots || perYear() !== null) {
             <div class="stats">
               @if (detail()?.hotspots; as hotspots) {
                 <div class="stat-tile hotspots-stat">
                   <b class="mono">{{ hotspots.count }}</b>
-                  <span>{{ hotspots.count === 1 ? 'foco' : 'focos' }} a menos de 25 km</span>
+                  <span>{{ 'sheet.hotspotsNear' | t: { count: hotspots.count } }}</span>
                   @if (latestHotspot(); as latest) {
-                    <small>el último, {{ latest }}</small>
+                    <small>{{ 'sheet.latest' | t: { ago: latest } }}</small>
                   }
                 </div>
               } @else if (!detail()) {
                 <div class="stat-tile skeleton stat-skeleton" aria-hidden="true"></div>
               }
-              @if (firesPerYear(); as perYear) {
+              @if (perYear(); as perYear) {
                 <div class="stat-tile fires-stat">
                   <b class="mono">{{ perYear }}</b>
-                  <span>incendios por año</span>
+                  <span>{{ 'sheet.firesPerYear' | t }}</span>
                 </div>
               }
             </div>
@@ -161,11 +194,9 @@ interface DragState {
           <app-forecast-section [forecast]="forecast()" [status]="forecastStatus()" (retry)="forecastRetry.emit()" />
 
           <button type="button" class="history-cta" (click)="historyRequested.emit()">
-            Ver historial de {{ risk().name }}
+            {{ 'sheet.history' | t: { name: risk().name } }}
           </button>
-          <p class="disclaimer">
-            Datos simulados para fines académicos. El riesgo no confirma la ocurrencia de un incendio.
-          </p>
+          <p class="disclaimer">{{ 'sheet.disclaimer' | t }}</p>
         </div>
       </section>
     </div>
@@ -180,7 +211,7 @@ export class ZoneSheet implements OnDestroy {
   /** When the zones were loaded; null leaves the "actualizado" text out. */
   readonly updatedAt = input<Date | null>(null);
   /** Average fires per year of the zone (from its records); null leaves the card out. */
-  readonly firesPerYear = input<string | null, number | null>(null, { transform: perYearLabel });
+  readonly firesPerYear = input<number | null>(null);
   /** 72 h forecast of the zone (ML model or its fallback) and whether it is still loading or failed. */
   readonly forecast = input<ZoneForecast | null>(null);
   readonly forecastStatus = input<ForecastStatus>('idle');
@@ -293,31 +324,59 @@ export class ZoneSheet implements OnDestroy {
   /** Name, score and level: the detail's once it arrives, the map's until then. */
   protected readonly risk = computed(() => this.detail() ?? this.zone());
   protected readonly ringValue = computed(() => (Math.min(Math.max(this.risk().score, 0), 100) / 100) * RING_TOTAL);
-  protected readonly riskLabel = computed(() => RISK_LABELS[this.risk().level]);
+  private readonly i18n = inject(I18n);
+  protected readonly riskLabel = computed(() => riskLabel(this.risk().level, this.i18n.language()));
   protected readonly updated = computed(() => {
     const date = this.updatedAt();
-    return date ? ` · actualizado ${formatUpdatedDay(date)}` : '';
+    return date ? ` · ${this.i18n.t('sheet.updated', { day: formatUpdatedDay(date, this.i18n.language()) })}` : '';
   });
   protected readonly latestHotspot = computed(() => {
     const hotspots = this.detail()?.hotspots;
-    return hotspots?.count && hotspots.latestDetectedAt ? formatTimeAgo(hotspots.latestDetectedAt) : '';
+    return hotspots?.count && hotspots.latestDetectedAt ? formatTimeAgo(hotspots.latestDetectedAt, this.i18n.language()) : '';
+  });
+  private readonly settings = inject(SettingsStore);
+  /**
+   * «Clima ahora» from the detail, in the units of Ajustes (the API sends °C and km/h). A value the
+   * API did not send is left out; null while the detail has not arrived (a placeholder keeps its room).
+   */
+  protected readonly weather = computed((): WeatherItem[] | null => {
+    const detail = this.detail();
+    if (!detail) return null;
+    const weather: Partial<ZoneDetail['weather']> = detail.weather ?? {};
+    const language = this.i18n.language();
+    const items: WeatherItem[] = [];
+    if (isNumber(weather.temperatureC)) {
+      const value = formatTemperature(weather.temperatureC, this.settings.temperature(), language);
+      items.push({ icon: 'thermometer', value, label: 'weather.temperature' });
+    }
+    if (isNumber(weather.humidityPct)) {
+      items.push({ icon: 'droplet', value: formatPercent(Math.round(weather.humidityPct), language), label: 'weather.humidity' });
+    }
+    if (isNumber(weather.windKmh)) {
+      items.push({ icon: 'wind', value: formatWind(weather.windKmh, this.settings.wind(), language), label: 'weather.wind' });
+    }
+    if (isNumber(weather.daysWithoutRain)) {
+      const count = Math.round(weather.daysWithoutRain);
+      items.push({ icon: 'calendar', value: String(count), label: 'weather.dryDays', params: { count } });
+    }
+    return items;
+  });
+  /** 2.08 -> "2,1" | "2.1"; null leaves the card out. */
+  protected readonly perYear = computed(() => {
+    const value = this.firesPerYear();
+    return value === null ? null : formatDecimal(value, this.i18n.language());
   });
 
   /**
    * Weights from backend/src/domain/service/RiskScoringService.ts (SCORE_WEIGHTS). A null value is a
    * placeholder: an older backend sends no factors in the zone list, so they wait for the detail.
    */
-  protected readonly factors = computed(() => {
+  protected readonly factors = computed((): { label: MessageKey; weight: number; value: number | null }[] => {
     const f = this.detail()?.factors ?? this.zone().factors;
     return [
-      { label: 'Clima seco', weight: 50, value: f?.dryWeather ?? null },
-      { label: 'Focos cercanos', weight: 30, value: f?.nearbyHotspots ?? null },
-      { label: 'Historial', weight: 20, value: f?.fireHistory ?? null },
+      { label: 'factor.dryWeather', weight: 50, value: f?.dryWeather ?? null },
+      { label: 'factor.nearbyHotspots', weight: 30, value: f?.nearbyHotspots ?? null },
+      { label: 'factor.fireHistory', weight: 20, value: f?.fireHistory ?? null },
     ];
   });
-}
-
-/** 2.08 -> "2,1"; null stays null. */
-function perYearLabel(value: number | null): string | null {
-  return value === null ? null : formatDecimal(value);
 }

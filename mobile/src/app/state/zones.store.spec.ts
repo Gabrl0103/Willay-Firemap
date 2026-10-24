@@ -140,6 +140,20 @@ describe('ZonesStore forecast', () => {
   });
 });
 
+describe('ZonesStore cache', () => {
+  it('forgets the forecasts and the boundaries and asks for them again', () => {
+    const { store, repository, zoneRepository } = setup(() => of(FORECAST));
+    store.loadBoundaries();
+    store.select('pasto');
+    store.clearSelection();
+    store.clearCache();
+    expect(zoneRepository.boundaries).toHaveBeenCalledTimes(2);
+    expect(store.boundariesStatus()).toBe('ready');
+    store.select('pasto');
+    expect(repository.forecast).toHaveBeenCalledTimes(2); // not from the cache any more
+  });
+});
+
 describe('ZonesStore boundaries', () => {
   it('asks for the boundaries once', () => {
     const { store, zoneRepository } = setup(() => of(FORECAST));

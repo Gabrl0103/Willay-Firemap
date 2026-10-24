@@ -118,6 +118,23 @@ La hoja de zona tiene dos botones junto al nivel, los únicos para marcar favori
   «Atalaya · Riesgo de incendios en Nariño». Sin links ni ubicación. En Android usa `@capacitor/share`; en el
   navegador, `navigator.share` o, si no existe, copia el texto y dice «Copiado». Cerrar el menú no es un error.
 
+#### Ajustes e idiomas (v0.30)
+Ajustes se abre con el engranaje de la cabecera de Inicio (`/settings`, carga perezosa; no es una pestaña).
+Todo se guarda con `@capacitor/preferences` (clave `settings`) y se lee antes de la primera pantalla, así
+que la app nunca aparece en el idioma equivocado:
+- **Idioma:** Automático (el del teléfono si es español o inglés; si no, español), Español o English. Las
+  traducciones están en `mobile/src/app/i18n/es.json` y `en.json` (en el APK, sin internet); el pipe `t` las
+  cambia en caliente, con fechas, números y horas por `Intl` («24 oct. 2026, 5:07 p. m.» / «Oct 24, 2026,
+  5:07 PM»). Una prueba falla si un JSON tiene claves que el otro no. No se traducen los datos: municipios,
+  lugares, UNGRD, Gobernación, NASA FIRMS, la cita literal del DANE ni los nombres de los tiles de OSM.
+- **Unidades:** °C / °F y km/h / mph para la fila «Clima ahora» de la hoja de zona (temperatura, humedad,
+  viento y días sin lluvia; lo que no llegue se omite). Solo cambia cómo se muestran.
+- **Movimiento:** Automático (sigue al teléfono) o Reducido (sin entrada del mapa, partículas ni animaciones).
+- **Vibración**, **Datos** (borrar favoritos, con confirmación; borrar la caché de pronósticos y límites),
+  **Ayuda** (ver la introducción otra vez) y **Acerca de** (versión 0.30.0, cómo se calcula el riesgo y las
+  fuentes con su licencia o cita: NASA FIRMS, Open-Meteo, ERA5/Copernicus, NASA POWER, Gobernación de
+  Nariño, OpenStreetMap, UNGRD y DANE).
+
 ### 3. App en Android (emulador o celular)
 ```
 cd mobile

@@ -1,0 +1,173 @@
+<app-lava-bg />
+
+<div class="page-scroll">
+  <header class="head anim-up">
+    <button type="button" class="back" [attr.aria-label]="'settings.back' | t" (click)="back()">
+      <app-icon name="chevron-left" [size]="24" />
+    </button>
+    <h1 class="page-title">{{ 'settings.title' | t }}</h1>
+  </header>
+
+  <section class="glass-card group anim-up" style="--i: 1" aria-labelledby="language-title">
+    <h2 id="language-title" class="group-title">{{ 'settings.language' | t }}</h2>
+    <div class="segmented" role="radiogroup" aria-labelledby="language-title">
+      @for (choice of languages; track choice.value) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="settings.language() === choice.value"
+          [attr.lang]="choice.value === 'auto' ? null : choice.value"
+          (click)="choose({ language: choice.value })"
+        >
+          {{ choice.label | t }}
+        </button>
+      }
+    </div>
+    @if (settings.language() === 'auto') {
+      <p class="hint">{{ 'settings.autoHint' | t: { language: (i18n.language() === 'en' ? 'settings.english' : 'settings.spanish') | t } }}</p>
+    }
+  </section>
+
+  <section class="glass-card group anim-up" style="--i: 2" aria-labelledby="units-title">
+    <h2 id="units-title" class="group-title">{{ 'settings.units' | t }}</h2>
+    <div class="row">
+      <span id="temperature-label">{{ 'weather.temperature' | t }}</span>
+      <div class="segmented compact" role="radiogroup" aria-labelledby="temperature-label">
+        @for (choice of temperatures; track choice.value) {
+          <button
+            type="button"
+            role="radio"
+            class="mono"
+            [attr.aria-checked]="settings.temperature() === choice.value"
+            (click)="choose({ temperature: choice.value })"
+          >
+            {{ choice.label | t }}
+          </button>
+        }
+      </div>
+    </div>
+    <div class="row">
+      <span id="wind-label">{{ 'weather.wind' | t }}</span>
+      <div class="segmented compact" role="radiogroup" aria-labelledby="wind-label">
+        @for (choice of winds; track choice.value) {
+          <button
+            type="button"
+            role="radio"
+            class="mono"
+            [attr.aria-checked]="settings.wind() === choice.value"
+            (click)="choose({ wind: choice.value })"
+          >
+            {{ choice.label | t }}
+          </button>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="glass-card group anim-up" style="--i: 3" aria-labelledby="motion-title">
+    <h2 id="motion-title" class="group-title">{{ 'settings.motion' | t }}</h2>
+    <div class="segmented" role="radiogroup" aria-labelledby="motion-title">
+      @for (choice of motions; track choice.value) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="settings.motion() === choice.value"
+          (click)="choose({ motion: choice.value })"
+        >
+          {{ choice.label | t }}
+        </button>
+      }
+    </div>
+    <p class="hint">{{ (settings.motion() === 'auto' ? 'settings.motionAutoHint' : 'settings.motionReducedHint') | t }}</p>
+  </section>
+
+  <section class="glass-card group anim-up" style="--i: 4" aria-labelledby="haptics-title">
+    <div class="row">
+      <div>
+        <h2 id="haptics-title" class="group-title">{{ 'settings.haptics' | t }}</h2>
+        <p class="hint">{{ 'settings.hapticsHint' | t }}</p>
+      </div>
+      <button
+        type="button"
+        class="switch"
+        role="switch"
+        [attr.aria-checked]="settings.haptics()"
+        aria-labelledby="haptics-title"
+        (click)="toggleHaptics()"
+      >
+        <span></span>
+      </button>
+    </div>
+  </section>
+
+  <section class="glass-card group anim-up" style="--i: 5" aria-labelledby="data-title">
+    <h2 id="data-title" class="group-title">{{ 'settings.data' | t }}</h2>
+    <div class="row">
+      <div>
+        <span>{{ 'settings.clearFavorites' | t }}</span>
+        <p class="hint">{{ 'settings.favoritesCount' | t: { count: favorites.ids().length } }}</p>
+      </div>
+      @if (favorites.ids().length > 0 && !confirmingClear()) {
+        <button type="button" class="action" (click)="confirmingClear.set(true)">{{ 'settings.clear' | t }}</button>
+      }
+    </div>
+    @if (confirmingClear()) {
+      <div class="confirm" role="alertdialog" aria-labelledby="confirm-text">
+        <p id="confirm-text">{{ 'settings.clearFavoritesConfirm' | t: { count: favorites.ids().length } }}</p>
+        <div class="confirm-actions">
+          <button type="button" class="action" (click)="confirmingClear.set(false)">{{ 'search.cancel' | t }}</button>
+          <button type="button" class="action danger" (click)="clearFavorites()">{{ 'settings.clear' | t }}</button>
+        </div>
+      </div>
+    }
+    <div class="row">
+      <div>
+        <span>{{ 'settings.clearCache' | t }}</span>
+        <p class="hint" role="status">{{ (cacheCleared() ? 'settings.cacheCleared' : 'settings.clearCacheHint') | t }}</p>
+      </div>
+      <button type="button" class="action" (click)="clearCache()">{{ 'settings.clear' | t }}</button>
+    </div>
+  </section>
+
+  <section class="glass-card group anim-up" style="--i: 6" aria-labelledby="help-title">
+    <h2 id="help-title" class="group-title">{{ 'settings.help' | t }}</h2>
+    <div class="row">
+      <div>
+        <span>{{ 'settings.replayIntro' | t }}</span>
+        <p class="hint">{{ 'settings.replayIntroHint' | t }}</p>
+      </div>
+      <button type="button" class="action" (click)="replayIntro()">{{ 'settings.open' | t }}</button>
+    </div>
+  </section>
+
+  <section class="glass-card group about anim-up" style="--i: 7" aria-labelledby="about-title">
+    <h2 id="about-title" class="group-title">{{ 'about.title' | t }}</h2>
+    <p class="version mono">{{ 'about.version' | t: { version: version } }}</p>
+    <h3>{{ 'about.howTitle' | t }}</h3>
+    <p>{{ 'about.how' | t }}</p>
+    <p>{{ 'about.forecast' | t }}</p>
+    <p class="disclaimer">{{ 'about.disclaimer' | t }}</p>
+
+    <h3>{{ 'about.sources' | t }}</h3>
+    <ul class="sources">
+      @for (source of sources; track source.name) {
+        <li>
+          <b>{{ source.name }}</b>
+          <span>{{ source.use | t }}</span>
+          @if (source.note) {
+            <small>{{ source.note | t: { year: year } }}</small>
+          }
+          @if (source.citation) {
+            <small class="citation" lang="en">“{{ source.citation }}”</small>
+          }
+          <small class="links">
+            @for (link of source.links; track link.url; let last = $last) {
+              <a [href]="link.url" target="_blank" rel="noopener">{{ link.text }}</a>@if (!last) { · }
+            }
+          </small>
+        </li>
+      }
+    </ul>
+  </section>
+  <app-data-attribution class="anim-up" style="--i: 8" />
+</div>

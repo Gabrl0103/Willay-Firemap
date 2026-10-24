@@ -22,6 +22,10 @@ describe('zone marker', () => {
     expect(html).toContain('<b>Chachagüí</b><small>63 · Alto</small>');
   });
 
+  it('names the level in the language of the app', () => {
+    expect(zoneMarkerHtml(zone('Pasto'), false, 'en')).toContain('<small>63 · High</small>');
+  });
+
   it('marks the selected zone, whose name is always shown', () => {
     expect(zoneMarkerHtml(zone('Pasto'), true)).toContain('class="zone-marker risk-high is-selected"');
   });

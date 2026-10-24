@@ -1,6 +1,9 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import type { RiskLevel } from '../../../domain/model/risk';
 import { RISK_RANGES } from '../../../domain/util/risk-labels';
+import { I18n } from '../../../i18n/i18n';
+import { TranslatePipe } from '../../../i18n/t.pipe';
+import { translate, type Language } from '../../../i18n/translate';
 import { AppIcon } from '../app-icon/app-icon';
 import { RiskBadge } from '../risk-badge/risk-badge';
 import { FLICK_VELOCITY } from '../zone-sheet/sheet-snap';
@@ -34,11 +37,10 @@ interface DragState {
   moved: boolean;
 }
 
-/** "64 municipios · 12 focos de calor recientes", in singular when there is one. */
-export function overviewCounts(zoneCount: number, hotspotCount: number): string {
-  const zones = zoneCount === 1 ? '1 municipio' : `${zoneCount} municipios`;
-  const hotspots = hotspotCount === 1 ? '1 foco de calor reciente' : `${hotspotCount} focos de calor recientes`;
-  return `${zones} · ${hotspots}`;
+/** "64 municipios · 12 focos de calor recientes" | "64 municipalities · 12 recent heat spots", singular for one. */
+export function overviewCounts(zoneCount: number, hotspotCount: number, language: Language = 'es'): string {
+  const zones = translate(language, 'overview.zones', { count: zoneCount });
+  return `${zones} · ${translate(language, 'overview.hotspots', { count: hotspotCount })}`;
 }
 
 /**
@@ -49,7 +51,7 @@ export function overviewCounts(zoneCount: number, hotspotCount: number): string 
  */
 @Component({
   selector: 'app-map-overview-sheet',
-  imports: [AppIcon, RiskBadge],
+  imports: [AppIcon, RiskBadge, TranslatePipe],
   // While dragged the whole sheet follows the finger (the section's entry animation owns its own transform).
   host: { '[style.transform]': 'dragTransform()', '[class.is-dragging]': 'dragOffset() !== null' },
   template: `
@@ -64,18 +66,18 @@ export function overviewCounts(zoneCount: number, hotspotCount: number): string 
         <button
           type="button"
           class="handle"
-          [attr.aria-label]="open() ? 'Ocultar detalles' : 'Mostrar detalles'"
+          [attr.aria-label]="(open() ? 'overview.hideDetails' : 'overview.showDetails') | t"
           [attr.aria-expanded]="open()"
           (click)="toggle()"
         >
           <span></span>
         </button>
-        <h2 id="overview-title">Departamento de Nariño</h2>
+        <h2 id="overview-title">{{ 'overview.title' | t }}</h2>
         @if (open()) {
           <p class="counts">{{ counts() }}</p>
         }
       </div>
-      <ul class="legend" aria-label="Leyenda de riesgo">
+      <ul class="legend" [attr.aria-label]="'overview.legend' | t">
         @for (level of levels; track level) {
           <li>
             <app-risk-badge [level]="level" />
@@ -86,14 +88,14 @@ export function overviewCounts(zoneCount: number, hotspotCount: number): string 
         }
       </ul>
       @if (open()) {
-        <p class="hotspot-key"><span class="dot"></span>Foco de calor (NASA FIRMS, últimos 5 días)</p>
+        <p class="hotspot-key"><span class="dot"></span>{{ 'overview.hotspotKey' | t }}</p>
       }
       @if (canZoom()) {
-        <button type="button" class="zoom" (click)="zoomRequested.emit()">Acercar a Nariño</button>
+        <button type="button" class="zoom" (click)="zoomRequested.emit()">{{ 'overview.zoom' | t }}</button>
       }
       @if (open()) {
         <p class="note">
-          <span><app-icon name="alert" [size]="12" />Estimación de riesgo, no predicción exacta</span>
+          <span><app-icon name="alert" [size]="12" />{{ 'common.disclaimer' | t }}</span>
           @if (updatedLabel()) {
             <span class="mono">{{ updatedLabel() }}</span>
           }
@@ -121,8 +123,11 @@ export class MapOverviewSheet {
     const offset = this.dragOffset();
     return offset === null ? null : `translateY(${offset}px)`;
   });
+  private readonly i18n = inject(I18n);
   protected readonly counts = computed(() =>
-    this.zoneCount() === 0 ? 'Cargando municipios…' : overviewCounts(this.zoneCount(), this.hotspotCount()),
+    this.zoneCount() === 0
+      ? this.i18n.t('overview.loadingZones')
+      : overviewCounts(this.zoneCount(), this.hotspotCount(), this.i18n.language()),
   );
 
   private drag?: DragState;

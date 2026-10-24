@@ -1,7 +1,9 @@
-import { Component, ElementRef, afterNextRender, computed, input, output, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, afterNextRender, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
 import { favoriteZones, favoritesFirst } from '../../../domain/util/favorites';
-import { RISK_LABELS } from '../../../domain/util/risk-labels';
+import { riskLabel } from '../../../domain/util/risk-labels';
+import { I18n } from '../../../i18n/i18n';
+import { TranslatePipe } from '../../../i18n/t.pipe';
 import { AppIcon } from '../app-icon/app-icon';
 import { RiskBadge } from '../risk-badge/risk-badge';
 
@@ -12,7 +14,7 @@ const normalize = (text: string): string =>
 
 @Component({
   selector: 'app-search-box',
-  imports: [AppIcon, RiskBadge],
+  imports: [AppIcon, RiskBadge, TranslatePipe],
   template: `
     <div class="search-row">
       <label class="search-wrap">
@@ -20,25 +22,25 @@ const normalize = (text: string): string =>
         <input
           #field
           type="search"
-          placeholder="Buscar municipio"
-          aria-label="Buscar municipio"
+          [placeholder]="'nav.search' | t"
+          [attr.aria-label]="'nav.search' | t"
           autocomplete="off"
           [value]="query()"
           (input)="query.set($any($event.target).value)"
           (keydown.escape)="cancelled.emit()"
         />
         @if (query()) {
-          <button type="button" class="clear" aria-label="Borrar búsqueda" (click)="query.set('')">
+          <button type="button" class="clear" [attr.aria-label]="'search.clear' | t" (click)="query.set('')">
             <app-icon name="x" [size]="16" />
           </button>
         }
       </label>
-      <button type="button" class="cancel" (click)="cancelled.emit()">Cancelar</button>
+      <button type="button" class="cancel" (click)="cancelled.emit()">{{ 'search.cancel' | t }}</button>
     </div>
     @if (results().length > 0) {
       <div class="results">
         @if (!query().trim()) {
-          <p class="results-title">Mis municipios</p>
+          <p class="results-title">{{ 'home.myZones' | t }}</p>
         }
         @for (zone of results(); track zone.id) {
           <button type="button" class="result" (click)="pick(zone)">
@@ -48,7 +50,7 @@ const normalize = (text: string): string =>
         }
       </div>
     } @else if (query().length > 0) {
-      <div class="results empty">No encontramos ese municipio.</div>
+      <div class="results empty">{{ 'search.empty' | t }}</div>
     }
   `,
   styleUrl: './search-box.css',
@@ -80,8 +82,10 @@ export class SearchBox {
     return this.favoriteIds().includes(zone.id);
   }
 
+  private readonly i18n = inject(I18n);
+
   protected label(zone: ZoneRiskSummary): string {
-    return RISK_LABELS[zone.level];
+    return riskLabel(zone.level, this.i18n.language());
   }
 
   protected pick(zone: ZoneRiskSummary): void {

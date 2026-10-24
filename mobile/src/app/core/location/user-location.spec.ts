@@ -1,4 +1,5 @@
 import type { PermissionStatus, Position } from '@capacitor/geolocation';
+import { translate } from '../../i18n/translate';
 import { type GeolocationApi, getUserLocation, locationMessage } from './user-location';
 
 const POSITION = { timestamp: 0, coords: { latitude: 1.21, longitude: -77.28 } } as Position;
@@ -79,8 +80,9 @@ describe('getUserLocation in the browser', () => {
 
 describe('locationMessage', () => {
   it('explains each failure in Spanish', () => {
-    expect(locationMessage('denied')).toContain('permiso de ubicación');
-    expect(locationMessage('disabled')).toContain('GPS');
-    expect(locationMessage('unavailable')).toContain('No pudimos obtener tu ubicación');
+    expect(translate('es', locationMessage('denied'))).toContain('permiso de ubicación');
+    expect(translate('es', locationMessage('disabled'))).toContain('GPS');
+    expect(translate('es', locationMessage('unavailable'))).toContain('No pudimos obtener tu ubicación');
+    expect(translate('en', locationMessage('denied'))).toContain('Settings > Apps > Atalaya > Permissions');
   });
 });
