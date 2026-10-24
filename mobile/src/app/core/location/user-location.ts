@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import type { MessageKey } from '../../i18n/translate';
 
 export type LocationFailure = 'denied' | 'disabled' | 'unavailable';
 
@@ -16,14 +17,14 @@ const DISABLED_CODES = ['OS-PLUG-GLOC-0007', 'OS-PLUG-GLOC-0009', 'OS-PLUG-GLOC-
 /** Browser GeolocationPositionError.PERMISSION_DENIED. */
 const BROWSER_DENIED = 1;
 
-const MESSAGES: Record<LocationFailure, string> = {
-  denied:
-    'Atalaya no tiene permiso de ubicación. Actívalo en Ajustes > Apps > Atalaya > Permisos, o busca tu municipio en el mapa.',
-  disabled: 'La ubicación (GPS) de tu teléfono está apagada. Actívala y vuelve a intentarlo.',
-  unavailable: 'No pudimos obtener tu ubicación. Inténtalo de nuevo en unos segundos.',
+const MESSAGES: Record<LocationFailure, MessageKey> = {
+  denied: 'location.denied',
+  disabled: 'location.disabled',
+  unavailable: 'location.unavailable',
 };
 
-export function locationMessage(failure: LocationFailure): string {
+/** What to tell the user, as a text key (the map says it in the app's language). */
+export function locationMessage(failure: LocationFailure): MessageKey {
   return MESSAGES[failure];
 }
 

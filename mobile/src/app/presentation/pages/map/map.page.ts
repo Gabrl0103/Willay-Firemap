@@ -8,6 +8,7 @@ import {
 } from 'maplibre-gl';
 import { getUserLocation, locationMessage } from '../../../core/location/user-location';
 import { AppCurtain } from '../../../core/app-curtain';
+import { API_ERROR_KEYS } from '../../../core/error/api-error';
 import { ZoneSharer, type ShareOutcome } from '../../../core/share/share-zone';
 import { SearchRequest } from '../../../core/search-request';
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
@@ -106,8 +107,9 @@ export class MapPage implements AfterViewInit, OnDestroy {
   /** The glass search layer, opened from the magnifier of the bottom nav. */
   protected readonly searchOpen = signal(false);
   protected readonly locating = signal(false);
-  /** Why «Mi ubicación» failed, in Spanish (kept apart from the store error, whose retry reloads zones). */
-  protected readonly locationError = signal<string | null>(null);
+  /** Why «Mi ubicación» failed, as a text key (kept apart from the store error, whose retry reloads zones). */
+  protected readonly locationError = signal<MessageKey | null>(null);
+  protected readonly errorKeys = API_ERROR_KEYS;
   protected readonly shareNotice = signal<string | null>(null);
   private noticeTimer?: ReturnType<typeof setTimeout>;
 

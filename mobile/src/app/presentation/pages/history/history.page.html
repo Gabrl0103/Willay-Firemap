@@ -2,35 +2,35 @@
 
 <div class="page-scroll">
   <header class="head anim-up">
-    <h1 class="page-title">Historial</h1>
-    <p class="period">{{ placePrefix() }}del <span class="mono">{{ period.from }}</span> al <span class="mono">{{ period.to }}</span></p>
+    <h1 class="page-title">{{ 'nav.history' | t }}</h1>
+    <p class="period">{{ placePrefix() }}{{ 'history.period' | t: { from: period().from, to: period().to } }}</p>
   </header>
 
-  <div class="filter-row anim-up" style="--i: 1" role="group" aria-label="Municipio">
-    <button type="button" [class.is-active]="!zoneId()" (click)="filterBy()">Todos</button>
+  <div class="filter-row anim-up" style="--i: 1" role="group" [attr.aria-label]="'history.filter' | t">
+    <button type="button" [class.is-active]="!zoneId()" (click)="filterBy()">{{ 'history.all' | t }}</button>
     @for (zone of zones(); track zone.id) {
       <button type="button" [class.is-active]="zoneId() === zone.id" (click)="filterBy(zone.id)">{{ zone.name }}</button>
     }
   </div>
 
-  @if (store.error(); as message) {
+  @if (store.error(); as code) {
     <div class="glass-card state-card error anim-up" style="--i: 2">
-      <span>{{ message }}</span>
-      <button type="button" (click)="store.load(zoneId())">Reintentar</button>
+      <span>{{ errorKeys[code] | t }}</span>
+      <button type="button" (click)="store.load(zoneId())">{{ 'common.retry' | t }}</button>
     </div>
   } @else if (store.loading() && !store.history()) {
-    <div class="glass-card state-card anim-up" style="--i: 2">Cargando registros…</div>
+    <div class="glass-card state-card anim-up" style="--i: 2">{{ 'history.loading' | t }}</div>
   } @else {
-    <section class="glass-card overview anim-up" style="--i: 2" aria-label="Reportes por año">
+    <section class="glass-card overview anim-up" style="--i: 2" [attr.aria-label]="'history.perYearTitle' | t">
       <div class="totals">
         <div class="count">
           <strong class="mono">{{ events().length }}</strong>
-          <span>{{ events().length === 1 ? 'reporte' : 'reportes' }} en {{ years().length }} años</span>
+          <span>{{ 'history.reportsIn' | t: { count: events().length, years: years().length } }}</span>
         </div>
         <div class="rates">
-          <b class="mono">{{ perYear() }} por año</b>
+          <b class="mono">{{ 'history.perYear' | t: { value: perYear() } }}</b>
           @if (peak(); as p) {
-            <span>Máximo: <span class="mono">{{ p.year }} ({{ p.count }})</span></span>
+            <span>{{ 'history.peak' | t }} <span class="mono">{{ p.year }} ({{ p.count }})</span></span>
           }
         </div>
       </div>
@@ -46,8 +46,8 @@
     </section>
 
     <div class="list-heading anim-up" style="--i: 3">
-      <h2 class="section-title">Reportes recientes</h2>
-      <span class="mono">{{ shownEvents().length }} de {{ events().length }}</span>
+      <h2 class="section-title">{{ 'history.recent' | t }}</h2>
+      <span class="mono">{{ 'history.shownOf' | t: { shown: shownEvents().length, total: events().length } }}</span>
     </div>
     @if (events().length) {
       <div class="event-list">
@@ -57,11 +57,11 @@
       </div>
       @if (events().length > shownEvents().length) {
         <button type="button" class="show-all" (click)="showAll.set(true)">
-          Ver los <span class="mono">{{ events().length }}</span> reportes
+          {{ 'history.showAllBefore' | t }} <span class="mono">{{ events().length }}</span> {{ 'history.showAllAfter' | t }}
         </button>
       }
     } @else {
-      <div class="glass-card state-card">No hay incendios registrados para este municipio.</div>
+      <div class="glass-card state-card">{{ 'history.empty' | t }}</div>
     }
   }
 

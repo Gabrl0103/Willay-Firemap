@@ -44,14 +44,14 @@
   />
 }
 
-@if (store.error(); as message) {
+@if (store.error(); as code) {
   <div class="error-banner" role="alert">
-    <span>{{ message }}</span>
+    <span>{{ errorKeys[code] | t }}</span>
     <button type="button" (click)="store.load(); store.dismissError()">{{ 'common.retry' | t }}</button>
   </div>
-} @else if (locationError(); as message) {
+} @else if (locationError(); as key) {
   <div class="error-banner location-error" role="alert">
-    <span>{{ message }}</span>
+    <span>{{ key | t }}</span>
     <div class="banner-actions">
       <button type="button" (click)="locateMe()">{{ 'common.retry' | t }}</button>
       <button type="button" (click)="locationError.set(null)">{{ 'common.close' | t }}</button>

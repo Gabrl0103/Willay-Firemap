@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { apiErrorCode, type ApiErrorCode } from '../core/error/api-error';
 import type { FireHistory } from '../domain/model/risk';
 import { FireRepository } from '../domain/repository/repositories';
 
@@ -8,7 +9,7 @@ export class HistoryStore {
 
   readonly history = signal<FireHistory | null>(null);
   readonly loading = signal(false);
-  readonly error = signal<string | null>(null);
+  readonly error = signal<ApiErrorCode | null>(null);
 
   load(zoneId?: string): void {
     this.loading.set(true);
@@ -18,8 +19,8 @@ export class HistoryStore {
         this.history.set(history);
         this.loading.set(false);
       },
-      error: (error: Error) => {
-        this.error.set(error.message);
+      error: (error: unknown) => {
+        this.error.set(apiErrorCode(error));
         this.loading.set(false);
       },
     });

@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { forkJoin, type Subscription } from 'rxjs';
+import { apiErrorCode, type ApiErrorCode } from '../core/error/api-error';
 import type { FireHistory, Hotspot, ZoneBoundaries, ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../domain/model/risk';
 import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from '../domain/repository/repositories';
 
@@ -35,7 +36,8 @@ export class ZonesStore {
   readonly boundaries = signal<ZoneBoundaries | null>(null);
   readonly boundariesStatus = signal<BoundariesStatus>('idle');
   readonly loading = signal(false);
-  readonly error = signal<string | null>(null);
+  /** Why the zones could not load; the map and Inicio name it in the app's language. */
+  readonly error = signal<ApiErrorCode | null>(null);
   readonly updatedAt = signal<Date | null>(null);
 
   /** Model forecasts by zone, with when they arrived (fallbacks are asked again: the model may be back). */
@@ -56,8 +58,8 @@ export class ZonesStore {
         this.updatedAt.set(new Date());
         this.loading.set(false);
       },
-      error: (error: Error) => {
-        this.error.set(error.message);
+      error: (error: unknown) => {
+        this.error.set(apiErrorCode(error));
         this.loading.set(false);
       },
     });
@@ -92,7 +94,7 @@ export class ZonesStore {
       next: (detail) => {
         if (this.selectedId() === zoneId) this.detail.set(detail);
       },
-      error: (error: Error) => this.error.set(error.message),
+      error: (error: unknown) => this.error.set(apiErrorCode(error)),
     });
     this.fireRepository.history(zoneId).subscribe({
       next: (history) => {
@@ -143,8 +145,8 @@ export class ZonesStore {
     this.forecastStatus.set('idle');
   }
 
-  reportError(message: string): void {
-    this.error.set(message);
+  reportError(code: ApiErrorCode): void {
+    this.error.set(code);
   }
 
   dismissError(): void {

@@ -53,9 +53,9 @@
     <p class="note anim-up" style="--i: 5">
       {{ 'home.note' | t }}
     </p>
-  } @else if (store.error(); as message) {
+  } @else if (store.error(); as code) {
     <div class="glass-card state-card error anim-up" style="--i: 1">
-      <span>{{ message }}</span>
+      <span>{{ errorKeys[code] | t }}</span>
       <button type="button" (click)="store.load()">{{ 'common.retry' | t }}</button>
     </div>
   } @else {

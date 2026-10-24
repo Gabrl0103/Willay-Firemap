@@ -1,7 +1,10 @@
+import { LOCALES, translate, type Language } from '../../i18n/translate';
 import type { FireEvent, FireSource } from '../model/risk';
 import { formatDateMedium } from './format';
 
-const SOURCE_NAMES: Record<FireSource, string> = { ungrd: 'UNGRD', news: 'noticias locales' };
+/** UNGRD is a name; the news are described in the app's language. */
+const sourceName = (source: FireSource, language: Language): string =>
+  source === 'ungrd' ? 'UNGRD' : translate(language, 'source.newsLocal');
 
 const yearOf = (event: FireEvent): number => Number(event.date.slice(0, 4));
 
@@ -33,9 +36,9 @@ export function keepYearRangesTogether(text: string): string {
   return text.replace(/(\d{4})–(\d{4})/g, `$1–${WORD_JOINER}$2`);
 }
 
-/** "a", "a y b", "a, b y c". */
-function joinSpanish(items: readonly string[]): string {
-  return items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} y ${items.at(-1)}`;
+/** "a, b y c" | "a, b, and c". */
+function joinList(items: readonly string[], language: Language): string {
+  return new Intl.ListFormat(LOCALES[language], { type: 'conjunction' }).format(items);
 }
 
 /** Local calendar day of a date, as ISO (YYYY-MM-DD). */
@@ -45,8 +48,8 @@ export function toIsoDate(date: Date): string {
 }
 
 /** Period the records cover, from the start of the data to today: { from: "1 ene 2019", to: "6 oct 2026" }. */
-export function recordPeriod(now: Date): { from: string; to: string } {
-  return { from: formatDateMedium(RECORD_START), to: formatDateMedium(toIsoDate(now)) };
+export function recordPeriod(now: Date, language: Language = 'es'): { from: string; to: string } {
+  return { from: formatDateMedium(RECORD_START, language), to: formatDateMedium(toIsoDate(now), language) };
 }
 
 export interface YearCount {
@@ -101,7 +104,7 @@ export function splitPlace(place: string): { name: string; municipality: string 
  * Sources are listed by their first year; a gap is a year between the first and the last record
  * without any fire. Empty string when there are no events.
  */
-export function coverageNote(events: readonly FireEvent[]): string {
+export function coverageNote(events: readonly FireEvent[], language: Language = 'es'): string {
   if (events.length === 0) return '';
   const bySource = new Map<FireSource, { from: number; to: number }>();
   for (const event of events) {
@@ -111,7 +114,7 @@ export function coverageNote(events: readonly FireEvent[]): string {
   }
   const sources = [...bySource.entries()]
     .sort(([, a], [, b]) => a.from - b.from || a.to - b.to)
-    .map(([source, { from, to }]) => `${SOURCE_NAMES[source]} (${yearRange(from, to)})`);
+    .map(([source, { from, to }]) => `${sourceName(source, language)} (${yearRange(from, to)})`);
 
   const years = new Set(events.map(yearOf));
   const first = Math.min(...years);
@@ -125,6 +128,6 @@ export function coverageNote(events: readonly FireEvent[]): string {
     year = end;
   }
 
-  const note = `Fuentes: ${joinSpanish(sources)}.`;
-  return gaps.length > 0 ? `${note} Sin datos de ${joinSpanish(gaps)}.` : note;
+  const note = translate(language, 'history.sources', { list: joinList(sources, language) });
+  return gaps.length > 0 ? `${note} ${translate(language, 'history.noData', { list: joinList(gaps, language) })}` : note;
 }

@@ -1,5 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { API_ERROR_KEYS } from '../../../core/error/api-error';
 import type { RiskLevel } from '../../../domain/model/risk';
 import { summarizeDepartment, topZones } from '../../../domain/util/department-summary';
 import { favoriteZones } from '../../../domain/util/favorites';
@@ -24,6 +25,7 @@ const TOP_ZONE_COUNT = 5;
 })
 export class HomePage {
   protected readonly store = inject(ZonesStore);
+  protected readonly errorKeys = API_ERROR_KEYS;
   private readonly router = inject(Router);
   private readonly favorites = inject(FavoritesStore);
   private readonly i18n = inject(I18n);
