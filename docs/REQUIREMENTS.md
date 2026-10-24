@@ -262,6 +262,35 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-24 (v0.27, rama `feat/map-globe`):** un solo elemento por municipio en el zoom de nombres.
+  - Antes: desde zoom 8,5, junto a las etiquetas seguían saliendo círculos con número que parecían grupos (no lo
+    eran: eran municipios cuya etiqueta no cabía, dibujados como el círculo del zoom bajo) y podían quedar
+    encima de otra etiqueta («36» sobre Ancuya); el que tenía etiqueta mostraba además su punto al lado; y una
+    etiqueta podía salir cortada por un borde, la cabecera o la hoja.
+  - Desde zoom 8,5 el municipio es su etiqueta, centrada en la cabecera, sin punto aparte. Si no cabe, es un punto
+    de 8 px sin número, y si una etiqueta lo tapa no se dibuja.
+  - Solo se muestran etiquetas enteras dentro del mapa libre (debajo de la cabecera, dentro de los bordes y
+    encima de la hoja general o la de zona); al subir o bajar una hoja se vuelven a ubicar.
+  - Igual que antes: prioridad del seleccionado y luego por puntaje, y el mismo contraste.
+  - Verificado en 390 × 844: el encuadre inicial (zoom 6,9) no muestra etiquetas; a zoom 8,5–11,5, con la hoja
+    baja, subida o la de zona abierta, ninguna sale cortada ni encimada.
+- **2026-10-24 (v0.26, rama `feat/map-globe`):** el mapa más legible y con un flujo más natural, tras probarlo en el navegador.
+  - Antes: sobre Nariño los grupos («40», «14») tapaban los municipios (se agrupaba hasta zoom 8 y el encuadre
+    queda en ~6,9); los polígonos casi no se distinguían (relleno 0,28, contorno de 0,8 px) y no había nombres
+    hasta zoom 10; el globo casi no se veía; la entrada se repetía en cada recarga y la hoja ocupaba mucho.
+  - Grupos solo hasta zoom 5, por debajo del mínimo sobre Nariño (6): ahí cada municipio tiene su marcador.
+  - Polígonos: relleno 0,42 (seleccionado 0,62), contorno claro de 1 px, borde del departamento de 2,5 px (los
+    bordes que tiene un solo municipio; mapshaper conserva los compartidos vértice a vértice) y el seleccionado
+    con contorno blanco de 3 px y resplandor.
+  - Etiquetas con nombre y puntaje en el color del nivel desde zoom 8,5; al detenerse la cámara se ubican de
+    mayor a menor prioridad (seleccionado, luego puntaje) y las que chocan quedan como punto con el puntaje.
+  - Globo: tiles más claros y con algo más de color hasta zoom 3, que pasan al estilo oscuro en zoom 5.
+  - Entrada una vez por sesión (`sessionStorage`, con la marca de la página de respaldo); un toque salta el giro
+    o el vuelo; `prefers-reduced-motion` abre directo en Nariño.
+  - Encuadre a 35° (antes 50°), con menos margen a los lados y el inferior según la altura de la hoja.
+  - Hoja baja por defecto (247 px en 390 × 844; con todo a la vista, ~350 px): título, niveles y «Acercar a Nariño»; arrastrando
+    o con el asa se sube con los conteos, rangos, clave de focos y nota.
+  - Tocar un municipio: vuelo de 0,7 s al zoom 9,5 y su hoja de zona; al cerrarla, vuelta de 0,9 s a Nariño.
 - **2026-10-21 (v0.25, rama `feat/map-globe`):** el mapa ajustado a la captura aprobada (`docs/design/4 · Mapa (globo)`).
   - Antes: abriendo directo en `/map`, el giro y el vuelo pasaban debajo de la splash (2,5 s + 0,45 s) y nadie los
     veía; el globo quedaba medio tapado por la hoja, que ocupaba el 52 % de la pantalla; Nariño salía chico.

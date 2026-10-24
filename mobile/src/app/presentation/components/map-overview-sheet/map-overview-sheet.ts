@@ -3,8 +3,36 @@ import type { RiskLevel } from '../../../domain/model/risk';
 import { RISK_RANGES } from '../../../domain/util/risk-labels';
 import { AppIcon } from '../app-icon/app-icon';
 import { RiskBadge } from '../risk-badge/risk-badge';
+import { FLICK_VELOCITY } from '../zone-sheet/sheet-snap';
 
 const LEVELS: readonly RiskLevel[] = ['low', 'medium', 'high', 'extreme'];
+/** Movement (px) below which a press on the top of the sheet is a tap, not a drag. */
+const TAP_SLOP = 6;
+/** A drag this long (px) opens or lowers the sheet... */
+export const DRAG_DISTANCE = 40;
+/** ...and while the finger moves it the sheet follows, up to this far up (it has nothing more above). */
+const MAX_LIFT = 24;
+/** A finger that stops this long (ms) before lifting releases with no speed. */
+const STILL_MS = 100;
+
+/**
+ * Whether the sheet ends open after a drag of `dy` px (negative: up) released at `velocity` px/ms
+ * (positive: down). A flick or a drag past DRAG_DISTANCE moves it; anything less leaves it as it was.
+ */
+export function overviewOpenAfterDrag(open: boolean, dy: number, velocity: number): boolean {
+  if (velocity <= -FLICK_VELOCITY || dy <= -DRAG_DISTANCE) return true;
+  if (velocity >= FLICK_VELOCITY || dy >= DRAG_DISTANCE) return false;
+  return open;
+}
+
+interface DragState {
+  readonly pointerId: number;
+  readonly startY: number;
+  lastY: number;
+  lastTime: number;
+  velocity: number;
+  moved: boolean;
+}
 
 /** "64 municipios · 12 focos de calor recientes", in singular when there is one. */
 export function overviewCounts(zoneCount: number, hotspotCount: number): string {
@@ -14,35 +42,56 @@ export function overviewCounts(zoneCount: number, hotspotCount: number): string 
 }
 
 /**
- * Bottom sheet of the map while no zone is selected: the department in numbers, the risk legend and
- * a way back to the whole department. The handle folds it down to its title to see more map.
+ * Bottom sheet of the map while no zone is selected. Low by default (title, the four levels and a
+ * way back to the whole department) so the map has room; dragged up (or the handle tapped) it adds
+ * the numbers, the ranges, the hotspot key and the disclaimer. Its height only changes when it
+ * settles, so the map frames Nariño again once, not on every pixel of the drag.
  */
 @Component({
   selector: 'app-map-overview-sheet',
   imports: [AppIcon, RiskBadge],
+  // While dragged the whole sheet follows the finger (the section's entry animation owns its own transform).
+  host: { '[style.transform]': 'dragTransform()', '[class.is-dragging]': 'dragOffset() !== null' },
   template: `
-    <section class="overview anim-sheet" [class.is-folded]="folded()" aria-labelledby="overview-title">
-      <button
-        type="button"
-        class="handle"
-        [attr.aria-label]="folded() ? 'Mostrar leyenda' : 'Ocultar leyenda'"
-        [attr.aria-expanded]="!folded()"
-        (click)="folded.set(!folded())"
+    <section class="overview anim-sheet" [class.is-open]="open()" aria-labelledby="overview-title">
+      <div
+        class="drag-area"
+        (pointerdown)="onPointerDown($event)"
+        (pointermove)="onPointerMove($event)"
+        (pointerup)="onPointerUp($event)"
+        (pointercancel)="onPointerCancel($event)"
       >
-        <span></span>
-      </button>
-      <h2 id="overview-title">Departamento de Nariño</h2>
-      <p class="counts">{{ counts() }}</p>
-      @if (!folded()) {
-        <ul class="legend" aria-label="Leyenda de riesgo">
-          @for (level of levels; track level) {
-            <li><app-risk-badge [level]="level" /><small class="range mono">{{ ranges[level] }}</small></li>
-          }
-        </ul>
-        <p class="hotspot-key"><span class="dot"></span>Foco de calor (NASA FIRMS, últimos 5 días)</p>
-        @if (canZoom()) {
-          <button type="button" class="zoom" (click)="zoomRequested.emit()">Acercar a Nariño</button>
+        <button
+          type="button"
+          class="handle"
+          [attr.aria-label]="open() ? 'Ocultar detalles' : 'Mostrar detalles'"
+          [attr.aria-expanded]="open()"
+          (click)="toggle()"
+        >
+          <span></span>
+        </button>
+        <h2 id="overview-title">Departamento de Nariño</h2>
+        @if (open()) {
+          <p class="counts">{{ counts() }}</p>
         }
+      </div>
+      <ul class="legend" aria-label="Leyenda de riesgo">
+        @for (level of levels; track level) {
+          <li>
+            <app-risk-badge [level]="level" />
+            @if (open()) {
+              <small class="range mono">{{ ranges[level] }}</small>
+            }
+          </li>
+        }
+      </ul>
+      @if (open()) {
+        <p class="hotspot-key"><span class="dot"></span>Foco de calor (NASA FIRMS, últimos 5 días)</p>
+      }
+      @if (canZoom()) {
+        <button type="button" class="zoom" (click)="zoomRequested.emit()">Acercar a Nariño</button>
+      }
+      @if (open()) {
         <p class="note">
           <span><app-icon name="alert" [size]="12" />Estimación de riesgo, no predicción exacta</span>
           @if (updatedLabel()) {
@@ -65,8 +114,66 @@ export class MapOverviewSheet {
 
   protected readonly levels = LEVELS;
   protected readonly ranges = RISK_RANGES;
-  protected readonly folded = signal(false);
+  protected readonly open = signal(false);
+  /** How far (px) the finger has moved the sheet; null when it rests. */
+  protected readonly dragOffset = signal<number | null>(null);
+  protected readonly dragTransform = computed(() => {
+    const offset = this.dragOffset();
+    return offset === null ? null : `translateY(${offset}px)`;
+  });
   protected readonly counts = computed(() =>
     this.zoneCount() === 0 ? 'Cargando municipios…' : overviewCounts(this.zoneCount(), this.hotspotCount()),
   );
+
+  private drag?: DragState;
+  /** The click that follows a drag on the handle must not toggle the sheet. */
+  private suppressClick = false;
+
+  protected toggle(): void {
+    if (this.suppressClick) {
+      this.suppressClick = false;
+      return;
+    }
+    this.open.set(!this.open());
+  }
+
+  protected onPointerDown(event: PointerEvent): void {
+    this.suppressClick = false;
+    if (event.button !== 0) return;
+    this.drag = { pointerId: event.pointerId, startY: event.clientY, lastY: event.clientY, lastTime: event.timeStamp, velocity: 0, moved: false };
+  }
+
+  protected onPointerMove(event: PointerEvent): void {
+    const drag = this.drag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const dy = event.clientY - drag.startY;
+    if (!drag.moved) {
+      if (Math.abs(dy) < TAP_SLOP) return;
+      drag.moved = true;
+      (event.currentTarget as Element).setPointerCapture(event.pointerId);
+    }
+    const dt = event.timeStamp - drag.lastTime;
+    if (dt > 0) drag.velocity = (event.clientY - drag.lastY) / dt;
+    drag.lastY = event.clientY;
+    drag.lastTime = event.timeStamp;
+    // Up it only gives a little (the rest shows when it opens); down it follows the finger.
+    this.dragOffset.set(Math.max(dy, -MAX_LIFT));
+  }
+
+  protected onPointerUp(event: PointerEvent): void {
+    const drag = this.drag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    this.drag = undefined;
+    if (!drag.moved) return;
+    this.suppressClick = true;
+    const velocity = event.timeStamp - drag.lastTime > STILL_MS ? 0 : drag.velocity;
+    this.dragOffset.set(null);
+    this.open.set(overviewOpenAfterDrag(this.open(), event.clientY - drag.startY, velocity));
+  }
+
+  protected onPointerCancel(event: PointerEvent): void {
+    if (event.pointerId !== this.drag?.pointerId) return;
+    this.drag = undefined;
+    this.dragOffset.set(null);
+  }
 }

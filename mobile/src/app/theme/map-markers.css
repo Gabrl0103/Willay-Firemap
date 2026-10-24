@@ -39,30 +39,39 @@
   color: var(--risk, var(--risk-low));
   cursor: pointer;
 }
+/* Zoom bajo: círculo del color del riesgo con el puntaje. */
 .zone-dot {
   position: absolute;
-  inset: 4px;
-  border-radius: 3px;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
   background: currentColor;
   border: 1px solid rgba(249, 249, 244, 0.82);
-  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 25%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 25%, transparent);
 }
-.zone-marker.is-selected .zone-dot { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 45%, transparent); }
-/* Score inside the dot: hidden while names are shown (the label already has it). */
-.zone-dot i { display: none; font-style: normal; font-size: 8px; font-weight: 700; line-height: 1; color: #fff; }
+.zone-dot i { font-style: normal; font-size: 8px; font-weight: 700; line-height: 1; color: #fff; }
 .zone-marker.risk-medium .zone-dot i { color: var(--map-deep); }
+/* Etiqueta centrada en la cabecera: cuando se ve, es el único elemento del municipio. */
 .zone-label {
   position: absolute;
-  left: 14px;
-  top: -3px;
-  display: flex;
+  left: 50%;
+  top: 50%;
+  display: none;
   flex-direction: column;
   align-items: flex-start;
+  padding: 2px 5px 2px 4px;
+  border-left: 2px solid currentColor;
+  border-radius: 0 5px 5px 0;
+  background: rgba(11, 6, 4, 0.68);
   white-space: nowrap;
   text-shadow: 0 1px 3px var(--map-deep);
+  transform: translate(-50%, -50%);
 }
 .zone-label b { font-size: 9px; line-height: 1; color: var(--map-foreground); }
-.zone-label small { margin-top: 2px; font-size: 7px; color: rgba(245, 246, 243, 0.82); }
+/* Puntaje y nivel en el color del riesgo. */
+.zone-label small { margin-top: 2px; font-size: 7px; font-weight: 700; line-height: 1; color: currentColor; }
+.zone-marker.is-selected .zone-label { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 55%, transparent), 0 0 14px color-mix(in srgb, currentColor 40%, transparent); }
 
 .user-dot {
   display: block;
@@ -74,10 +83,12 @@
   box-shadow: 0 0 0 6px rgba(47, 123, 255, 0.25);
 }
 
-/* Zoomed out: only the colored dot with the score; the selected zone keeps its name. */
-.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-label { display: none; }
-.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-dot {
-  inset: 0; display: grid; place-items: center; border-radius: 50%;
-  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 25%, transparent);
-}
-.map-element:not(.show-names) .zone-marker:not(.is-selected) .zone-dot i { display: block; }
+/* Con nombres (map.page.ts show-names), o si está seleccionado: la etiqueta en lugar del círculo. */
+.map-element.show-names .zone-label, .zone-marker.is-selected .zone-label { display: flex; }
+.map-element.show-names .zone-dot, .zone-marker.is-selected .zone-dot { display: none; }
+/* Sin lugar para su etiqueta (placeLabels): un punto chico sin número; nada si una etiqueta lo tapa.
+   La etiqueta sigue maquetada (oculta) para que placeLabels la pueda medir. */
+.map-element.show-names .label-hidden .zone-marker:not(.is-selected) .zone-label { visibility: hidden; }
+.map-element.show-names .label-hidden .zone-marker:not(.is-selected) .zone-dot { display: block; inset: 5px; box-shadow: none; }
+.map-element.show-names .label-hidden .zone-marker:not(.is-selected) .zone-dot i { display: none; }
+.map-element.show-names .dot-hidden .zone-marker:not(.is-selected) .zone-dot { display: none; }

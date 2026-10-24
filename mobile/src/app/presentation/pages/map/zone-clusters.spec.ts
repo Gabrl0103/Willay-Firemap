@@ -1,4 +1,5 @@
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
+import { MIN_ZOOM_OVER_NARINO } from './map-camera';
 import { CLUSTER_MAX_ZOOM, diffMarkers, markerItems, zonesSource, type SourcePoint } from './zone-clusters';
 import { NAME_MIN_ZOOM } from './zone-marker';
 
@@ -23,7 +24,8 @@ describe('zone clusters', () => {
     });
   });
 
-  it('stops grouping before the names show up', () => {
+  it('only groups in far views: over Nariño every municipality has its own marker', () => {
+    expect(CLUSTER_MAX_ZOOM).toBeLessThan(MIN_ZOOM_OVER_NARINO);
     expect(CLUSTER_MAX_ZOOM).toBeLessThan(NAME_MIN_ZOOM);
   });
 

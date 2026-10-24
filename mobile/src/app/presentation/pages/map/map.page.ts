@@ -1,5 +1,5 @@
 import {
-  AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, viewChild,
+  AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, untracked, viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
@@ -18,25 +18,35 @@ import { SearchBox } from '../../components/search-box/search-box';
 import { MID_HEIGHT } from '../../components/zone-sheet/sheet-snap';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
-  FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, SPIN_MS, ZONE_FLY_MS, ZONE_ZOOM,
-  globeHalo, globeStart, hasWebGL, introPlan, prefersReducedMotion, spinCenter,
+  FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, RETURN_FLY_MS, SPIN_MS, TAP_FLY_MS,
+  ZONE_FLY_MS, ZONE_ZOOM,
+  globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed, rememberIntroPlayed, spinCenter,
 } from './map-camera';
 import {
-  BOUNDARIES_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYER, boundariesSource, boundaryLayers,
-  hotspotLayers, hotspotPoints, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
+  BOUNDARIES_SOURCE, DEPARTMENT_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYERS, boundariesSource, boundaryLayers,
+  departmentSource, hotspotLayers, hotspotPoints, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
 } from './map-layers';
 import { mapStyle } from './map-style';
 import { ZONES_SOURCE, diffMarkers, markerItems, zonePoints, zonesHitLayer, zonesSource, type MarkerItem } from './zone-clusters';
-import { clusterLabel, clusterMarkerHtml, showsNames, zoneMarkerHtml } from './zone-marker';
+import {
+  clusterLabel, clusterMarkerHtml, coveredDots, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox, type ScreenBox,
+} from './zone-marker';
 
 /** MapLibre's worker, copied next to the app by angular.json (it cannot come from a CDN). */
 const WORKER_PATH = 'maplibre/maplibre-gl-worker.mjs';
-/** The globe spins and flies once per app session; later visits open straight over Nariño. */
+/**
+ * The globe spins and flies once per session (sessionStorage, so a reload does not replay it);
+ * later visits open straight over Nariño. This flag covers a browser without storage.
+ */
 let introPlayed = false;
-/** Room for the header (top) when framing the department; the bottom adds the sheet's height. */
-const NARINO_PADDING = { top: 84, bottom: 12, left: 12, right: 12 };
+/** Any of these on the map during the intro skips it. */
+const SKIP_EVENTS = ['mousedown', 'touchstart', 'wheel'] as const;
 /** How far (px) the globe's orange halo reaches beyond its edge. */
 const GLOW_WIDTH = 44;
+/** Room (px) a label keeps from the edges of the free map area. */
+const LABEL_MARGIN = 4;
+/** Half the size (px) of the dot of a municipality whose label does not fit (map-markers.css). */
+const DOT_RADIUS = 4;
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
 const SEAT_OFFSET: [number, number] = [0, -150];
 
@@ -62,17 +72,24 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
   private readonly glow = viewChild.required<ElementRef<HTMLDivElement>>('glow');
+  private readonly header = viewChild.required<ElementRef<HTMLElement>>('header');
   private map?: MapLibreMap;
   private colors?: MapColors;
   private readonly markers = new Map<string, ShownMarker>();
   private userMarker?: Marker;
   private spinFrame?: number;
   private spinning = false;
+  /** Ends the intro (spin or flight to Nariño) and drops its skip listeners; false outside it. */
+  private endIntro: () => boolean = () => false;
+  /** Bumped by every camera move the page starts, so a flight that was cut short does not finish its work. */
+  private cameraMove = 0;
   private destroyed = false;
   private readonly mapReady = signal(false);
   private boundariesShown = false;
   /** The camera shows the whole department (intro, «Acercar a Nariño»), untouched since. */
   private framingNarino = false;
+  /** The zone sheet just closed: once the overview sheet is laid out (its height known), fly back to Nariño. */
+  private returnToNarino = false;
   protected readonly sheetInset = signal(0);
   /** No WebGL: MapLibre cannot draw in any projection, so the map area explains it instead. */
   protected readonly mapUnavailable = signal(false);
@@ -119,6 +136,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
       if (!this.mapReady()) return;
       this.styleSelection(this.store.zones(), this.store.selectedId(), this.store.boundaries());
     });
+    // A sheet that grows covers more map: the labels under it give way (and the ones it uncovers come back).
+    effect(() => {
+      this.sheetInset();
+      if (this.mapReady()) untracked(() => this.placeLabels());
+    });
     // The overview sheet folds and unfolds: the credits follow it and Nariño is framed again above it.
     effect((onCleanup) => {
       const overview = this.overview()?.nativeElement;
@@ -128,9 +150,15 @@ export class MapPage implements AfterViewInit, OnDestroy {
         this.sheetInset.set(detailOpen ? Math.round(this.mapElement().nativeElement.clientHeight * MID_HEIGHT) : 0);
         return;
       }
+      // Called once right away, with the sheet's real height: the moment to fly back after a zone.
       const observer = new ResizeObserver(() => {
         this.sheetInset.set(overview.offsetHeight);
-        if (this.framingNarino) this.reframeNarino();
+        if (this.returnToNarino) {
+          this.returnToNarino = false;
+          this.flyToNarino(false, RETURN_FLY_MS);
+        } else if (this.framingNarino) {
+          this.reframeNarino();
+        }
       });
       observer.observe(overview);
       onCleanup(() => observer.disconnect());
@@ -155,9 +183,10 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const plan = introPlan({
       hasSelection: this.store.selectedId() !== null,
       reducedMotion: prefersReducedMotion(window),
-      firstVisit: !introPlayed,
+      firstVisit: !introPlayed && !readIntroPlayed(window),
     });
     introPlayed = true;
+    rememberIntroPlayed(window);
 
     const map = new MapLibreMap({
       container: element,
@@ -177,11 +206,16 @@ export class MapPage implements AfterViewInit, OnDestroy {
     map.addControl(new AttributionControl({ compact: false }), 'bottom-right');
 
     const updateZoomClass = (): void => {
-      element.classList.toggle('show-names', showsNames(map.getZoom()));
+      const names = showsNames(map.getZoom());
+      if (names === element.classList.contains('show-names')) return;
+      // Crossing into the names: they wait hidden until the camera stops and placeLabels sorts them out.
+      if (names) this.hideLabels();
+      element.classList.toggle('show-names', names);
     };
     map.on('zoom', updateZoomClass);
     updateZoomClass();
     map.on('render', () => this.syncMarkers());
+    map.on('moveend', () => this.placeLabels());
     map.on('move', () => this.placeGlow());
     map.on('resize', () => this.placeGlow());
     this.placeGlow();
@@ -199,13 +233,14 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.endIntro();
     this.stopSpin();
     this.map?.remove();
   }
 
-  protected selectZone(zone: ZoneRiskSummary): void {
+  protected selectZone(zone: ZoneRiskSummary, duration = ZONE_FLY_MS): void {
     this.store.select(zone.id);
-    this.flyToSeat(zone.longitude, zone.latitude);
+    this.flyToSeat(zone.longitude, zone.latitude, duration);
   }
 
   protected pickFromSearch(zone: ZoneRiskSummary): void {
@@ -222,7 +257,9 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.flyToNarino(false);
   }
 
+  /** The zone sheet closed (its back button, the backdrop or a drag down): back to the whole department. */
   protected closeSheet(): void {
+    this.returnToNarino = true;
     this.store.clearSelection();
   }
 
@@ -261,6 +298,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (!map || !this.colors) return;
     this.boundariesShown = true;
     map.addSource(BOUNDARIES_SOURCE, boundariesSource(boundaries));
+    map.addSource(DEPARTMENT_SOURCE, departmentSource(boundaries));
     for (const layer of boundaryLayers(this.colors)) map.addLayer(layer, 'hotspot-halo');
     this.styleSelection(this.store.zones(), this.store.selectedId(), boundaries);
   }
@@ -277,12 +315,13 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (!map) return;
     if (boundaries && this.boundariesShown) {
       for (const { id, state } of zoneStates(boundaries, zones, selectedId)) map.setFeatureState({ source: BOUNDARIES_SOURCE, id }, state);
-      map.setFilter(ZONE_SELECTED_LAYER, selectedZoneFilter(selectedId));
+      for (const layer of ZONE_SELECTED_LAYERS) map.setFilter(layer, selectedZoneFilter(selectedId));
     }
-    // Markers already on screen take the new score, level or selection.
+    // Markers already on screen take the new score, level or selection; the selected name goes first.
     for (const { marker, item } of this.markers.values()) {
       if (item.kind === 'zone') this.paintZoneMarker(marker, item.zoneId);
     }
+    this.placeLabels();
   }
 
   /** Same as tapping the marker. A tap that started on a marker (or group) is the marker's, not the polygon's. */
@@ -292,7 +331,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const id = event.features?.[0]?.properties['id'];
     const zone = this.store.zones().find((z) => z.id === id);
     // Zones without a score yet have no sheet to open.
-    if (zone) this.selectZone(zone);
+    if (zone) this.selectZone(zone, TAP_FLY_MS);
   }
 
   /** Shows one HTML marker per group or lone seat that the zones source has, reusing those already shown. */
@@ -310,18 +349,69 @@ export class MapPage implements AfterViewInit, OnDestroy {
       marker.setLngLat(item.lngLat).addTo(map);
       this.markers.set(item.key, { marker, item });
     }
+    if (add.length > 0 && !map.isMoving()) this.placeLabels();
+  }
+
+  /**
+   * Shows the names (with the score) that fit without overlapping: the selected zone first, then
+   * the riskiest. The rest are a small dot, dropped when a shown label covers it, so a municipality
+   * is never a label and a dot at once. Measured when the camera stops, so nothing flickers while it moves.
+   */
+  private placeLabels(): void {
+    const map = this.map;
+    if (!map || !showsNames(map.getZoom())) return;
+    const scores = new Map(this.store.zones().map((zone) => [zone.id, zone.score]));
+    const selectedId = this.store.selectedId();
+    const boxes: LabelBox[] = [];
+    for (const { marker, item } of this.markers.values()) {
+      const label = item.kind === 'zone' ? marker.getElement().querySelector('.zone-label') : null;
+      if (!label || item.kind !== 'zone') continue;
+      const { left, top, right, bottom } = label.getBoundingClientRect();
+      const priority = item.zoneId === selectedId ? Infinity : (scores.get(item.zoneId) ?? 0);
+      boxes.push({ key: item.key, priority, left, top, right, bottom });
+    }
+    const shown = visibleLabels(boxes, this.labelArea());
+    const dots: (ScreenBox & { readonly key: string })[] = [];
+    for (const { marker, item } of this.markers.values()) {
+      const element = marker.getElement();
+      element.classList.toggle('label-hidden', !shown.has(item.key));
+      if (item.kind === 'zone' && !shown.has(item.key)) {
+        const { left, top, right, bottom } = element.getBoundingClientRect();
+        const x = (left + right) / 2;
+        const y = (top + bottom) / 2;
+        dots.push({ key: item.key, left: x - DOT_RADIUS, top: y - DOT_RADIUS, right: x + DOT_RADIUS, bottom: y + DOT_RADIUS });
+      }
+    }
+    const covered = coveredDots(dots, boxes.filter((box) => shown.has(box.key)));
+    for (const { marker, item } of this.markers.values()) marker.getElement().classList.toggle('dot-hidden', covered.has(item.key));
+  }
+
+  /** Where a label can show whole: the map below the header and above the sheet, with a small margin. */
+  private labelArea(): ScreenBox {
+    const map = this.mapElement().nativeElement.getBoundingClientRect();
+    return {
+      left: map.left + LABEL_MARGIN,
+      right: map.right - LABEL_MARGIN,
+      top: this.header().nativeElement.getBoundingClientRect().bottom + LABEL_MARGIN,
+      bottom: map.bottom - this.sheetInset() - LABEL_MARGIN,
+    };
+  }
+
+  private hideLabels(): void {
+    for (const { marker } of this.markers.values()) marker.getElement().classList.add('label-hidden');
   }
 
   private zoneMarker(zoneId: string): Marker | null {
     const zone = this.store.zones().find((z) => z.id === zoneId);
     if (!zone) return null;
     const element = document.createElement('div');
-    element.className = 'zone-icon';
+    // Its label shows once placeLabels finds room for it.
+    element.className = 'zone-icon label-hidden';
     element.title = zone.name;
     element.addEventListener('click', (event) => {
       event.stopPropagation();
       const current = this.store.zones().find((z) => z.id === zoneId);
-      if (current) this.selectZone(current);
+      if (current) this.selectZone(current, TAP_FLY_MS);
     });
     const marker = new Marker({ element });
     this.paintZoneMarker(marker, zoneId);
@@ -373,19 +463,24 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (plan === 'zone' && selected) this.flyToSeat(selected.longitude, selected.latitude);
   }
 
-  /** The globe turns slowly, then flies to Nariño. Touching the map skips straight to Nariño. */
+  /** The globe turns slowly, then flies to Nariño. Touching the map, spinning or flying, skips to the end. */
   private spin(): void {
     const map = this.map;
     if (!map) return;
     const start = performance.now();
     this.spinning = true;
-    const interrupt = (): void => {
-      if (!this.stopSpin()) return;
+    const skip = (): void => {
+      this.endIntro();
+      this.stopSpin();
+      map.stop();
       this.jumpToNarino();
     };
-    map.once('mousedown', interrupt);
-    map.once('touchstart', interrupt);
-    map.once('wheel', interrupt);
+    this.endIntro = () => {
+      this.endIntro = () => false;
+      for (const type of SKIP_EVENTS) map.off(type, skip);
+      return true;
+    };
+    for (const type of SKIP_EVENTS) map.on(type, skip);
     const frame = (now: number): void => {
       if (!this.spinning) return;
       const elapsed = now - start;
@@ -439,22 +534,25 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   /** Nariño as large as fits between the header and the sheet, tilted. Same for the intro and the button. */
   private narinoCamera() {
-    const padding = { ...NARINO_PADDING, bottom: NARINO_PADDING.bottom + this.sheetHeight() };
-    const camera = this.map?.cameraForBounds(NARINO_BOUNDS, { padding, pitch: PITCH });
+    const camera = this.map?.cameraForBounds(NARINO_BOUNDS, { padding: narinoPadding(this.sheetHeight()), pitch: PITCH });
     return camera && { ...camera, pitch: PITCH, padding: NO_PADDING };
   }
 
-  /** The intro flight is essential (reduced motion never gets here); the button's is not. */
-  private flyToNarino(essential = true): void {
+  /** The intro flight is essential (reduced motion never gets here); the button's and the return are not. */
+  private flyToNarino(essential = true, duration = FLY_MS): void {
     const map = this.map;
     const camera = this.narinoCamera();
     if (!map || !camera) return;
     this.framingNarino = false;
+    const move = ++this.cameraMove;
     map.once('moveend', () => {
+      // A skip or another flight took over: that one finishes the work.
+      if (move !== this.cameraMove) return;
+      this.endIntro();
       this.limitToNarino();
       this.framingNarino = true;
     });
-    map.flyTo({ ...camera, duration: FLY_MS, essential });
+    map.flyTo({ ...camera, duration, essential });
   }
 
   /** The sheet changed height while showing the department: frame it again above the sheet. */
@@ -467,6 +565,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const map = this.map;
     const camera = this.narinoCamera();
     if (!map || !camera) return;
+    this.cameraMove++;
     map.jumpTo(camera);
     this.limitToNarino();
     this.framingNarino = true;
@@ -482,12 +581,17 @@ export class MapPage implements AfterViewInit, OnDestroy {
    * Non-essential: MapLibre jumps instead of flying when the phone asks for reduced motion. A zone
    * picked during the spin wins over the flight to Nariño; the camera is limited once it lands.
    */
-  private flyToSeat(longitude: number, latitude: number): void {
-    if (this.stopSpin()) this.map?.once('moveend', () => this.limitToNarino());
+  private flyToSeat(longitude: number, latitude: number, duration = ZONE_FLY_MS): void {
+    const fromIntro = this.endIntro();
+    this.stopSpin();
+    this.cameraMove++;
     this.framingNarino = false;
     this.map?.flyTo({
-      center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, padding: NO_PADDING, duration: ZONE_FLY_MS,
+      center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, padding: NO_PADDING, duration,
     });
+    // Cut short, the intro never limited the camera: the seat's flight does it when it lands (registered
+    // after flyTo, which ends the intro's own flight with a moveend).
+    if (fromIntro) this.map?.once('moveend', () => this.limitToNarino());
   }
 
   private showUser(latitude: number, longitude: number): void {

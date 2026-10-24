@@ -1,7 +1,9 @@
 import {
-  GLOBE_MARGIN, GLOBE_START_CENTER, GLOBE_TOP, GLOW_END_ZOOM, MAX_BOUNDS, NARINO_BOUNDS, SPIN_DEGREES_PER_SECOND,
-  globeHalo, globeStart, hasWebGL, introPlan, prefersReducedMotion, spinCenter,
+  FLY_MS, GLOBE_MARGIN, GLOBE_START_CENTER, GLOBE_TOP, GLOW_END_ZOOM, INTRO_KEY, MAX_BOUNDS, NARINO_BOUNDS, NARINO_PADDING, PITCH,
+  SPIN_DEGREES_PER_SECOND, globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed,
+  RETURN_FLY_MS, TAP_FLY_MS, ZONE_FLY_MS, ZONE_ZOOM, rememberIntroPlayed, spinCenter,
 } from './map-camera';
+import { NAME_MIN_ZOOM } from './zone-marker';
 
 const globeRadius = (zoom: number): number => (512 * 2 ** zoom) / (2 * Math.PI);
 
@@ -42,6 +44,37 @@ describe('map camera: opening', () => {
     const [[west], [east]] = NARINO_BOUNDS;
     expect(GLOBE_START_CENTER[0]).toBeGreaterThan(east);
     expect(spinCenter(3000)[0]).toBeGreaterThan(west);
+  });
+
+  it('remembers the intro for the session, and plays it when there is no storage', () => {
+    const store = new Map<string, string>();
+    const win = {
+      sessionStorage: { getItem: (key: string) => store.get(key) ?? null, setItem: (key: string, value: string) => store.set(key, value) },
+    } as unknown as Window;
+    expect(readIntroPlayed(win)).toBe(false);
+    rememberIntroPlayed(win);
+    expect(store.get(INTRO_KEY)).toBe('1');
+    expect(readIntroPlayed(win)).toBe(true);
+
+    const blocked = {
+      get sessionStorage(): Storage {
+        throw new DOMException('blocked', 'SecurityError');
+      },
+    } as unknown as Window;
+    expect(readIntroPlayed(blocked)).toBe(false);
+    expect(() => rememberIntroPlayed(blocked)).not.toThrow();
+  });
+
+  it('frames Nariño tilted about 35°, above the sheet', () => {
+    expect(PITCH).toBe(35);
+    expect(narinoPadding(180)).toEqual({ ...NARINO_PADDING, bottom: NARINO_PADDING.bottom + 180 });
+    expect(narinoPadding(0).top).toBe(NARINO_PADDING.top);
+  });
+
+  it('flies short to a tapped municipality, where the names already show, and back quickly', () => {
+    expect(TAP_FLY_MS).toBeLessThan(ZONE_FLY_MS);
+    expect(RETURN_FLY_MS).toBeLessThan(FLY_MS);
+    expect(ZONE_ZOOM).toBeGreaterThanOrEqual(NAME_MIN_ZOOM);
   });
 
   it('keeps Nariño inside the bounds the camera may move in', () => {

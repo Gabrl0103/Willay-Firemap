@@ -9,10 +9,12 @@ export const NARINO_BOUNDS: [[number, number], [number, number]] = [[-79.05, 0.3
 export const MAX_BOUNDS: LngLatBoundsLike = [[-80.8, -0.9], [-75.0, 4.0]];
 export const MIN_ZOOM_OVER_NARINO = 6;
 export const MAX_ZOOM = 14;
-/** Tilt of the view over Nariño and of the flight to a seat. */
-export const PITCH = 50;
-/** Zoom of the flight to a seat: names show from 10 (zone-marker.ts). */
-export const ZONE_ZOOM = 10;
+/** Tilt of the view over Nariño and of the flight to a seat: enough for relief, flat enough to read. */
+export const PITCH = 35;
+/** Room around the department when framing it: the header on top; the sheet's height adds to the bottom. */
+export const NARINO_PADDING = { top: 84, bottom: 12, left: 8, right: 8 } as const;
+/** Zoom of the flight to a seat: past NAME_MIN_ZOOM (zone-marker.ts), so its neighbours' names show too. */
+export const ZONE_ZOOM = 9.5;
 
 /** Opening view: South America in front, east of Nariño so it spins into view (globeStart sizes it). */
 export const GLOBE_START_CENTER: [number, number] = [-50, -4];
@@ -25,8 +27,12 @@ export const SPIN_DEGREES_PER_SECOND = 8;
 /** ...for this long, then flies to Nariño. */
 export const SPIN_MS = 3000;
 export const FLY_MS = 2600;
-/** Flight to a seat (tap, search, coming from Inicio). */
+/** Flight to a seat from afar (search, «Mi ubicación», coming from Inicio)... */
 export const ZONE_FLY_MS = 1200;
+/** ...and the short one after tapping a municipality already on screen. */
+export const TAP_FLY_MS = 700;
+/** Back to the whole department when the zone sheet closes. */
+export const RETURN_FLY_MS = 900;
 /** Flights over Nariño frame with cameraForBounds, so the view itself keeps no padding. */
 export const NO_PADDING = { top: 0, bottom: 0, left: 0, right: 0 };
 
@@ -72,6 +78,31 @@ export function introPlan(options: {
   if (options.hasSelection) return 'zone';
   if (options.reducedMotion || !options.firstVisit) return 'jump';
   return 'spin-fly';
+}
+
+/** Padding that frames Nariño as large as fits between the header and a sheet `sheetHeight` px tall. */
+export function narinoPadding(sheetHeight: number): Padding {
+  return { ...NARINO_PADDING, bottom: NARINO_PADDING.bottom + sheetHeight };
+}
+
+/** sessionStorage key: the intro already played in this session (it survives a reload of the page). */
+export const INTRO_KEY = 'willay.mapIntroPlayed';
+
+/** False when the storage is unavailable (private mode, blocked site data): the intro then plays. */
+export function readIntroPlayed(win: Window): boolean {
+  try {
+    return win.sessionStorage.getItem(INTRO_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function rememberIntroPlayed(win: Window): void {
+  try {
+    win.sessionStorage.setItem(INTRO_KEY, '1');
+  } catch {
+    // Without storage the page's own flag still keeps it to once per app run.
+  }
 }
 
 /** Center of the opening view after `elapsedMs` of spin (the globe turns west). */

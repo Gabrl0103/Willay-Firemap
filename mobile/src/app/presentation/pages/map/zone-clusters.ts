@@ -9,10 +9,10 @@ export const ZONES_SOURCE = 'zones';
 /** Invisible: MapLibre only loads (and clusters) a source that some layer uses. */
 export const ZONES_HIT_LAYER = 'zones-hit';
 /**
- * Up to this zoom nearby seats are grouped. Above it (zooming into the Andes, where the seats are a
- * few km apart) every municipality has its own marker, and from zoom 10 its name.
+ * Up to this zoom nearby seats are grouped: only far views (the globe, the way in). Over Nariño the
+ * zoom never goes below MIN_ZOOM_OVER_NARINO (map-camera.ts), so every municipality has its own marker.
  */
-export const CLUSTER_MAX_ZOOM = 8;
+export const CLUSTER_MAX_ZOOM = 5;
 /** Seats closer than this (px) on screen go into one group: a bit more than two 18 px markers. */
 export const CLUSTER_RADIUS = 44;
 

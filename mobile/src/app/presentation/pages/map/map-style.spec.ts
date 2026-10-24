@@ -1,4 +1,6 @@
-import { DARK_RASTER_PAINT, MAP_BACKGROUND, OSM_ATTRIBUTION, mapStyle } from './map-style';
+import {
+  DARK_RASTER_PAINT, DARK_TILES_ZOOM, GLOBE_RASTER_PAINT, GLOBE_TILES_ZOOM, MAP_BACKGROUND, OSM_ATTRIBUTION, mapStyle, rasterPaint,
+} from './map-style';
 
 describe('map style', () => {
   it('always uses the globe, with a dark sky', () => {
@@ -9,8 +11,21 @@ describe('map style', () => {
 
   it('darkens the OSM tiles with raster paint (inverted brightness), not a CSS filter', () => {
     expect(DARK_RASTER_PAINT['raster-brightness-min']).toBeGreaterThan(DARK_RASTER_PAINT['raster-brightness-max']);
+    expect(GLOBE_RASTER_PAINT['raster-brightness-min']).toBeGreaterThan(GLOBE_RASTER_PAINT['raster-brightness-max']);
     const tiles = mapStyle().layers.find((layer) => layer.type === 'raster');
-    expect(tiles?.paint).toEqual(DARK_RASTER_PAINT);
+    expect(tiles?.paint).toEqual(rasterPaint());
+  });
+
+  it('shows lighter tiles on the globe and the dark ones once zoomed in', () => {
+    expect(GLOBE_RASTER_PAINT['raster-brightness-max']).toBeGreaterThan(DARK_RASTER_PAINT['raster-brightness-max']);
+    expect(GLOBE_RASTER_PAINT['raster-brightness-min']).toBeGreaterThan(DARK_RASTER_PAINT['raster-brightness-min']);
+    const paint = rasterPaint();
+    expect(paint['raster-brightness-max']).toEqual([
+      'interpolate', ['linear'], ['zoom'],
+      GLOBE_TILES_ZOOM, GLOBE_RASTER_PAINT['raster-brightness-max'], DARK_TILES_ZOOM, DARK_RASTER_PAINT['raster-brightness-max'],
+    ]);
+    // What does not change stays a plain value.
+    expect(paint['raster-hue-rotate']).toBe(180);
   });
 
   it('credits OpenStreetMap and loads nothing else from the network (no glyphs, no sprite)', () => {

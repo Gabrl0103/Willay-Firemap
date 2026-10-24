@@ -79,16 +79,26 @@ Pruebas unitarias de la app (Vitest): `npm test`.
 
 #### Mapa (MapLibre GL, globo)
 El mapa usa **MapLibre GL JS 6.13** con proyección `globe` y tiles raster de OpenStreetMap oscurecidos con
-propiedades de pintura (sin filtro CSS). La primera vez por sesión el globo entero, con su halo naranja,
+propiedades de pintura (sin filtro CSS), más claros en la vista lejana del globo y oscuros desde zoom 5. La
+primera vez por sesión (`sessionStorage`: una recarga no la repite) el globo entero, con su halo naranja,
 espera entre el título y la hoja a que se vaya la splash; luego gira despacio (3 s) y vuela a Nariño (2,6 s,
-inclinación 50°). Nariño queda lo más grande posible por encima de la hoja, el mismo encuadre que deja
-«Acercar a Nariño»; al plegar o desplegar la hoja se vuelve a encuadrar. Después la cámara queda dentro de
-Nariño (`maxBounds`). Con `prefers-reduced-motion` salta directo. Los municipios cercanos se agrupan hasta
-zoom 8 y los nombres salen desde zoom 10. El mapa es siempre globo: sin WebGL no hay mapa (ni globo ni
-plano), la pantalla lo dice y la búsqueda y «Mi ubicación» siguen abriendo la hoja de zona. La hoja
-«Departamento de Nariño» muestra los 4 niveles con sus rangos (0–24, 25–49, 50–74, 75–100) y la clave del
-foco de calor; los créditos de OSM y DANE van en letra pequeña abajo a la derecha del mapa, justo encima de
-la hoja.
+inclinación 35°). Un toque en el mapa salta el giro o el vuelo y deja el encuadre final; con
+`prefers-reduced-motion` abre directo en Nariño. Nariño queda lo más grande posible por encima de la hoja, el
+mismo encuadre que deja «Acercar a Nariño»; al subir o bajar la hoja se vuelve a encuadrar. Después la cámara
+queda dentro de Nariño (`maxBounds`, zoom mínimo 6).
+
+Los municipios se colorean por nivel de riesgo, con un contorno claro de 1 px, el borde del departamento más
+grueso y el seleccionado con contorno blanco y resplandor. Solo se agrupan en vistas lejanas (hasta zoom 5);
+sobre Nariño cada uno tiene su marcador (círculo con el puntaje). Desde zoom 8,5 el municipio pasa a ser su
+etiqueta, con nombre y puntaje en el color del nivel y centrada en la cabecera, mientras no choque con otra
+(gana el seleccionado y luego el más riesgoso) y quepa entera entre la cabecera y la hoja; si no, queda como un
+punto chico sin número, que no se dibuja si una etiqueta lo tapa. Tocar un municipio hace un vuelo
+corto (0,7 s) y abre su hoja de zona; al cerrarla el mapa vuelve al encuadre de Nariño. El mapa es siempre
+globo: sin WebGL no hay mapa (ni globo ni plano), la pantalla lo dice y la búsqueda y «Mi ubicación» siguen
+abriendo la hoja de zona. La hoja «Departamento de Nariño» abre baja (título, los 4 niveles y «Acercar a
+Nariño») y se sube arrastrando o tocando el asa para ver los conteos, los rangos (0–24, 25–49, 50–74, 75–100),
+la clave del foco de calor y la nota; los créditos de OSM y DANE van en letra pequeña abajo a la derecha del
+mapa, justo encima de la hoja.
 
 Nada se baja de un CDN: el CSS y el worker de MapLibre (`maplibre/maplibre-gl-worker.mjs`, copiado por
 `angular.json`) van en la app; solo los tiles vienen de internet. El chunk del mapa (carga perezosa en
