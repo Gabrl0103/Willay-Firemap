@@ -192,5 +192,6 @@
   "about.powerUse": "Clima con el que se entrenó el modelo del pronóstico.",
   "about.governmentUse": "Noticias de incendios recientes.",
   "about.governmentLicense": "Boletines de prensa de narino.gov.co; se cita la fuente. Sin licencia abierta declarada.",
-  "about.osmUse": "Mapa base."
+  "about.osmUse": "Mapa base.",
+  "about.powerCitation": "Sin licencia declarada; el proyecto pide esta cita:"
 }

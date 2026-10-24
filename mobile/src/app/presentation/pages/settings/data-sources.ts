@@ -48,7 +48,8 @@ export const DATA_SOURCES: readonly DataSource[] = [
   {
     name: 'NASA POWER',
     use: 'about.powerUse',
-    note: 'about.nasaCitation',
+    // The page states no license, only the citation (and asks to be told about publications).
+    note: 'about.powerCitation',
     // https://power.larc.nasa.gov/docs/referencing/ («POWER's Reference»).
     citation:
       "The data was obtained from National Aeronautics and Space Administration (NASA) Langley Research Center's Prediction Of Worldwide Energy Resources (POWER) project funded through the NASA Earth Science Division.",

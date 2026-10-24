@@ -192,5 +192,6 @@
   "about.powerUse": "Weather the forecast model was trained on.",
   "about.governmentUse": "News of recent fires.",
   "about.governmentLicense": "Press releases from narino.gov.co; the source is cited. No open license declared.",
-  "about.osmUse": "Base map."
+  "about.osmUse": "Base map.",
+  "about.powerCitation": "No license stated; the project asks for this citation:"
 }
