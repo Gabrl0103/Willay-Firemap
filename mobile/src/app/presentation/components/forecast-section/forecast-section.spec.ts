@@ -40,13 +40,14 @@ describe('ForecastSection', () => {
   it('shows the 24, 48 and 72 h rows with level, bar and percentage', () => {
     const { host } = render(MODEL, 'ready');
     expect(text(host, 'h3')).toEqual(['Pronóstico 72 h']);
-    expect(text(host, '.forecast-when b')).toEqual(['24 h', '48 h', '72 h']);
-    expect(text(host, '.forecast-row app-risk-badge')).toEqual(['Alto', 'Medio', 'Bajo']);
+    expect(text(host, '.forecast-rows .forecast-when b')).toEqual(['24 h', '48 h', '72 h']);
+    expect(text(host, '.forecast-rows .forecast-row app-risk-badge')).toEqual(['Alto', 'Medio', 'Bajo']);
     expect(text(host, '.forecast-value')).toEqual(['53 %', '45 %', '<1 %']);
-    const bars = [...host.querySelectorAll<HTMLElement>('.forecast-track span')].map((bar) => parseFloat(bar.style.width));
+    const bars = [...host.querySelectorAll<HTMLElement>('.forecast-rows .forecast-track span')].map((bar) => parseFloat(bar.style.width));
     expect(bars).toHaveLength(3);
     [52.8, 45.2, 0.4].forEach((width, i) => expect(bars[i]).toBeCloseTo(width, 6));
-    expect(host.querySelector('.forecast-row')!.classList).toContain('risk-high');
+    expect(host.querySelector('.forecast-rows .forecast-row')!.classList).toContain('risk-high');
+    expect(host.querySelector('.forecast-sizer')!.classList).not.toContain('is-loading');
   });
 
   it('says it is an estimate', () => {
@@ -84,8 +85,10 @@ describe('ForecastSection', () => {
   it('keeps the three rows as placeholders while it loads', () => {
     const { host } = render(null, 'loading');
     expect(host.querySelector('[role="status"]')!.getAttribute('aria-label')).toBe('Calculando el pronóstico…');
-    expect(text(host, '.forecast-loading .forecast-when b')).toEqual(['24 h', '48 h', '72 h']);
-    expect(host.querySelectorAll('.forecast-loading .forecast-track.skeleton').length).toBe(3);
+    expect(host.querySelector('.forecast-sizer')!.classList).toContain('is-loading');
+    expect(text(host, '.forecast-sizer .forecast-when b')).toEqual(['24 h', '48 h', '72 h']);
+    expect(host.querySelectorAll('.forecast-sizer .forecast-track.skeleton').length).toBe(3);
+    expect(host.querySelector('.forecast-sizer .forecast-note .skeleton-text')).not.toBeNull();
     expect(host.querySelector('.forecast-rows')).toBeNull();
   });
 });

@@ -22,7 +22,7 @@ const ZONE: ZoneRiskSummary = {
 
 function render(
   detail: ZoneDetail | null = DETAIL,
-  inputs: { firesPerYear?: number | null; updatedAt?: Date | null } = {},
+  inputs: { firesPerYear?: number | null; updatedAt?: Date | null; firesLoading?: boolean } = {},
   zone: ZoneRiskSummary = ZONE,
 ) {
   const fixture = TestBed.createComponent(ZoneSheet);
@@ -94,7 +94,7 @@ describe('ZoneSheet', () => {
     expect(text(host, '.hotspots-stat > *')).toEqual(['4', 'focos a menos de 25 km', 'el último, hace 3 días']);
 
     const none = render({ ...DETAIL, hotspots: { count: 0, latestDetectedAt: null } }).host;
-    expect(text(none, '.hotspots-stat > *')).toEqual(['0', 'focos a menos de 25 km']);
+    expect(text(none, '.hotspots-stat > *')).toEqual(['0', 'focos a menos de 25 km', '']); // keeps its line
   });
 
   it('shows the fires per year only when the records arrived', () => {
@@ -178,10 +178,31 @@ describe('ZoneSheet', () => {
     expect(row()).toEqual(['64°F Temperature', '1 day without rain']);
   });
 
-  it('keeps the room of «Clima ahora» until the detail arrives', () => {
+  it('shows «Clima ahora» at once when the zone list brings the weather', () => {
+    const { host } = render(null, {}, { ...ZONE, weather: { temperatureC: 14.1, humidityPct: 97, windKmh: 3.9, daysWithoutRain: 0 } });
+    expect(host.querySelector('.weather-row .skeleton-text')).toBeNull();
+    const values = [...host.querySelectorAll('.weather-row b')].map((b) => b.textContent);
+    expect(values).toEqual(['14 °C', '97 %', '4 km/h', '0']);
+  });
+
+  it('keeps «Clima ahora» shaped like itself until the weather arrives', () => {
     const { host } = render(null);
-    expect(host.querySelector('.weather-skeleton')).not.toBeNull();
-    expect(host.querySelector('.weather-row')).toBeNull();
+    expect(host.querySelector('.weather')!.getAttribute('aria-busy')).toBe('true');
+    expect(host.querySelectorAll('.weather-row .skeleton-text').length).toBe(4);
+    expect(text(host, '.weather-row small')).toEqual(['Temperatura', 'Humedad', 'Viento', 'días sin lluvia']);
+  });
+
+  it('keeps the cards of hotspots and fires shaped like themselves while they load', () => {
+    const { fixture, host } = render(null, { firesLoading: true });
+    expect(host.querySelectorAll('.stat-skeleton').length).toBe(2);
+    expect(text(host, '.hotspots-stat.stat-skeleton span')).toEqual(['focos a menos de 25 km']);
+
+    fixture.componentRef.setInput('detail', { ...DETAIL, hotspots: { count: 1, latestDetectedAt: null } });
+    fixture.componentRef.setInput('firesLoading', false);
+    fixture.componentRef.setInput('firesPerYear', 2);
+    fixture.detectChanges();
+    expect(host.querySelectorAll('.stat-skeleton').length).toBe(0);
+    expect(text(host, '.fires-stat b')).toEqual(['2']);
   });
 
   it('says when the data was updated', () => {

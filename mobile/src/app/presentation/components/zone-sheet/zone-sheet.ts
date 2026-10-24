@@ -36,15 +36,23 @@ interface DragState {
   moved: boolean;
 }
 
-/** One value of «Clima ahora»: its icon, the value in the chosen unit and what it is. */
+/** One value of «Clima ahora»: its icon, the value in the chosen unit (null while it loads) and what it is. */
 interface WeatherItem {
   readonly icon: IconName;
-  readonly value: string;
+  readonly value: string | null;
   readonly label: MessageKey | PluralKey;
   readonly params?: MessageParams;
 }
 
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+
+/** «Clima ahora» while neither the zone list nor the detail has it: the same four tiles, values pending. */
+const WEATHER_PLACEHOLDERS: readonly WeatherItem[] = [
+  { icon: 'thermometer', value: null, label: 'weather.temperature' },
+  { icon: 'droplet', value: null, label: 'weather.humidity' },
+  { icon: 'wind', value: null, label: 'weather.wind' },
+  { icon: 'calendar', value: null, label: 'weather.dryDays', params: { count: 2 } },
+];
 
 @Component({
   selector: 'app-zone-sheet',
@@ -132,23 +140,23 @@ const isNumber = (value: unknown): value is number => typeof value === 'number' 
         </div>
 
         <div class="zone-content">
-          @if (weather(); as items) {
-            @if (items.length > 0) {
-              <section class="weather" aria-labelledby="weather-title">
-                <h3 id="weather-title" class="factors-title">{{ 'weather.title' | t }}</h3>
-                <ul class="weather-row">
-                  @for (item of items; track item.label) {
-                    <li class="stat-tile">
-                      <app-icon [name]="item.icon" [size]="16" />
+          @if (weather().length > 0) {
+            <section class="weather" aria-labelledby="weather-title" [attr.aria-busy]="weatherPending()">
+              <h3 id="weather-title" class="factors-title">{{ 'weather.title' | t }}</h3>
+              <ul class="weather-row">
+                @for (item of weather(); track item.label) {
+                  <li class="stat-tile">
+                    <app-icon [name]="item.icon" [size]="16" />
+                    @if (item.value !== null) {
                       <b class="mono">{{ item.value }}</b>
-                      <small>{{ item.label | t: item.params }}</small>
-                    </li>
-                  }
-                </ul>
-              </section>
-            }
-          } @else {
-            <div class="weather weather-skeleton skeleton" aria-hidden="true"></div>
+                    } @else {
+                      <b class="mono skeleton skeleton-text" aria-hidden="true">00</b>
+                    }
+                    <small>{{ item.label | t: item.params }}</small>
+                  </li>
+                }
+              </ul>
+            </section>
           }
           <h3 class="factors-title">{{ 'sheet.factorsTitle' | t }}</h3>
           @for (factor of factors(); track factor.label; let i = $index) {
@@ -169,22 +177,33 @@ const isNumber = (value: unknown): value is number => typeof value === 'number' 
             </div>
           }
 
-          @if (!detail() || detail()?.hotspots || perYear() !== null) {
+          <!-- Each card waits shaped like itself (same lines), so the forecast below never moves. -->
+          @if (!detail() || detail()?.hotspots || perYear() !== null || firesLoading()) {
             <div class="stats">
-              @if (detail()?.hotspots; as hotspots) {
-                <div class="stat-tile hotspots-stat">
-                  <b class="mono">{{ hotspots.count }}</b>
-                  <span>{{ 'sheet.hotspotsNear' | t: { count: hotspots.count } }}</span>
-                  @if (latestHotspot(); as latest) {
-                    <small>{{ 'sheet.latest' | t: { ago: latest } }}</small>
-                  }
+              @if (detail(); as loaded) {
+                @if (loaded.hotspots; as hotspots) {
+                  <div class="stat-tile hotspots-stat">
+                    <b class="mono">{{ hotspots.count }}</b>
+                    <span>{{ 'sheet.hotspotsNear' | t: { count: hotspots.count } }}</span>
+                    <!-- Kept without a detection too: the card keeps the height it had while loading. -->
+                    <small>{{ latestHotspot() ? ('sheet.latest' | t: { ago: latestHotspot() }) : '\u00a0' }}</small>
+                  </div>
+                }
+              } @else {
+                <div class="stat-tile hotspots-stat stat-skeleton" aria-hidden="true">
+                  <b class="mono skeleton skeleton-text">00</b>
+                  <span>{{ 'sheet.hotspotsNear' | t: { count: 2 } }}</span>
+                  <small class="skeleton skeleton-text">{{ 'sheet.latest' | t: { ago: ('time.daysAgo' | t: { count: 3 }) } }}</small>
                 </div>
-              } @else if (!detail()) {
-                <div class="stat-tile skeleton stat-skeleton" aria-hidden="true"></div>
               }
               @if (perYear(); as perYear) {
                 <div class="stat-tile fires-stat">
                   <b class="mono">{{ perYear }}</b>
+                  <span>{{ 'sheet.firesPerYear' | t }}</span>
+                </div>
+              } @else if (firesLoading()) {
+                <div class="stat-tile fires-stat stat-skeleton" aria-hidden="true">
+                  <b class="mono skeleton skeleton-text">0,0</b>
                   <span>{{ 'sheet.firesPerYear' | t }}</span>
                 </div>
               }
@@ -212,6 +231,8 @@ export class ZoneSheet implements OnDestroy {
   readonly updatedAt = input<Date | null>(null);
   /** Average fires per year of the zone (from its records); null leaves the card out. */
   readonly firesPerYear = input<number | null>(null);
+  /** The fire records are still on their way: their card waits as a placeholder. */
+  readonly firesLoading = input(false);
   /** 72 h forecast of the zone (ML model or its fallback) and whether it is still loading or failed. */
   readonly forecast = input<ZoneForecast | null>(null);
   readonly forecastStatus = input<ForecastStatus>('idle');
@@ -335,14 +356,17 @@ export class ZoneSheet implements OnDestroy {
     return hotspots?.count && hotspots.latestDetectedAt ? formatTimeAgo(hotspots.latestDetectedAt, this.i18n.language()) : '';
   });
   private readonly settings = inject(SettingsStore);
+  /** Neither the zone list nor the detail has brought the weather yet (an older backend, or on its way). */
+  protected readonly weatherPending = computed(() => !this.detail() && !this.zone().weather);
   /**
-   * «Clima ahora» from the detail, in the units of Ajustes (the API sends °C and km/h). A value the
-   * API did not send is left out; null while the detail has not arrived (a placeholder keeps its room).
+   * «Clima ahora» from the zone list (or the detail), in the units of Ajustes (the API sends °C and
+   * km/h). A value the API did not send is left out; while pending, the four tiles wait with their labels.
    */
-  protected readonly weather = computed((): WeatherItem[] | null => {
-    const detail = this.detail();
-    if (!detail) return null;
-    const weather: Partial<ZoneDetail['weather']> = detail.weather ?? {};
+  protected readonly weather = computed((): readonly WeatherItem[] => {
+    if (this.weatherPending()) return WEATHER_PLACEHOLDERS;
+    // The zone list brings it (v0.31); an older backend only in the detail.
+    const source = this.detail()?.weather ?? this.zone().weather;
+    const weather: Partial<ZoneDetail['weather']> = source ?? {};
     const language = this.i18n.language();
     const items: WeatherItem[] = [];
     if (isNumber(weather.temperatureC)) {

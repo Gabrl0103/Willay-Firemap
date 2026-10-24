@@ -32,21 +32,30 @@ export const WHEN_KEYS: Record<24 | 48 | 72, MessageKey> = { 24: 'when.today', 4
   template: `
     <section class="forecast glass-card" aria-labelledby="forecast-title">
       <h3 id="forecast-title">{{ 'forecast.title' | t }}</h3>
-      @switch (status()) {
-        @case ('loading') {
-          <div class="forecast-loading" role="status" [attr.aria-label]="'forecast.loading' | t">
-            @for (hours of loadingRows; track hours) {
-              <div class="forecast-row" aria-hidden="true">
-                <div class="forecast-head">
-                  <span class="forecast-when"><b class="mono">{{ hours }} h</b><small>{{ whenKeys[hours] | t }}</small></span>
-                  <span class="skeleton skeleton-badge"></span>
-                  <span class="skeleton skeleton-value"></span>
-                </div>
-                <div class="forecast-track skeleton"></div>
+      <div
+        class="forecast-body"
+        [attr.role]="status() === 'loading' ? 'status' : null"
+        [attr.aria-label]="status() === 'loading' ? ('forecast.loading' | t) : null"
+      >
+        <!--
+          Always the room of the full forecast (three rows and the note, in this language): the
+          answer, its fallback or an error never push what is below. While loading it is the placeholder.
+        -->
+        <div class="forecast-sizer" [class.is-loading]="status() === 'loading'" aria-hidden="true">
+          @for (hours of loadingRows; track hours) {
+            <div class="forecast-row">
+              <div class="forecast-head">
+                <span class="forecast-when"><b class="mono">{{ hours }} h</b><small>{{ whenKeys[hours] | t }}</small></span>
+                <span class="skeleton skeleton-badge"></span>
+                <span class="skeleton skeleton-value"></span>
               </div>
-            }
-          </div>
-        }
+              <div class="forecast-track skeleton"></div>
+            </div>
+          }
+          <p class="forecast-note"><span class="skeleton skeleton-text">{{ 'forecast.note' | t }}</span></p>
+        </div>
+      @switch (status()) {
+        @case ('loading') {}
         @case ('error') {
           <div class="forecast-state is-error" role="alert">
             <p>{{ 'forecast.error' | t }}</p>
@@ -82,6 +91,7 @@ export const WHEN_KEYS: Record<24 | 48 | 72, MessageKey> = { 24: 'when.today', 4
           }
         }
       }
+      </div>
     </section>
   `,
   styleUrl: './forecast-section.css',

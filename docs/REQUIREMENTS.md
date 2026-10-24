@@ -262,6 +262,21 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-24 (v0.31, rama `fix/sheet-weather`):** «Clima ahora» al instante y la hoja de zona sin saltos.
+  - Antes: el clima solo venía en `GET /api/zones/:id`, que se pedía al tocar (la hoja no esperaba) y
+    respondía a los ~0,5 s en local, ~0,4 s en Render despierto y 21,9 s con Render dormido. Al llegar el
+    detalle y el pronóstico, el contenido bajaba: «Ver historial» pasaba de 762 a 800 y a 878 px (clima
+    +4 px, focos +34 px, pronóstico +79 px porque su esqueleto no reservaba la nota).
+  - `GET /api/zones` trae `weather` (opcional, con prueba del endpoint: igual al del detalle). La hoja lo
+    muestra en cuanto abre (43 ms medidos) en las unidades e idioma de Ajustes.
+  - Respaldo para un backend anterior: detalle e historial se piden al tocar, con caché por zona de 10 min y
+    cancelación al tocar otro municipio o cerrar la hoja (`firesStatus` nuevo); «Borrar caché de datos» los
+    olvida también.
+  - Esqueletos con la forma del dato: las cuatro tarjetas de clima con sus etiquetas, las tarjetas de focos e
+    incendios por año con sus líneas, y el pronóstico reserva siempre la altura del completo (tres filas y la
+    nota), también si responde con respaldo o error. El pulso se apaga con menos movimiento.
+  - Verificado en 390 × 844, en español e inglés, con la lista nueva y simulando la vieja: «Ver historial»
+    queda en 878 px de principio a fin.
 - **2026-10-24 (v0.30, rama `feat/settings-i18n`):** pantalla de Ajustes y la app en inglés.
   - Idioma: servicio `I18n` con signals y diccionarios `i18n/es.json` / `en.json` en el bundle (sin CDN ni
     internet), pipe `t` con parámetros y plurales (`Intl.PluralRules`, más `.zero`), `lang` del documento al

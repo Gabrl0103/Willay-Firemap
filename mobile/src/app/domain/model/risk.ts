@@ -11,6 +11,8 @@ export interface ZoneRiskSummary {
   readonly level: RiskLevel;
   /** What the score is made of. Missing on backends older than v0.28 (the sheet waits for ZoneDetail). */
   readonly factors?: ZoneDetail['factors'];
+  /** The weather now, for «Clima ahora». Missing on backends older than v0.31 (the sheet waits for ZoneDetail). */
+  readonly weather?: ZoneDetail['weather'];
 }
 
 export interface ZoneDetail {
