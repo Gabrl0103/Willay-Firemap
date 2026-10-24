@@ -1,0 +1,9 @@
+{
+  "risk.low": "Bajo",
+  "risk.medium": "Medio",
+  "risk.high": "Alto",
+  "risk.extreme": "Extremo",
+  "common.retry": "Reintentar",
+  "common.close": "Cerrar",
+  "common.loading": "Cargando datos…"
+}
