@@ -89,8 +89,10 @@ queda dentro de Nariño (`maxBounds`, zoom mínimo 6).
 
 Los municipios se colorean por nivel de riesgo, con un contorno claro de 1 px, el borde del departamento más
 grueso y el seleccionado con contorno blanco y resplandor. Solo se agrupan en vistas lejanas (hasta zoom 5);
-sobre Nariño cada uno tiene su marcador, y desde zoom 8,5 su nombre y puntaje en el color del nivel, mientras
-no choque con otra etiqueta (gana el seleccionado y luego el más riesgoso). Tocar un municipio hace un vuelo
+sobre Nariño cada uno tiene su marcador (círculo con el puntaje). Desde zoom 8,5 el municipio pasa a ser su
+etiqueta, con nombre y puntaje en el color del nivel y centrada en la cabecera, mientras no choque con otra
+(gana el seleccionado y luego el más riesgoso) y quepa entera entre la cabecera y la hoja; si no, queda como un
+punto chico sin número, que no se dibuja si una etiqueta lo tapa. Tocar un municipio hace un vuelo
 corto (0,7 s) y abre su hoja de zona; al cerrarla el mapa vuelve al encuadre de Nariño. El mapa es siempre
 globo: sin WebGL no hay mapa (ni globo ni plano), la pantalla lo dice y la búsqueda y «Mi ubicación» siguen
 abriendo la hoja de zona. La hoja «Departamento de Nariño» abre baja (título, los 4 niveles y «Acercar a
