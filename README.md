@@ -88,12 +88,14 @@ mismo encuadre que deja «Acercar a Nariño»; al subir o bajar la hoja se vuelv
 queda dentro de Nariño (`maxBounds`, zoom mínimo 6).
 
 Los municipios se colorean por nivel de riesgo, con un contorno claro de 1 px, el borde del departamento más
-grueso y el seleccionado con contorno blanco y resplandor. Solo se agrupan en vistas lejanas (hasta zoom 5);
-sobre Nariño cada uno tiene su marcador (círculo con el puntaje). Desde zoom 8,5 el municipio pasa a ser su
-etiqueta, con nombre y puntaje en el color del nivel y centrada en la cabecera, mientras no choque con otra
-(gana el seleccionado y luego el más riesgoso) y quepa entera entre la cabecera y la hoja; si no, queda como un
-punto chico sin número, que no se dibuja si una etiqueta lo tapa. Tocar un municipio hace un vuelo
-corto (0,7 s) y abre su hoja de zona; al cerrarla el mapa vuelve al encuadre de Nariño. El mapa es siempre
+grueso y el seleccionado con contorno blanco y resplandor. No hay grupos: en el globo solo se ven los
+polígonos y, sobre Nariño, cada municipio es su etiqueta centrada en la cabecera, mientras no choque con otra
+(gana el seleccionado, luego Pasto y luego el más riesgoso) y quepa entera entre la cabecera y la hoja; si no,
+queda como un punto chico sin número, que no se dibuja si una etiqueta lo tapa. En el encuadre inicial la
+etiqueta es solo el nombre (10 px, claro con halo oscuro; unas 21 a 390 px de ancho) y al acercar aparecen
+más; desde zoom 8,5 suma el puntaje y el nivel en el color del riesgo. Tocar un municipio abre su hoja de zona
+al instante, con lo que el mapa ya tiene (nombre, puntaje, nivel y factores), mientras hace un vuelo corto
+(0,7 s); al cerrarla el mapa se queda donde está y solo «Acercar a Nariño» vuelve al departamento. El mapa es siempre
 globo: sin WebGL no hay mapa (ni globo ni plano), la pantalla lo dice y la búsqueda y «Mi ubicación» siguen
 abriendo la hoja de zona. La hoja «Departamento de Nariño» abre baja (título, los 4 niveles y «Acercar a
 Nariño») y se sube arrastrando o tocando el asa para ver los conteos, los rangos (0–24, 25–49, 50–74, 75–100),
@@ -126,7 +128,7 @@ Niveles: Bajo 0–24, Medio 25–49, Alto 50–74, Extremo 75–100. Detalle y l
 ### Pronóstico 72 h (modelo de machine learning)
 En `ml/` hay un modelo que estima la probabilidad de focos de calor a ≤ 25 km en las próximas 72 h. Se entrenó con NASA FIRMS (VIIRS) y clima de NASA POWER. En el periodo de prueba (2025–2026), la regresión logística supera al modelo de pesos: ROC-AUC 0,85 frente a 0,68.
 
-Desde la v0.22 el backend lo usa en `GET /api/zones/:id/forecast` y la app lo muestra en la hoja de zona («Pronóstico 72 h»). El puntaje del mapa sigue siendo el modelo de pesos.
+Desde la v0.22 el backend lo usa en `GET /api/zones/:id/forecast` y la app lo muestra en la hoja de zona («Pronóstico 72 h»). El puntaje del mapa sigue siendo el modelo de pesos. La app lo pide en cuanto se toca un municipio, muestra las tres filas como esqueleto mientras llega, lo guarda por zona 10 minutos (solo las respuestas del modelo) y cancela la petición anterior si se toca otro.
 - **Sin Python en producción:** `python -m willay_ml.export_backend` (en `ml/`) exporta la regresión logística a `backend/src/infrastructure/ml/risk-model-1.0.0.json` y el backend la calcula en TypeScript (`predictRisk`).
 - **Clima:** producción usa Open-Meteo y el modelo se entrenó con NASA POWER, así que cada variable pasa por un ajuste lineal Open-Meteo → POWER (ajustado con 2024). En prueba: ROC-AUC 0,842 con Open-Meteo ajustado frente a 0,853 con POWER.
 - **Filas 24/48/72 h:** el modelo corrido al final de hoy, mañana y pasado mañana, con el clima pronosticado y solo los focos ya observados.
@@ -135,7 +137,7 @@ Desde la v0.22 el backend lo usa en `GET /api/zones/:id/forecast` y la app lo mu
 Detalle, ajuste y limitaciones en `docs/ML.md` (sección 7); cómo reproducirlo en `ml/README.md`.
 
 ## Endpoints
-- `GET /api/zones` — municipios con puntaje y nivel de riesgo.
+- `GET /api/zones` — municipios con puntaje, nivel de riesgo y, desde la v0.28, `factors` (campo opcional para la app: si falta, la hoja muestra los factores como esqueleto hasta que llega el detalle).
 - `GET /api/zones/:id` — detalle: clima y factores.
 - `GET /api/zones/:id/forecast` — pronóstico de 72 h con el modelo de ML (filas de 24, 48 y 72 h), o respaldo con el puntaje actual.
 - `GET /api/zones/boundaries` — límites de los 64 municipios (GeoJSON, `feature.id` = id de la zona; caché de un día con ETag).

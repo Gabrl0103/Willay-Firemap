@@ -262,6 +262,27 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-24 (v0.28, rama `fix/map-flow`):** flujo de la hoja de zona y nombres desde el encuadre inicial.
+  - Cerrar la hoja de un municipio («‹ Nariño», el fondo o arrastrarla abajo) ya no vuela de vuelta a Nariño:
+    el mapa se queda en la misma posición y zoom, y el municipio pierde el resaltado. Solo «Acercar a Nariño»
+    vuelve al departamento.
+  - Antes la hoja tardaba ~0,5 s en local (más en Render) porque esperaba `GET /api/zones/:id`; ni el vuelo ni
+    el pronóstico la frenaban. Ahora se abre al tocar (32 ms medidos) con el resumen del mapa. `GET /api/zones`
+    trae `factors` (opcional: con un backend anterior los factores son esqueleto hasta que llega el detalle) y
+    los focos cercanos esperan como esqueleto.
+  - «Pronóstico 72 h»: se pide primero al tocar, muestra las tres filas como esqueleto, se guarda por zona 10
+    minutos (solo respuestas del modelo; el respaldo se vuelve a pedir) y una petición en curso se cancela al
+    tocar otro municipio o cerrar la hoja. Siguen el error con «Reintentar» y el aviso de respaldo.
+  - Sin grupos: en el globo (zoom < 6) solo los polígonos; sobre Nariño un solo elemento por municipio en todo
+    zoom (etiqueta o punto sin número). Por debajo de zoom 8,5 la etiqueta es solo el nombre, 10 px, `#f9f9f4`
+    con halo `#09232a` (15,5:1); desde 8,5 nombre, puntaje y nivel. Prioridad: seleccionado, Pasto y puntaje;
+    1 px de separación entre etiquetas. La pastilla de las etiquetas completas pasa de 0,68 a 0,82 de opacidad
+    para que el nivel en rojo llegue a 4,7:1 aun sobre el relleno amarillo.
+  - Verificado en 390 × 844: encuadre inicial (zoom 6,9) con 21 nombres, Pasto incluido, 0 cortados y 0
+    encimados; 22–31 nombres entre zoom 7,3 y 8,3; desde 8,5 etiquetas completas; ubicar las etiquetas cuesta
+    0,4 ms al detenerse la cámara. Los fps no se pudieron medir en la ventana de automatización (Chrome limita
+    `requestAnimationFrame` a 1 Hz); por cuadro hay menos trabajo que antes: los mismos 64 marcadores y ya no
+    se consulta la fuente de puntos en cada render.
 - **2026-10-24 (v0.27, rama `feat/map-globe`):** un solo elemento por municipio en el zoom de nombres.
   - Antes: desde zoom 8,5, junto a las etiquetas seguían saliendo círculos con número que parecían grupos (no lo
     eran: eran municipios cuya etiqueta no cabía, dibujados como el círculo del zoom bajo) y podían quedar
