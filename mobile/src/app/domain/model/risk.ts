@@ -9,6 +9,8 @@ export interface ZoneRiskSummary {
   readonly longitude: number;
   readonly score: number;
   readonly level: RiskLevel;
+  /** What the score is made of. Missing on backends older than v0.28 (the sheet waits for ZoneDetail). */
+  readonly factors?: ZoneDetail['factors'];
 }
 
 export interface ZoneDetail {

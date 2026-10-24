@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import type { FireHistory, Hotspot, ZoneBoundaries, ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../domain/model/risk';
 import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from '../domain/repository/repositories';
@@ -20,6 +20,8 @@ export class ZonesStore {
   readonly zones = signal<ZoneRiskSummary[]>([]);
   readonly hotspots = signal<Hotspot[]>([]);
   readonly selectedId = signal<string | null>(null);
+  /** The selected zone as the map has it: enough to open its sheet before ZoneDetail arrives. */
+  readonly selected = computed(() => this.zones().find((zone) => zone.id === this.selectedId()) ?? null);
   readonly detail = signal<ZoneDetail | null>(null);
   /** Fire records of the selected zone (its "incendios por año"); null until they arrive or if they fail. */
   readonly detailFires = signal<FireHistory | null>(null);

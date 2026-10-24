@@ -38,6 +38,19 @@ function setup(forecast: ForecastRepository['forecast'], boundaries: ZoneReposit
   return { store: TestBed.inject(ZonesStore), repository, zoneRepository };
 }
 
+describe('ZonesStore selection', () => {
+  it('has the selected zone from the list right away, before its detail', () => {
+    const { store } = setup(() => of(FORECAST));
+    const pasto = { id: 'pasto', name: 'Pasto', latitude: 1.2, longitude: -77.3, score: 37, level: 'medium' } as const;
+    store.zones.set([pasto]);
+    expect(store.selected()).toBeNull();
+    store.select('pasto');
+    expect(store.selected()).toEqual(pasto);
+    store.clearSelection();
+    expect(store.selected()).toBeNull();
+  });
+});
+
 describe('ZonesStore forecast', () => {
   it('asks for the forecast of the selected zone', () => {
     const { store, repository } = setup(() => of(FORECAST));

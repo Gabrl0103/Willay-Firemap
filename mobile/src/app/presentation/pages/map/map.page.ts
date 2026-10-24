@@ -144,8 +144,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
       const overview = this.overview()?.nativeElement;
       if (!overview) {
         // The zone sheet opens at MID_HEIGHT of the screen.
-        const detailOpen = this.store.detail() !== null;
-        this.sheetInset.set(detailOpen ? Math.round(this.mapElement().nativeElement.clientHeight * MID_HEIGHT) : 0);
+        const zoneOpen = this.store.selected() !== null;
+        this.sheetInset.set(zoneOpen ? Math.round(this.mapElement().nativeElement.clientHeight * MID_HEIGHT) : 0);
         return;
       }
       const observer = new ResizeObserver(() => {

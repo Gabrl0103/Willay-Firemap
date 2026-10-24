@@ -25,6 +25,13 @@
   to { stroke-dasharray: var(--ring-value, 0) var(--ring-total, 100); }
 }
 
+/* Lugar de un dato que todavía no llega: un bloque tenue que late. */
+.skeleton {
+  background: rgba(255, 255, 255, 0.1);
+  animation: a-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes a-pulse { from { opacity: 1; } to { opacity: 0.45; } }
+
 @media (prefers-reduced-motion: reduce) {
-  .anim-up, .anim-sheet, .anim-growy, .anim-growx, .anim-ring { animation: none; }
+  .anim-up, .anim-sheet, .anim-growy, .anim-growx, .anim-ring, .skeleton { animation: none; }
 }
