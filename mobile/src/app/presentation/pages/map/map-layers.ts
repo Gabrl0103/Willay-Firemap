@@ -16,7 +16,6 @@ export const ZONE_SELECTED_LAYER = 'zone-selected';
 /** The layers that only draw the selected zone: map.page.ts filters them all by its id. */
 export const ZONE_SELECTED_LAYERS = [ZONE_SELECTED_GLOW_LAYER, ZONE_SELECTED_LAYER] as const;
 export const HOTSPOTS_SOURCE = 'hotspots';
-export const BOUNDARIES_ATTRIBUTION = 'Límites: <a href="https://www.dane.gov.co">DANE</a> (MGN 2025)';
 
 /** Colors the GL layers need as values: they come from the CSS tokens (theme/tokens.css). */
 export interface MapColors {
@@ -45,9 +44,12 @@ export const DEPARTMENT_WIDTH = 2.5;
 export const NO_RISK_FILL = '#35655c';
 export const FILL_OPACITY = { normal: 0.42, selected: 0.62, noRisk: 0.35 } as const;
 
-/** The municipal polygons from GET /api/zones/boundaries; feature-state is keyed by zone id. */
+/**
+ * The municipal polygons from GET /api/zones/boundaries; feature-state is keyed by zone id. DANE's
+ * credit goes in the map's credits (map.page.ts), so it can change language.
+ */
 export function boundariesSource(boundaries: ZoneBoundaries): SourceSpecification {
-  return { type: 'geojson', data: boundaries, promoteId: 'id', attribution: BOUNDARIES_ATTRIBUTION };
+  return { type: 'geojson', data: boundaries, promoteId: 'id' };
 }
 
 /**

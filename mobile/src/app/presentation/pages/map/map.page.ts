@@ -13,7 +13,10 @@ import { SearchRequest } from '../../../core/search-request';
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
+import { formatTime } from '../../../domain/util/format';
 import { shareText } from '../../../domain/util/share-text';
+import { I18n } from '../../../i18n/i18n';
+import { TranslatePipe } from '../../../i18n/t.pipe';
 import { FavoritesStore } from '../../../state/favorites.store';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
@@ -59,7 +62,7 @@ const SEAT_OFFSET: [number, number] = [0, -150];
 
 @Component({
   selector: 'app-map-page',
-  imports: [AppIcon, MapOverviewSheet, SearchBox, ZoneSheet],
+  imports: [AppIcon, MapOverviewSheet, SearchBox, TranslatePipe, ZoneSheet],
   templateUrl: './map.page.html',
   styleUrl: './map.page.css',
   // --sheet-inset: how much of the map the sheet covers, so the credits sit just above it.
@@ -72,12 +75,15 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly searchRequest = inject(SearchRequest);
   private readonly curtain = inject(AppCurtain);
   private readonly sharer = inject(ZoneSharer);
+  private readonly i18n = inject(I18n);
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
   private readonly glow = viewChild.required<ElementRef<HTMLDivElement>>('glow');
   private readonly header = viewChild.required<ElementRef<HTMLElement>>('header');
   private map?: MapLibreMap;
+  /** The map credits: rebuilt when the boundaries arrive and when the language changes. */
+  private credits?: AttributionControl;
   private colors?: MapColors;
   /** One marker per municipality, by zone id: never grouped. */
   private readonly markers = new Map<string, Marker>();
@@ -106,9 +112,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   protected readonly updatedLabel = computed(() => {
     const date = this.store.updatedAt();
-    return date
-      ? `Actualizado ${date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`
-      : 'Cargando…';
+    return date ? this.i18n.t('map.updated', { time: formatTime(date, this.i18n.language()) }) : this.i18n.t('map.loading');
   });
 
   /** Fires per year of the selected zone, from its records (null until they arrive). */
@@ -140,6 +144,16 @@ export class MapPage implements AfterViewInit, OnDestroy {
     effect(() => {
       if (!this.mapReady()) return;
       this.styleSelection(this.store.zones(), this.store.selectedId(), this.store.boundaries());
+    });
+    // Markers and credits live outside Angular: a new language redraws them (and their labels take new room).
+    effect(() => {
+      this.i18n.language();
+      if (!this.mapReady()) return;
+      untracked(() => {
+        for (const [zoneId, marker] of this.markers) this.paintZoneMarker(marker, zoneId);
+        this.placeLabels();
+        if (this.map) this.showCredits(this.map);
+      });
     });
     // A sheet that grows covers more map: the labels under it give way (and the ones it uncovers come back).
     effect(() => {
@@ -201,8 +215,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     });
     this.map = map;
     map.touchZoomRotate.disableRotation();
-    // Always expanded: OpenStreetMap and DANE ask to be credited where the map is seen.
-    map.addControl(new AttributionControl({ compact: false }), 'bottom-right');
+    this.showCredits(map);
 
     const updateZoomClass = (): void => {
       // The globe (intro): only the colored polygons, no marker piled on Nariño.
@@ -325,7 +338,19 @@ export class MapPage implements AfterViewInit, OnDestroy {
     map.addSource(BOUNDARIES_SOURCE, boundariesSource(boundaries));
     map.addSource(DEPARTMENT_SOURCE, departmentSource(boundaries));
     for (const layer of boundaryLayers(this.colors)) map.addLayer(layer, 'hotspot-halo');
+    this.showCredits(map);
     this.styleSelection(this.store.zones(), this.store.selectedId(), boundaries);
+  }
+
+  /**
+   * Always expanded: OpenStreetMap and DANE ask to be credited where the map is seen. OSM's credit
+   * comes with its tiles; DANE's, in the app's language, once the boundaries are on the map.
+   */
+  private showCredits(map: MapLibreMap): void {
+    if (this.credits) map.removeControl(this.credits);
+    const boundaries = this.boundariesShown ? this.i18n.t('map.boundariesCredit') : undefined;
+    this.credits = new AttributionControl({ compact: false, customAttribution: boundaries });
+    map.addControl(this.credits, 'bottom-right');
   }
 
   /** One marker per municipality on its seat; new scores rebuild them. */
@@ -430,7 +455,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (!zone) return;
     const selected = zone.id === this.store.selectedId();
     const element = marker.getElement();
-    element.innerHTML = zoneMarkerHtml(zone, selected);
+    element.innerHTML = zoneMarkerHtml(zone, selected, this.i18n.language());
     // The selected marker goes on top, so its name is not hidden under its neighbours.
     element.style.zIndex = selected ? '2' : '';
   }
