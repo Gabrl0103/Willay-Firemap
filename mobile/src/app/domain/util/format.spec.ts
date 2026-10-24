@@ -1,6 +1,6 @@
 import {
   dateParts, formatDateLong, formatDateMedium, formatDateTime, formatDecimal, formatTime, formatTimeAgo, formatUpdatedDay,
-  percentLabel,
+  formatPercent, percentLabel,
 } from './format';
 
 describe('format', () => {
@@ -62,5 +62,7 @@ describe('format', () => {
     expect(percentLabel(0.528)).toBe('53 %');
     expect(percentLabel(0.528, 'en')).toBe('53%');
     expect(percentLabel(0.004, 'en')).toBe('<1%');
+    expect(formatPercent(70)).toBe('70 %');
+    expect(formatPercent(70, 'en')).toBe('70%');
   });
 });

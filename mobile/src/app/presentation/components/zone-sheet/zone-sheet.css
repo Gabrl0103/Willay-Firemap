@@ -4,6 +4,9 @@
   z-index: 2;
   left: 20px;
   top: calc(58px + env(safe-area-inset-top, 0px));
+}
+/* «‹ Nariño» y el aviso («Copiado»): la misma píldora de vidrio. */
+.sheet-back, .notice-pill {
   min-height: 44px;
   padding: 0 18px 0 12px;
   display: flex;
@@ -31,21 +34,7 @@
   margin: 0;
   pointer-events: none;
 }
-.notice-pill {
-  min-height: 44px;
-  padding: 0 18px;
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-pill);
-  background: var(--glass-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-soft);
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 600;
-}
+.notice-pill { padding: 0 18px; }
 @media (prefers-reduced-motion: no-preference) {
   .notice-pill { animation: a-up 0.32s var(--ease-out); }
 }
@@ -95,6 +84,12 @@ h2 { margin: 0; font-size: 36px; font-weight: 800; line-height: 1.1; letter-spac
 .score-ring strong { font-size: 30px; font-weight: 700; line-height: 1; }
 .score-ring span { margin-top: 4px; font-size: 12px; font-weight: 700; color: var(--risk); }
 
+/* «Clima ahora»: una fila de hasta cuatro valores (.stat-tile de base.css), en las unidades de Ajustes. */
+.weather { margin-bottom: 24px; }
+.weather-row { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.weather-row .stat-tile { padding: 10px 4px; display: grid; justify-items: center; gap: 4px; border-radius: 18px; text-align: center; font-size: 11px; line-height: 1.2; overflow-wrap: anywhere; color: var(--text-2); }
+.weather-row .stat-tile b { font-size: 15px; white-space: nowrap; color: var(--text); }
+.weather-skeleton { height: 112px; border-radius: 18px; }
 .factors-title { margin: 0 0 12px; font-size: 15px; font-weight: 600; color: var(--text-2); }
 .factor + .factor { margin-top: 13px; }
 .factor-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 16px; font-weight: 600; }

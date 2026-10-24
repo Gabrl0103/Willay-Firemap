@@ -137,5 +137,11 @@
   "event.approx": "aprox.",
   "attribution.ungrd": "Datos oficiales: «Emergencias UNGRD», Unidad Nacional para la Gestión del Riesgo de Desastres (UNGRD), publicados en datos.gov.co:",
   "attribution.changes": "Atalaya solo toma los incendios forestales de Nariño y une los reportes del mismo día y municipio.",
-  "attribution.boundaries": "Límites municipales del mapa: Marco Geoestadístico Nacional 2025, simplificados para el celular."
+  "attribution.boundaries": "Límites municipales del mapa: Marco Geoestadístico Nacional 2025, simplificados para el celular.",
+  "weather.title": "Clima ahora",
+  "weather.temperature": "Temperatura",
+  "weather.humidity": "Humedad",
+  "weather.wind": "Viento",
+  "weather.dryDays.one": "día sin lluvia",
+  "weather.dryDays.other": "días sin lluvia"
 }

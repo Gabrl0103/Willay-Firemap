@@ -2,13 +2,15 @@ import {
   Component, ElementRef, OnDestroy, afterNextRender, computed, inject, input, output, signal, viewChild,
 } from '@angular/core';
 import type { ZoneDetail, ZoneForecast, ZoneRiskSummary } from '../../../domain/model/risk';
-import { formatDecimal, formatTimeAgo, formatUpdatedDay } from '../../../domain/util/format';
+import { formatDecimal, formatPercent, formatTimeAgo, formatUpdatedDay } from '../../../domain/util/format';
 import { riskLabel } from '../../../domain/util/risk-labels';
+import { formatTemperature, formatWind } from '../../../domain/util/units';
 import { I18n } from '../../../i18n/i18n';
 import { TranslatePipe } from '../../../i18n/t.pipe';
-import type { MessageKey } from '../../../i18n/translate';
+import type { MessageKey, MessageParams, PluralKey } from '../../../i18n/translate';
+import { SettingsStore } from '../../../state/settings.store';
 import type { ForecastStatus } from '../../../state/zones.store';
-import { AppIcon } from '../app-icon/app-icon';
+import { AppIcon, type IconName } from '../app-icon/app-icon';
 import { ForecastSection } from '../forecast-section/forecast-section';
 import { RiskBadge } from '../risk-badge/risk-badge';
 import { FULL_HEIGHT, clampOffset, resolveSnap, snapOffset, type SheetSnap } from './sheet-snap';
@@ -33,6 +35,16 @@ interface DragState {
   velocity: number;
   moved: boolean;
 }
+
+/** One value of «Clima ahora»: its icon, the value in the chosen unit and what it is. */
+interface WeatherItem {
+  readonly icon: IconName;
+  readonly value: string;
+  readonly label: MessageKey | PluralKey;
+  readonly params?: MessageParams;
+}
+
+const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
 @Component({
   selector: 'app-zone-sheet',
@@ -120,6 +132,24 @@ interface DragState {
         </div>
 
         <div class="zone-content">
+          @if (weather(); as items) {
+            @if (items.length > 0) {
+              <section class="weather" aria-labelledby="weather-title">
+                <h3 id="weather-title" class="factors-title">{{ 'weather.title' | t }}</h3>
+                <ul class="weather-row">
+                  @for (item of items; track item.label) {
+                    <li class="stat-tile">
+                      <app-icon [name]="item.icon" [size]="16" />
+                      <b class="mono">{{ item.value }}</b>
+                      <small>{{ item.label | t: item.params }}</small>
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+          } @else {
+            <div class="weather weather-skeleton skeleton" aria-hidden="true"></div>
+          }
           <h3 class="factors-title">{{ 'sheet.factorsTitle' | t }}</h3>
           @for (factor of factors(); track factor.label; let i = $index) {
             <div class="factor">
@@ -303,6 +333,33 @@ export class ZoneSheet implements OnDestroy {
   protected readonly latestHotspot = computed(() => {
     const hotspots = this.detail()?.hotspots;
     return hotspots?.count && hotspots.latestDetectedAt ? formatTimeAgo(hotspots.latestDetectedAt, this.i18n.language()) : '';
+  });
+  private readonly settings = inject(SettingsStore);
+  /**
+   * «Clima ahora» from the detail, in the units of Ajustes (the API sends °C and km/h). A value the
+   * API did not send is left out; null while the detail has not arrived (a placeholder keeps its room).
+   */
+  protected readonly weather = computed((): WeatherItem[] | null => {
+    const detail = this.detail();
+    if (!detail) return null;
+    const weather: Partial<ZoneDetail['weather']> = detail.weather ?? {};
+    const language = this.i18n.language();
+    const items: WeatherItem[] = [];
+    if (isNumber(weather.temperatureC)) {
+      const value = formatTemperature(weather.temperatureC, this.settings.temperature(), language);
+      items.push({ icon: 'thermometer', value, label: 'weather.temperature' });
+    }
+    if (isNumber(weather.humidityPct)) {
+      items.push({ icon: 'droplet', value: formatPercent(Math.round(weather.humidityPct), language), label: 'weather.humidity' });
+    }
+    if (isNumber(weather.windKmh)) {
+      items.push({ icon: 'wind', value: formatWind(weather.windKmh, this.settings.wind(), language), label: 'weather.wind' });
+    }
+    if (isNumber(weather.daysWithoutRain)) {
+      const count = Math.round(weather.daysWithoutRain);
+      items.push({ icon: 'calendar', value: String(count), label: 'weather.dryDays', params: { count } });
+    }
+    return items;
   });
   /** 2.08 -> "2,1" | "2.1"; null leaves the card out. */
   protected readonly perYear = computed(() => {

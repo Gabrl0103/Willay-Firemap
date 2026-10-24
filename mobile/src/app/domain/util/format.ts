@@ -71,11 +71,15 @@ export function formatDateTime(date: Date, language: Language = 'es'): string {
   return `${date.getDate()} ${shortMonth(date, 'es')}. ${date.getFullYear()}, ${hours % 12 || 12}:${minutes} ${period}`;
 }
 
+/** A 0–100 value as "70 %" | "70%" (Spanish keeps the space before the sign). */
+export function formatPercent(value: number | string, language: Language = 'es'): string {
+  return `${value}${language === 'es' ? ' %' : '%'}`;
+}
+
 /** "24 %" | "24%", or "<1 %" so a tiny probability does not read as zero. */
 export function percentLabel(probability: number, language: Language = 'es'): string {
   const percent = Math.round(probability * 100);
-  const sign = language === 'es' ? ' %' : '%';
-  return percent < 1 ? `<1${sign}` : `${percent}${sign}`;
+  return formatPercent(percent < 1 ? '<1' : percent, language);
 }
 
 const HOUR_MS = 60 * 60 * 1000;
