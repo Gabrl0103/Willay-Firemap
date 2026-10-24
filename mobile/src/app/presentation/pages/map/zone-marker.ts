@@ -1,11 +1,11 @@
-import type { RiskLevel, ZoneRiskSummary } from '../../../domain/model/risk';
+import type { ZoneRiskSummary } from '../../../domain/model/risk';
 import { RISK_LABELS } from '../../../domain/util/risk-labels';
 
 /**
- * From this zoom on a municipality is its label (name and score, centered on its seat), as long as
- * the label does not run into another one (visibleLabels); one that does not fit is a small dot
- * without number, gone if it falls under a label (coveredDots). Below it markers are the colored
- * circle with the score; the selected one keeps its label.
+ * Over Nariño a municipality is its label, centered on its seat, as long as the label does not run
+ * into another one (visibleLabels); one that does not fit is a small dot without number, gone if it
+ * falls under a label (coveredDots). There are no groups. From this zoom on the label also says the
+ * score and the level.
  */
 export const NAME_MIN_ZOOM = 8.5;
 
@@ -20,7 +20,7 @@ const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (char) => 
 export function zoneMarkerHtml(zone: ZoneRiskSummary, selected: boolean): string {
   return (
     `<div class="zone-marker risk-${zone.level}${selected ? ' is-selected' : ''}">` +
-    `<span class="zone-dot"><i>${zone.score}</i></span>` +
+    `<span class="zone-dot"></span>` +
     `<span class="zone-label"><b>${escapeHtml(zone.name)}</b><small>${zone.score} · ${RISK_LABELS[zone.level]}</small></span>` +
     `</div>`
   );
@@ -67,14 +67,4 @@ export function visibleLabels(boxes: readonly LabelBox[], area?: ScreenBox): Set
 /** The dots (of municipalities without a label) that a shown label covers: those are not drawn. */
 export function coveredDots(dots: readonly (ScreenBox & { readonly key: string })[], labels: readonly ScreenBox[]): Set<string> {
   return new Set(dots.filter((dot) => labels.some((label) => overlaps(label, dot))).map((dot) => dot.key));
-}
-
-/** A group of nearby seats at low zoom: how many, in the color of the worst one. Tapping it zooms in. */
-export function clusterMarkerHtml(count: number, level: RiskLevel): string {
-  return `<div class="zone-cluster risk-${level}"><b>${count}</b></div>`;
-}
-
-/** Spoken name of a group marker (it is a button for screen readers). */
-export function clusterLabel(count: number): string {
-  return `${count} municipios. Toca para acercar`;
 }

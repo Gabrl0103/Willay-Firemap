@@ -1,7 +1,5 @@
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
-import {
-  NAME_MIN_ZOOM, clusterLabel, clusterMarkerHtml, coveredDots, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox,
-} from './zone-marker';
+import { NAME_MIN_ZOOM, coveredDots, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox } from './zone-marker';
 
 const zone = (name: string): ZoneRiskSummary => ({
   id: 'x', name, latitude: 1, longitude: -77, score: 63, level: 'high',
@@ -15,10 +13,10 @@ describe('zone marker', () => {
     expect(showsNames(13)).toBe(true);
   });
 
-  it('puts the score in the dot and the name in the label', () => {
+  it('puts the name and the score in the label, and no number in the dot', () => {
     const html = zoneMarkerHtml(zone('Chachagüí'), false);
     expect(html).toContain('class="zone-marker risk-high"');
-    expect(html).toContain('<span class="zone-dot"><i>63</i></span>');
+    expect(html).toContain('<span class="zone-dot"></span>');
     expect(html).toContain('<b>Chachagüí</b><small>63 · Alto</small>');
   });
 
@@ -70,10 +68,5 @@ describe('zone marker', () => {
     // "36" sat on Ancuya's label: its dot goes; one clear of every label stays.
     expect([...coveredDots([dot('36', 150, 110), dot('lejos', 300, 300), dot('borde', 163, 110)], [label])].sort()).toEqual(['36', 'borde']);
     expect(coveredDots([dot('solo', 10, 10)], []).size).toBe(0);
-  });
-
-  it('draws a group with its count, in the color of its worst zone', () => {
-    expect(clusterMarkerHtml(7, 'extreme')).toBe('<div class="zone-cluster risk-extreme"><b>7</b></div>');
-    expect(clusterLabel(7)).toBe('7 municipios. Toca para acercar');
   });
 });
