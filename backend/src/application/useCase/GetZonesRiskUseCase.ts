@@ -16,6 +16,16 @@ export interface ZoneRiskSummary {
    * Optional in the contract: backends before v0.28 do not send it.
    */
   readonly factors?: RiskFactors;
+  /**
+   * The weather now, the same as GET /zones/:id sends, so «Clima ahora» shows at once.
+   * Optional in the contract: backends before v0.31 do not send it.
+   */
+  readonly weather?: {
+    readonly temperatureC: number;
+    readonly humidityPct: number;
+    readonly windKmh: number;
+    readonly daysWithoutRain: number;
+  };
 }
 
 export class GetZonesRiskUseCase {
@@ -30,8 +40,9 @@ export class GetZonesRiskUseCase {
     const summaries = await Promise.all(
       zones.map(async (zone): Promise<ZoneRiskSummary | undefined> => {
         let assessment;
+        let weather;
         try {
-          ({ assessment } = await this.riskCalculator.calculate(zone));
+          ({ assessment, weather } = await this.riskCalculator.calculate(zone));
         } catch (error) {
           if (error instanceof NotFoundError) return undefined;
           throw error;
@@ -44,6 +55,12 @@ export class GetZonesRiskUseCase {
           score: assessment.score,
           level: assessment.level,
           factors: assessment.factors,
+          weather: {
+            temperatureC: weather.temperatureC,
+            humidityPct: weather.humidityPct,
+            windKmh: weather.windKmh,
+            daysWithoutRain: weather.daysWithoutRain,
+          },
         };
       }),
     );

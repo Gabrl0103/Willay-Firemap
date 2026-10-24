@@ -99,6 +99,7 @@ describe('GET /api/zones', () => {
     }
   }
   type Factors = { dryWeather: number; nearbyHotspots: number; fireHistory: number };
+  type Weather = { temperatureC: number; humidityPct: number; windKmh: number; daysWithoutRain: number };
 
   it('sends the factors of each score, the same ones as the zone detail', async () => {
     const zones = await getJson<Array<{ id: string; score: number; factors?: Factors }>>('/api/zones');
@@ -111,5 +112,17 @@ describe('GET /api/zones', () => {
     const detail = await getJson<{ score: number; factors: Factors }>(`/api/zones/${first!.id}`);
     assert.deepEqual(first!.factors, detail.factors);
     assert.equal(first!.score, detail.score);
+  });
+
+  it('sends the weather now of each zone, the same one as the zone detail', async () => {
+    const zones = await getJson<Array<{ id: string; weather?: Weather }>>('/api/zones');
+    for (const zone of zones) {
+      assert.ok(zone.weather, zone.id);
+      assert.deepEqual(Object.keys(zone.weather).sort(), ['daysWithoutRain', 'humidityPct', 'temperatureC', 'windKmh'], zone.id);
+      for (const value of Object.values(zone.weather)) assert.equal(typeof value, 'number', zone.id);
+    }
+    const [first] = zones;
+    const detail = await getJson<{ weather: Weather }>(`/api/zones/${first!.id}`);
+    assert.deepEqual(first!.weather, detail.weather);
   });
 });
