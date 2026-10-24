@@ -38,9 +38,13 @@ export class App {
     inject(I18n);
     inject(Motion);
     // Se resuelve mucho antes de que termine la splash, así que la introducción ya está debajo al desvanecerse.
-    void inject(OnboardingFlag)
-      .isDone()
-      .then((done) => this.showOnboarding.set(!done));
+    const onboarding = inject(OnboardingFlag);
+    void onboarding.isDone().then((done) => this.showOnboarding.set(!done));
+    effect(() => {
+      if (!onboarding.replayRequested()) return;
+      onboarding.replayRequested.set(false);
+      this.showOnboarding.set(true);
+    });
     const curtain = inject(AppCurtain);
     effect(() => {
       if (!this.showSplash() && !this.showOnboarding()) curtain.lift();

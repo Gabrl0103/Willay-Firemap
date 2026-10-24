@@ -57,6 +57,19 @@
 .confirm p { margin: 0; font-size: 15px; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
+/* Acerca de: texto corrido, fuentes con su licencia y, debajo, la atribución de UNGRD y DANE. */
+.about h3 { margin: 18px 0 6px; font-size: 15px; font-weight: 700; }
+.about p { margin: 6px 0 0; font-size: 14px; line-height: 1.45; color: var(--text-2); }
+.about .version { margin: 0; color: var(--text); }
+.about .disclaimer { color: var(--text); font-weight: 600; }
+.sources { margin: 0; padding: 0; list-style: none; }
+.sources li { padding: 10px 0; display: grid; gap: 3px; font-size: 14px; }
+.sources li + li { border-top: 1px solid var(--glass-border); }
+.sources small { font-size: 12px; line-height: 1.4; color: var(--text-2); }
+.sources .citation { font-style: italic; }
+.sources a { color: var(--amber); text-underline-offset: 2px; }
+app-data-attribution { display: block; margin-top: 16px; }
+
 /* Interruptor de 52 × 32 dentro de un objetivo de 44 px. */
 .switch { position: relative; flex: none; width: 52px; height: 44px; }
 .switch::before {

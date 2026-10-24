@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { Preferences } from '@capacitor/preferences';
 
 const KEY = 'onboarding.done';
@@ -6,6 +6,13 @@ const KEY = 'onboarding.done';
 /** Recuerda si ya se vio la introducción (Preferences: almacenamiento nativo; localStorage en el navegador). */
 @Injectable({ providedIn: 'root' })
 export class OnboardingFlag {
+  /** «Ver introducción otra vez» (Ajustes): the app shows it again; nothing else changes. */
+  readonly replayRequested = signal(false);
+
+  requestReplay(): void {
+    this.replayRequested.set(true);
+  }
+
   async isDone(): Promise<boolean> {
     try {
       const { value } = await Preferences.get({ key: KEY });

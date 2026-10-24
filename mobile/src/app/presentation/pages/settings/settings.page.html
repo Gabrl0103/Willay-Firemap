@@ -128,4 +128,46 @@
       <button type="button" class="action" (click)="clearCache()">{{ 'settings.clear' | t }}</button>
     </div>
   </section>
+
+  <section class="glass-card group anim-up" style="--i: 6" aria-labelledby="help-title">
+    <h2 id="help-title" class="group-title">{{ 'settings.help' | t }}</h2>
+    <div class="row">
+      <div>
+        <span>{{ 'settings.replayIntro' | t }}</span>
+        <p class="hint">{{ 'settings.replayIntroHint' | t }}</p>
+      </div>
+      <button type="button" class="action" (click)="replayIntro()">{{ 'settings.open' | t }}</button>
+    </div>
+  </section>
+
+  <section class="glass-card group about anim-up" style="--i: 7" aria-labelledby="about-title">
+    <h2 id="about-title" class="group-title">{{ 'about.title' | t }}</h2>
+    <p class="version mono">{{ 'about.version' | t: { version: version } }}</p>
+    <h3>{{ 'about.howTitle' | t }}</h3>
+    <p>{{ 'about.how' | t }}</p>
+    <p>{{ 'about.forecast' | t }}</p>
+    <p class="disclaimer">{{ 'about.disclaimer' | t }}</p>
+
+    <h3>{{ 'about.sources' | t }}</h3>
+    <ul class="sources">
+      @for (source of sources; track source.name) {
+        <li>
+          <b>{{ source.name }}</b>
+          <span>{{ source.use | t }}</span>
+          @if (source.note) {
+            <small>{{ source.note | t: { year: year } }}</small>
+          }
+          @if (source.citation) {
+            <small class="citation" lang="en">“{{ source.citation }}”</small>
+          }
+          <small class="links">
+            @for (link of source.links; track link.url; let last = $last) {
+              <a [href]="link.url" target="_blank" rel="noopener">{{ link.text }}</a>@if (!last) { · }
+            }
+          </small>
+        </li>
+      }
+    </ul>
+  </section>
+  <app-data-attribution class="anim-up" style="--i: 8" />
 </div>

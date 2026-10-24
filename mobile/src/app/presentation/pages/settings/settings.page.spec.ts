@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { OnboardingFlag } from '../../../core/onboarding-flag';
 import { FAVORITES_STORAGE, FavoritesStore } from '../../../state/favorites.store';
 import { SettingsStore } from '../../../state/settings.store';
 import { ZonesStore } from '../../../state/zones.store';
@@ -102,6 +103,30 @@ describe('SettingsPage', () => {
     fixture.detectChanges();
     expect(clearCache).toHaveBeenCalledTimes(1);
     expect(text(rows[1]!.querySelector('.hint'))).toBe('Listo: se volverán a pedir.');
+  });
+
+  it('opens the introduction again without clearing anything', () => {
+    const { host } = render();
+    const onboarding = TestBed.inject(OnboardingFlag);
+    host.querySelector<HTMLButtonElement>('[aria-labelledby="help-title"] button')!.click();
+    expect(onboarding.replayRequested()).toBe(true);
+  });
+
+  it('shows the version, how the risk is calculated and every source with its license', () => {
+    const { host } = render();
+    const about = host.querySelector('[aria-labelledby="about-title"]')!;
+    expect(text(about.querySelector('.version'))).toBe('Versión 0.30.0');
+    expect(text(about)).toContain('clima seco (50 %)');
+    expect(text(about)).toContain('Es un indicador, no una predicción exacta.');
+    expect([...about.querySelectorAll('.sources b')].map(text)).toEqual([
+      'NASA FIRMS', 'Open-Meteo', 'ERA5 · Copernicus', 'NASA POWER', 'Gobernación de Nariño', 'OpenStreetMap',
+    ]);
+    expect(text(about)).toContain('Weather data by Open-Meteo.com');
+    expect(text(about)).toContain('ODbL');
+    expect(text(about)).toContain('Sin licencia abierta declarada.');
+    expect(text(about)).toContain(`Copernicus ${new Date().getFullYear()}`);
+    // UNGRD and DANE, with DANE's citation word for word.
+    expect(text(host.querySelector('app-data-attribution'))).toContain('Fuente: Departamento Administrativo Nacional de Estadística');
   });
 
   it('says which language «Automático» is using', () => {
