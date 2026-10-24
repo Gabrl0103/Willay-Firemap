@@ -1,15 +1,18 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular';
 import { errorInterceptor } from './core/error/error.interceptor';
 import { HttpFireRepository, HttpForecastRepository, HttpHotspotRepository, HttpZoneRepository } from './data/http-repositories';
 import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from './domain/repository/repositories';
 import { routes } from './app.routes';
+import { SettingsStore } from './state/settings.store';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    // Settings (language, motion…) before the first screen, so nothing is drawn in the wrong language.
+    provideAppInitializer(() => inject(SettingsStore).load()),
     provideIonicAngular({ mode: 'md' }),
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withInterceptors([errorInterceptor])),
