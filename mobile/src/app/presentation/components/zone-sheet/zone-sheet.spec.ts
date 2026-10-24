@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { ZoneDetail } from '../../../domain/model/risk';
+import type { ZoneDetail, ZoneRiskSummary } from '../../../domain/model/risk';
 import { ZoneSheet } from './zone-sheet';
 
 const text = (host: HTMLElement, selector: string): string[] =>
@@ -14,8 +14,18 @@ const DETAIL: ZoneDetail = {
   factors: { dryWeather: 40, nearbyHotspots: 20, fireHistory: 60 },
 };
 
-function render(detail: ZoneDetail = DETAIL, inputs: { firesPerYear?: number | null; updatedAt?: Date | null } = {}) {
+/** What the map has of the same zone: the sheet opens with it. */
+const ZONE: ZoneRiskSummary = {
+  id: 'pasto', name: 'Pasto', latitude: 1.21, longitude: -77.28, score: 42, level: 'medium', factors: DETAIL.factors,
+};
+
+function render(
+  detail: ZoneDetail | null = DETAIL,
+  inputs: { firesPerYear?: number | null; updatedAt?: Date | null } = {},
+  zone: ZoneRiskSummary = ZONE,
+) {
   const fixture = TestBed.createComponent(ZoneSheet);
+  fixture.componentRef.setInput('zone', zone);
   fixture.componentRef.setInput('detail', detail);
   for (const [name, value] of Object.entries(inputs)) fixture.componentRef.setInput(name, value);
   fixture.detectChanges();
@@ -92,6 +102,30 @@ describe('ZoneSheet', () => {
     expect(host.querySelector('.fires-stat')).toBeNull();
     // Backends older than v0.20 do not send hotspots: no cards at all.
     expect(host.querySelector('.stats')).toBeNull();
+  });
+
+  it('opens with what the map has, the hotspots waiting as a placeholder', () => {
+    const { fixture, host } = render(null);
+    expect(text(host, '.zone-title h2')).toEqual(['Pasto']);
+    expect(text(host, '.score-ring strong')).toEqual(['42']);
+    expect(text(host, '.factor-head b')).toEqual(['40', '20', '60']);
+    expect(host.querySelector('.stat-skeleton')).not.toBeNull();
+
+    fixture.componentRef.setInput('detail', { ...DETAIL, hotspots: { count: 2, latestDetectedAt: null } });
+    fixture.detectChanges();
+    expect(host.querySelector('.stat-skeleton')).toBeNull();
+    expect(text(host, '.hotspots-stat b')).toEqual(['2']);
+  });
+
+  it('keeps the factors as placeholders until the detail brings them (backends before v0.28)', () => {
+    const { fixture, host } = render(null, {}, { ...ZONE, factors: undefined });
+    expect(host.querySelectorAll('.factor-value-skeleton').length).toBe(3);
+    expect(host.querySelectorAll('.factor-track.skeleton').length).toBe(3);
+
+    fixture.componentRef.setInput('detail', DETAIL);
+    fixture.detectChanges();
+    expect(host.querySelector('.factor-value-skeleton')).toBeNull();
+    expect(text(host, '.factor-head b')).toEqual(['40', '20', '60']);
   });
 
   it('says when the data was updated', () => {

@@ -1,4 +1,5 @@
 import { NotFoundError } from '../../domain/error/DomainErrors.js';
+import type { RiskFactors } from '../../domain/model/RiskAssessment.js';
 import type { RiskLevel } from '../../domain/model/RiskLevel.js';
 import type { ZoneRepository } from '../../domain/port/Repositories.js';
 import type { ZoneRiskCalculator } from '../service/ZoneRiskCalculator.js';
@@ -10,6 +11,11 @@ export interface ZoneRiskSummary {
   readonly longitude: number;
   readonly score: number;
   readonly level: RiskLevel;
+  /**
+   * What the score is made of, so the app opens the zone sheet without waiting for GET /zones/:id.
+   * Optional in the contract: backends before v0.28 do not send it.
+   */
+  readonly factors?: RiskFactors;
 }
 
 export class GetZonesRiskUseCase {
@@ -37,6 +43,7 @@ export class GetZonesRiskUseCase {
           longitude: zone.longitude,
           score: assessment.score,
           level: assessment.level,
+          factors: assessment.factors,
         };
       }),
     );

@@ -31,8 +31,6 @@ export const FLY_MS = 2600;
 export const ZONE_FLY_MS = 1200;
 /** ...and the short one after tapping a municipality already on screen. */
 export const TAP_FLY_MS = 700;
-/** Back to the whole department when the zone sheet closes. */
-export const RETURN_FLY_MS = 900;
 /** Flights over Nariño frame with cameraForBounds, so the view itself keeps no padding. */
 export const NO_PADDING = { top: 0, bottom: 0, left: 0, right: 0 };
 

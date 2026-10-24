@@ -18,7 +18,7 @@ import { SearchBox } from '../../components/search-box/search-box';
 import { MID_HEIGHT } from '../../components/zone-sheet/sheet-snap';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
-  FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, RETURN_FLY_MS, SPIN_MS, TAP_FLY_MS,
+  FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, SPIN_MS, TAP_FLY_MS,
   ZONE_FLY_MS, ZONE_ZOOM,
   globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed, rememberIntroPlayed, spinCenter,
 } from './map-camera';
@@ -27,9 +27,8 @@ import {
   departmentSource, hotspotLayers, hotspotPoints, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
 } from './map-layers';
 import { mapStyle } from './map-style';
-import { ZONES_SOURCE, diffMarkers, markerItems, zonePoints, zonesHitLayer, zonesSource, type MarkerItem } from './zone-clusters';
 import {
-  clusterLabel, clusterMarkerHtml, coveredDots, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox, type ScreenBox,
+  coveredDots, labelPriority, showsNames, visibleLabels, zoneMarkerHtml, type LabelBox, type ScreenBox,
 } from './zone-marker';
 
 /** MapLibre's worker, copied next to the app by angular.json (it cannot come from a CDN). */
@@ -49,11 +48,6 @@ const LABEL_MARGIN = 4;
 const DOT_RADIUS = 4;
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
 const SEAT_OFFSET: [number, number] = [0, -150];
-
-interface ShownMarker {
-  readonly marker: Marker;
-  readonly item: MarkerItem;
-}
 
 @Component({
   selector: 'app-map-page',
@@ -75,7 +69,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly header = viewChild.required<ElementRef<HTMLElement>>('header');
   private map?: MapLibreMap;
   private colors?: MapColors;
-  private readonly markers = new Map<string, ShownMarker>();
+  /** One marker per municipality, by zone id: never grouped. */
+  private readonly markers = new Map<string, Marker>();
   private userMarker?: Marker;
   private spinFrame?: number;
   private spinning = false;
@@ -88,8 +83,6 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private boundariesShown = false;
   /** The camera shows the whole department (intro, «Acercar a Nariño»), untouched since. */
   private framingNarino = false;
-  /** The zone sheet just closed: once the overview sheet is laid out (its height known), fly back to Nariño. */
-  private returnToNarino = false;
   protected readonly sheetInset = signal(0);
   /** No WebGL: MapLibre cannot draw in any projection, so the map area explains it instead. */
   protected readonly mapUnavailable = signal(false);
@@ -146,19 +139,13 @@ export class MapPage implements AfterViewInit, OnDestroy {
       const overview = this.overview()?.nativeElement;
       if (!overview) {
         // The zone sheet opens at MID_HEIGHT of the screen.
-        const detailOpen = this.store.detail() !== null;
-        this.sheetInset.set(detailOpen ? Math.round(this.mapElement().nativeElement.clientHeight * MID_HEIGHT) : 0);
+        const zoneOpen = this.store.selected() !== null;
+        this.sheetInset.set(zoneOpen ? Math.round(this.mapElement().nativeElement.clientHeight * MID_HEIGHT) : 0);
         return;
       }
-      // Called once right away, with the sheet's real height: the moment to fly back after a zone.
       const observer = new ResizeObserver(() => {
         this.sheetInset.set(overview.offsetHeight);
-        if (this.returnToNarino) {
-          this.returnToNarino = false;
-          this.flyToNarino(false, RETURN_FLY_MS);
-        } else if (this.framingNarino) {
-          this.reframeNarino();
-        }
+        if (this.framingNarino) this.reframeNarino();
       });
       observer.observe(overview);
       onCleanup(() => observer.disconnect());
@@ -206,6 +193,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
     map.addControl(new AttributionControl({ compact: false }), 'bottom-right');
 
     const updateZoomClass = (): void => {
+      // The globe (intro): only the colored polygons, no marker piled on Nariño.
+      element.classList.toggle('is-far', map.getZoom() < MIN_ZOOM_OVER_NARINO);
       const names = showsNames(map.getZoom());
       if (names === element.classList.contains('show-names')) return;
       // Crossing into the names: they wait hidden until the camera stops and placeLabels sorts them out.
@@ -214,7 +203,6 @@ export class MapPage implements AfterViewInit, OnDestroy {
     };
     map.on('zoom', updateZoomClass);
     updateZoomClass();
-    map.on('render', () => this.syncMarkers());
     map.on('moveend', () => this.placeLabels());
     map.on('move', () => this.placeGlow());
     map.on('resize', () => this.placeGlow());
@@ -257,9 +245,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.flyToNarino(false);
   }
 
-  /** The zone sheet closed (its back button, the backdrop or a drag down): back to the whole department. */
+  /**
+   * The zone sheet closed (its back button, the backdrop or a drag down): the camera stays where it is
+   * and the municipality loses its highlight. Only «Acercar a Nariño» goes back to the whole department.
+   */
   protected closeSheet(): void {
-    this.returnToNarino = true;
     this.store.clearSelection();
   }
 
@@ -284,12 +274,10 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.flyToSeat(longitude, latitude);
   }
 
-  /** The base style is ready: add the zones, hotspots and (when they arrive) the municipal polygons. */
+  /** The base style is ready: add the hotspots and (when they arrive) the municipal polygons. */
   private addLayers(map: MapLibreMap, colors: MapColors): void {
     map.addSource(HOTSPOTS_SOURCE, hotspotsSource([]));
     for (const layer of hotspotLayers(colors)) map.addLayer(layer);
-    map.addSource(ZONES_SOURCE, zonesSource([]));
-    map.addLayer(zonesHitLayer);
   }
 
   /** Polygons go under the hotspots and the markers. Added once: risk and selection only restyle them. */
@@ -303,11 +291,14 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.styleSelection(this.store.zones(), this.store.selectedId(), boundaries);
   }
 
-  /** New scores regroup the seats: the markers are rebuilt from the next render. */
+  /** One marker per municipality on its seat; new scores rebuild them. */
   private setZones(zones: readonly ZoneRiskSummary[]): void {
-    for (const { marker } of this.markers.values()) marker.remove();
+    const map = this.map;
+    for (const marker of this.markers.values()) marker.remove();
     this.markers.clear();
-    this.source(ZONES_SOURCE)?.setData(zonePoints(zones));
+    if (!map) return;
+    for (const zone of zones) this.markers.set(zone.id, this.zoneMarker(zone).setLngLat([zone.longitude, zone.latitude]).addTo(map));
+    if (!map.isMoving()) this.placeLabels();
   }
 
   private styleSelection(zones: readonly ZoneRiskSummary[], selectedId: string | null, boundaries: ZoneBoundaries | null): void {
@@ -318,13 +309,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
       for (const layer of ZONE_SELECTED_LAYERS) map.setFilter(layer, selectedZoneFilter(selectedId));
     }
     // Markers already on screen take the new score, level or selection; the selected name goes first.
-    for (const { marker, item } of this.markers.values()) {
-      if (item.kind === 'zone') this.paintZoneMarker(marker, item.zoneId);
-    }
+    for (const [zoneId, marker] of this.markers) this.paintZoneMarker(marker, zoneId);
     this.placeLabels();
   }
 
-  /** Same as tapping the marker. A tap that started on a marker (or group) is the marker's, not the polygon's. */
+  /** Same as tapping the marker. A tap that started on a marker is the marker's, not the polygon's. */
   private onPolygonTap(event: MapLayerMouseEvent): void {
     const target = event.originalEvent.target;
     if (target instanceof Element && target.closest('.maplibregl-marker')) return;
@@ -334,56 +323,38 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (zone) this.selectZone(zone, TAP_FLY_MS);
   }
 
-  /** Shows one HTML marker per group or lone seat that the zones source has, reusing those already shown. */
-  private syncMarkers(): void {
-    const map = this.map;
-    if (!map || !map.getSource(ZONES_SOURCE) || !map.isSourceLoaded(ZONES_SOURCE)) return;
-    const { add, remove } = diffMarkers(new Set(this.markers.keys()), markerItems(map.querySourceFeatures(ZONES_SOURCE)));
-    for (const key of remove) {
-      this.markers.get(key)?.marker.remove();
-      this.markers.delete(key);
-    }
-    for (const item of add) {
-      const marker = item.kind === 'zone' ? this.zoneMarker(item.zoneId) : this.clusterMarker(item);
-      if (!marker) continue;
-      marker.setLngLat(item.lngLat).addTo(map);
-      this.markers.set(item.key, { marker, item });
-    }
-    if (add.length > 0 && !map.isMoving()) this.placeLabels();
-  }
-
   /**
-   * Shows the names (with the score) that fit without overlapping: the selected zone first, then
-   * the riskiest. The rest are a small dot, dropped when a shown label covers it, so a municipality
-   * is never a label and a dot at once. Measured when the camera stops, so nothing flickers while it moves.
+   * Shows the labels that fit without overlapping: the selected zone, Pasto, then the riskiest. The
+   * rest are a small dot, dropped when a shown label covers it, so a municipality is never a label and
+   * a dot at once. Measured when the camera stops, so nothing flickers while it moves; on the globe
+   * there are no markers to place.
    */
   private placeLabels(): void {
     const map = this.map;
-    if (!map || !showsNames(map.getZoom())) return;
+    if (!map || map.getZoom() < MIN_ZOOM_OVER_NARINO) return;
     const scores = new Map(this.store.zones().map((zone) => [zone.id, zone.score]));
     const selectedId = this.store.selectedId();
     const boxes: LabelBox[] = [];
-    for (const { marker, item } of this.markers.values()) {
-      const label = item.kind === 'zone' ? marker.getElement().querySelector('.zone-label') : null;
-      if (!label || item.kind !== 'zone') continue;
+    for (const [zoneId, marker] of this.markers) {
+      const label = marker.getElement().querySelector('.zone-label');
+      if (!label) continue;
       const { left, top, right, bottom } = label.getBoundingClientRect();
-      const priority = item.zoneId === selectedId ? Infinity : (scores.get(item.zoneId) ?? 0);
-      boxes.push({ key: item.key, priority, left, top, right, bottom });
+      boxes.push({ key: zoneId, priority: labelPriority(zoneId, scores.get(zoneId) ?? 0, selectedId), left, top, right, bottom });
     }
     const shown = visibleLabels(boxes, this.labelArea());
     const dots: (ScreenBox & { readonly key: string })[] = [];
-    for (const { marker, item } of this.markers.values()) {
+    for (const [zoneId, marker] of this.markers) {
       const element = marker.getElement();
-      element.classList.toggle('label-hidden', !shown.has(item.key));
-      if (item.kind === 'zone' && !shown.has(item.key)) {
+      element.classList.toggle('label-hidden', !shown.has(zoneId));
+      if (!shown.has(zoneId)) {
         const { left, top, right, bottom } = element.getBoundingClientRect();
         const x = (left + right) / 2;
         const y = (top + bottom) / 2;
-        dots.push({ key: item.key, left: x - DOT_RADIUS, top: y - DOT_RADIUS, right: x + DOT_RADIUS, bottom: y + DOT_RADIUS });
+        dots.push({ key: zoneId, left: x - DOT_RADIUS, top: y - DOT_RADIUS, right: x + DOT_RADIUS, bottom: y + DOT_RADIUS });
       }
     }
     const covered = coveredDots(dots, boxes.filter((box) => shown.has(box.key)));
-    for (const { marker, item } of this.markers.values()) marker.getElement().classList.toggle('dot-hidden', covered.has(item.key));
+    for (const [zoneId, marker] of this.markers) marker.getElement().classList.toggle('dot-hidden', covered.has(zoneId));
   }
 
   /** Where a label can show whole: the map below the header and above the sheet, with a small margin. */
@@ -398,12 +369,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
   }
 
   private hideLabels(): void {
-    for (const { marker } of this.markers.values()) marker.getElement().classList.add('label-hidden');
+    for (const marker of this.markers.values()) marker.getElement().classList.add('label-hidden');
   }
 
-  private zoneMarker(zoneId: string): Marker | null {
-    const zone = this.store.zones().find((z) => z.id === zoneId);
-    if (!zone) return null;
+  private zoneMarker(zone: ZoneRiskSummary): Marker {
+    const zoneId = zone.id;
     const element = document.createElement('div');
     // Its label shows once placeLabels finds room for it.
     element.className = 'zone-icon label-hidden';
@@ -426,28 +396,6 @@ export class MapPage implements AfterViewInit, OnDestroy {
     element.innerHTML = zoneMarkerHtml(zone, selected);
     // The selected marker goes on top, so its name is not hidden under its neighbours.
     element.style.zIndex = selected ? '2' : '';
-  }
-
-  private clusterMarker(item: Extract<MarkerItem, { kind: 'cluster' }>): Marker {
-    const element = document.createElement('button');
-    element.type = 'button';
-    element.className = 'cluster-icon';
-    element.setAttribute('aria-label', clusterLabel(item.count));
-    element.innerHTML = clusterMarkerHtml(item.count, item.level);
-    element.addEventListener('click', (event) => {
-      event.stopPropagation();
-      void this.zoomIntoCluster(item);
-    });
-    return new Marker({ element });
-  }
-
-  private async zoomIntoCluster(item: Extract<MarkerItem, { kind: 'cluster' }>): Promise<void> {
-    const map = this.map;
-    const source = this.source(ZONES_SOURCE);
-    if (!map || !source) return;
-    const zoom = await source.getClusterExpansionZoom(item.clusterId);
-    this.framingNarino = false;
-    map.easeTo({ center: item.lngLat, zoom: zoom + 0.25, duration: 500 });
   }
 
   private openCamera(plan: ReturnType<typeof introPlan>): void {
@@ -538,8 +486,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
     return camera && { ...camera, pitch: PITCH, padding: NO_PADDING };
   }
 
-  /** The intro flight is essential (reduced motion never gets here); the button's and the return are not. */
-  private flyToNarino(essential = true, duration = FLY_MS): void {
+  /** The intro flight is essential (reduced motion never gets here); the button's is not. */
+  private flyToNarino(essential = true): void {
     const map = this.map;
     const camera = this.narinoCamera();
     if (!map || !camera) return;
@@ -552,7 +500,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
       this.limitToNarino();
       this.framingNarino = true;
     });
-    map.flyTo({ ...camera, duration, essential });
+    map.flyTo({ ...camera, duration: FLY_MS, essential });
   }
 
   /** The sheet changed height while showing the department: frame it again above the sheet. */

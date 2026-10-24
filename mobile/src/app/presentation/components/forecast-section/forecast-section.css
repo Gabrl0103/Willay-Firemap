@@ -13,6 +13,11 @@ h3 { margin: 0 0 14px; font-size: 15px; font-weight: 600; color: var(--text-2); 
 .forecast-track { height: 8px; margin-top: 7px; overflow: hidden; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.1); }
 .forecast-track span { display: block; height: 100%; border-radius: inherit; background: var(--risk); }
 
+/* Esqueleto mientras llega GET /zones/:id/forecast: las tres filas con su hora y bloques que laten. */
+.forecast-loading .forecast-row + .forecast-row { margin-top: 14px; }
+.skeleton-badge { width: 64px; height: 22px; border-radius: var(--radius-pill); }
+.skeleton-value { width: 48px; height: 16px; border-radius: 6px; }
+
 .forecast-note { margin: 14px 0 0; font-size: 12px; line-height: 1.35; color: var(--text-2); }
 
 .forecast-state { margin: 0; font-size: 15px; line-height: 1.35; color: var(--text-2); }

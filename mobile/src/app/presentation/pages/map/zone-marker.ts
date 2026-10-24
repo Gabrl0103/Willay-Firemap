@@ -1,16 +1,26 @@
-import type { RiskLevel, ZoneRiskSummary } from '../../../domain/model/risk';
+import type { ZoneRiskSummary } from '../../../domain/model/risk';
 import { RISK_LABELS } from '../../../domain/util/risk-labels';
 
 /**
- * From this zoom on a municipality is its label (name and score, centered on its seat), as long as
- * the label does not run into another one (visibleLabels); one that does not fit is a small dot
- * without number, gone if it falls under a label (coveredDots). Below it markers are the colored
- * circle with the score; the selected one keeps its label.
+ * Over Nariño a municipality is its label, centered on its seat, as long as the label does not run
+ * into another one (visibleLabels); one that does not fit is a small dot without number, gone if it
+ * falls under a label (coveredDots). There are no groups. Below this zoom the label is only the name
+ * (light, with a dark halo); from it on it also says the score and the level, in the risk color.
  */
 export const NAME_MIN_ZOOM = 8.5;
 
 export function showsNames(zoom: number): boolean {
   return zoom >= NAME_MIN_ZOOM;
+}
+
+/** Pasto, the capital: the reference everyone looks for, so its name is always shown. */
+export const PINNED_ZONE_ID = 'pasto';
+
+/** Which label wins a collision: the selected zone, then Pasto, then the higher score. */
+export function labelPriority(zoneId: string, score: number, selectedId: string | null): number {
+  if (zoneId === selectedId) return Infinity;
+  if (zoneId === PINNED_ZONE_ID) return Number.MAX_SAFE_INTEGER;
+  return score;
 }
 
 const HTML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -20,7 +30,7 @@ const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (char) => 
 export function zoneMarkerHtml(zone: ZoneRiskSummary, selected: boolean): string {
   return (
     `<div class="zone-marker risk-${zone.level}${selected ? ' is-selected' : ''}">` +
-    `<span class="zone-dot"><i>${zone.score}</i></span>` +
+    `<span class="zone-dot"></span>` +
     `<span class="zone-label"><b>${escapeHtml(zone.name)}</b><small>${zone.score} · ${RISK_LABELS[zone.level]}</small></span>` +
     `</div>`
   );
@@ -40,8 +50,8 @@ export interface LabelBox extends ScreenBox {
   readonly priority: number;
 }
 
-/** Room (px) kept between two labels, or between a label and a dot. */
-const LABEL_GAP = 2;
+/** Room (px) kept between two labels, or between a label and a dot: 1 px fits ~21 names over Nariño at 390 px. */
+const LABEL_GAP = 1;
 
 const overlaps = (a: ScreenBox, b: ScreenBox): boolean =>
   a.left < b.right + LABEL_GAP && b.left < a.right + LABEL_GAP && a.top < b.bottom + LABEL_GAP && b.top < a.bottom + LABEL_GAP;
@@ -67,14 +77,4 @@ export function visibleLabels(boxes: readonly LabelBox[], area?: ScreenBox): Set
 /** The dots (of municipalities without a label) that a shown label covers: those are not drawn. */
 export function coveredDots(dots: readonly (ScreenBox & { readonly key: string })[], labels: readonly ScreenBox[]): Set<string> {
   return new Set(dots.filter((dot) => labels.some((label) => overlaps(label, dot))).map((dot) => dot.key));
-}
-
-/** A group of nearby seats at low zoom: how many, in the color of the worst one. Tapping it zooms in. */
-export function clusterMarkerHtml(count: number, level: RiskLevel): string {
-  return `<div class="zone-cluster risk-${level}"><b>${count}</b></div>`;
-}
-
-/** Spoken name of a group marker (it is a button for screen readers). */
-export function clusterLabel(count: number): string {
-  return `${count} municipios. Toca para acercar`;
 }

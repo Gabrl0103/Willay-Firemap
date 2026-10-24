@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import { once } from 'node:events';
+import type { AddressInfo } from 'node:net';
 import { describe, it } from 'node:test';
 import { buildContainer } from '../src/infrastructure/config/container.js';
 import { findMentionedZone, findZoneByName } from '../src/domain/service/zoneMatching.js';
 import { NARINO_MUNICIPALITIES } from '../src/infrastructure/persistence/narinoMunicipalities.js';
 import { zones } from '../src/infrastructure/persistence/seedData.js';
 import { findArticleZone } from '../src/infrastructure/scraping/NewsFireReportSource.js';
+import { createApp } from '../src/presentation/http/app.js';
 
 /** Ids of the first 12 zones: stored weather and fire events point to them. */
 const LEGACY_IDS = [
@@ -80,5 +83,33 @@ describe('municipality names -> zone', () => {
     assert.equal(findMentionedZone('Gobernación de Nariño atiende incendio', zones), undefined);
     assert.equal(findArticleZone('Incendio forestal en una vereda', 'ocurrió en el municipio de Nariño', zones)?.id, 'narino');
     assert.equal(findArticleZone('Gobernación de Nariño: incendio forestal', 'en el municipio de Cumbitara', zones)?.id, 'cumbitara');
+  });
+});
+
+describe('GET /api/zones', () => {
+  async function getJson<T>(path: string): Promise<T> {
+    const server = createApp(buildContainer({ port: 0, ingestionEnabled: false })).listen(0);
+    await once(server, 'listening');
+    try {
+      const response = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}${path}`);
+      assert.equal(response.status, 200, path);
+      return (await response.json()) as T;
+    } finally {
+      server.close();
+    }
+  }
+  type Factors = { dryWeather: number; nearbyHotspots: number; fireHistory: number };
+
+  it('sends the factors of each score, the same ones as the zone detail', async () => {
+    const zones = await getJson<Array<{ id: string; score: number; factors?: Factors }>>('/api/zones');
+    assert.equal(zones.length, 12);
+    for (const zone of zones) {
+      assert.ok(zone.factors, zone.id);
+      for (const value of Object.values(zone.factors)) assert.ok(value >= 0 && value <= 100, `${zone.id}: ${value}`);
+    }
+    const [first] = zones;
+    const detail = await getJson<{ score: number; factors: Factors }>(`/api/zones/${first!.id}`);
+    assert.deepEqual(first!.factors, detail.factors);
+    assert.equal(first!.score, detail.score);
   });
 });

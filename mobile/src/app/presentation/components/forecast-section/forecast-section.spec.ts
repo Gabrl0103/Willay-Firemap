@@ -71,8 +71,12 @@ describe('ForecastSection', () => {
     expect(retries).toHaveBeenCalledTimes(1);
   });
 
-  it('shows that it is loading', () => {
-    expect(text(render(null, 'loading').host, '.forecast-state')).toEqual(['Calculando el pronóstico…']);
+  it('keeps the three rows as placeholders while it loads', () => {
+    const { host } = render(null, 'loading');
+    expect(host.querySelector('[role="status"]')!.getAttribute('aria-label')).toBe('Calculando el pronóstico…');
+    expect(text(host, '.forecast-loading .forecast-when b')).toEqual(['24 h', '48 h', '72 h']);
+    expect(host.querySelectorAll('.forecast-loading .forecast-track.skeleton').length).toBe(3);
+    expect(host.querySelector('.forecast-rows')).toBeNull();
   });
 
   it('keeps tiny probabilities from reading as zero', () => {

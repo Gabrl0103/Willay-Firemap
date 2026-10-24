@@ -29,7 +29,18 @@ export function percentLabel(probability: number): string {
       <h3 id="forecast-title">Pronóstico 72 h</h3>
       @switch (status()) {
         @case ('loading') {
-          <p class="forecast-state" role="status">Calculando el pronóstico…</p>
+          <div class="forecast-loading" role="status" aria-label="Calculando el pronóstico…">
+            @for (hours of loadingRows; track hours) {
+              <div class="forecast-row" aria-hidden="true">
+                <div class="forecast-head">
+                  <span class="forecast-when"><b class="mono">{{ hours }} h</b><small>{{ when(hours) }}</small></span>
+                  <span class="skeleton skeleton-badge"></span>
+                  <span class="skeleton skeleton-value"></span>
+                </div>
+                <div class="forecast-track skeleton"></div>
+              </div>
+            }
+          </div>
         }
         @case ('error') {
           <div class="forecast-state is-error" role="alert">
@@ -84,5 +95,7 @@ export class ForecastSection {
     return data?.source === 'fallback' ? FALLBACK_REASONS[data.reason] : '';
   });
   protected readonly percent = percentLabel;
+  /** While it loads, the three rows keep their place: the sheet does not jump when the answer comes. */
+  protected readonly loadingRows = [24, 48, 72] as const;
   protected readonly when = (hours: 24 | 48 | 72): string => WHEN[hours];
 }
