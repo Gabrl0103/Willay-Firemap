@@ -31,6 +31,9 @@
   animation: a-pulse 1.2s ease-in-out infinite alternate;
 }
 @keyframes a-pulse { from { opacity: 1; } to { opacity: 0.45; } }
+/* Texto de muestra con la forma del dato real (mismo tamaño y alto de línea) pero invisible: el bloque
+   ocupa lo mismo que ocupará el dato, así que nada se mueve cuando llega. */
+.skeleton-text { color: transparent !important; border-radius: 6px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 
 @media (prefers-reduced-motion: reduce) {
   .anim-up, .anim-sheet, .anim-growy, .anim-growx, .anim-ring, .skeleton { animation: none; }

@@ -73,6 +73,7 @@
     [detail]="store.detail()"
     [updatedAt]="store.updatedAt()"
     [firesPerYear]="firesPerYear()"
+    [firesLoading]="store.firesStatus() === 'loading'"
     [forecast]="store.detailForecast()"
     [forecastStatus]="store.forecastStatus()"
     [favorite]="favorites.ids().includes(zone.id)"
