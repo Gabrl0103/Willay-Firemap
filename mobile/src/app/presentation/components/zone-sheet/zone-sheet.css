@@ -22,6 +22,34 @@
 }
 .is-closing .sheet-back { opacity: 0; pointer-events: none; }
 
+/* Aviso breve («Copiado») en la fila de «‹ Nariño», a la derecha. role="status": se lee al aparecer. */
+.sheet-notice {
+  position: absolute;
+  z-index: 2;
+  right: 20px;
+  top: calc(58px + env(safe-area-inset-top, 0px));
+  margin: 0;
+  pointer-events: none;
+}
+.notice-pill {
+  min-height: 44px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: var(--glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-soft);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .notice-pill { animation: a-up 0.32s var(--ease-out); }
+}
+
 .zone-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

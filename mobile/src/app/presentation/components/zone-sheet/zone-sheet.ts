@@ -40,6 +40,11 @@ interface DragState {
       <button type="button" class="sheet-back" aria-label="Volver a Nariño" (click)="close()">
         <app-icon name="chevron-left" [size]="22" /><span>Nariño</span>
       </button>
+      <p class="sheet-notice" role="status">
+        @if (notice(); as text) {
+          <span class="notice-pill">{{ text }}</span>
+        }
+      </p>
       <section
         #sheet
         class="zone-sheet"
@@ -81,6 +86,9 @@ interface DragState {
                   (click)="favoriteToggled.emit()"
                 >
                   <app-icon [name]="favorite() ? 'heart-filled' : 'heart'" [size]="22" />
+                </button>
+                <button type="button" class="icon-action share-button" aria-label="Compartir" (click)="shareRequested.emit()">
+                  <app-icon name="share" [size]="20" />
                 </button>
               </div>
             </div>
@@ -180,6 +188,10 @@ export class ZoneSheet implements OnDestroy {
   /** Whether the zone is among «Mis municipios»; the heart only asks the page to change it. */
   readonly favorite = input(false);
   readonly favoriteToggled = output<void>();
+  /** «Compartir»: the page builds the text with the data on screen and sends it. */
+  readonly shareRequested = output<void>();
+  /** A short notice over the map («Copiado»); null hides it. */
+  readonly notice = input<string | null>(null);
   readonly closed = output<void>();
   readonly historyRequested = output<void>();
 

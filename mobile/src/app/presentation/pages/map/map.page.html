@@ -77,6 +77,8 @@
     [forecastStatus]="store.forecastStatus()"
     [favorite]="favorites.ids().includes(zone.id)"
     (favoriteToggled)="toggleFavorite(zone.id)"
+    [notice]="shareNotice()"
+    (shareRequested)="shareZone(zone)"
     (forecastRetry)="store.retryForecast()"
     (closed)="closeSheet()"
     (historyRequested)="openHistory(zone.id)"

@@ -145,6 +145,22 @@ describe('ZoneSheet', () => {
     expect(heart.classList).toContain('is-on');
   });
 
+  it('asks the page to share and shows its short notice', () => {
+    const { fixture, host } = render();
+    const share = host.querySelector<HTMLButtonElement>('.share-button')!;
+    expect(share.getAttribute('aria-label')).toBe('Compartir');
+    let requested = 0;
+    fixture.componentInstance.shareRequested.subscribe(() => requested++);
+    share.click();
+    expect(requested).toBe(1);
+
+    expect(host.querySelector('.notice-pill')).toBeNull();
+    fixture.componentRef.setInput('notice', 'Copiado');
+    fixture.detectChanges();
+    expect(host.querySelector('.sheet-notice')!.getAttribute('role')).toBe('status');
+    expect(host.querySelector('.notice-pill')?.textContent).toBe('Copiado');
+  });
+
   it('says when the data was updated', () => {
     expect(text(render(DETAIL, { updatedAt: new Date() }).host, '.zone-title p')).toEqual(['Nariño · actualizado hoy']);
     expect(text(render().host, '.zone-title p')).toEqual(['Nariño']);
