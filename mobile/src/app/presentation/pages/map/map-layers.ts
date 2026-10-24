@@ -1,4 +1,4 @@
-import type { FeatureCollection, Point } from 'geojson';
+import type { FeatureCollection, MultiLineString, Point, Position } from 'geojson';
 import type { AddLayerObject, Map as MapLibreMap } from 'maplibre-gl';
 import type { Hotspot, RiskLevel, ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 
@@ -9,7 +9,12 @@ type FilterSpecification = NonNullable<LayerOf<'line'>['filter']>;
 export const BOUNDARIES_SOURCE = 'zone-boundaries';
 export const ZONE_FILL_LAYER = 'zone-fill';
 const ZONE_OUTLINE_LAYER = 'zone-outline';
+export const DEPARTMENT_SOURCE = 'department-outline';
+const DEPARTMENT_LAYER = 'department-outline';
+const ZONE_SELECTED_GLOW_LAYER = 'zone-selected-glow';
 export const ZONE_SELECTED_LAYER = 'zone-selected';
+/** The layers that only draw the selected zone: map.page.ts filters them all by its id. */
+export const ZONE_SELECTED_LAYERS = [ZONE_SELECTED_GLOW_LAYER, ZONE_SELECTED_LAYER] as const;
 export const HOTSPOTS_SOURCE = 'hotspots';
 export const BOUNDARIES_ATTRIBUTION = 'Límites: <a href="https://www.dane.gov.co">DANE</a> (MGN 2025)';
 
@@ -31,11 +36,14 @@ export function readMapColors(element: Element): MapColors {
   };
 }
 
-/** Thin light outline shared by neighbours, so two risk colors never fight on the same edge. */
-const OUTLINE = 'rgba(255, 243, 234, 0.4)';
+/** Light 1 px outline shared by neighbours, so two risk colors never fight on the same edge. */
+const OUTLINE = 'rgba(255, 243, 234, 0.6)';
+/** The department's own edge, thicker than the municipal ones. */
+const DEPARTMENT_OUTLINE = '#fff3ea';
+export const DEPARTMENT_WIDTH = 2.5;
 /** Zones without a score yet (the weather has not arrived): the prototype's Nariño fill. */
 export const NO_RISK_FILL = '#35655c';
-export const FILL_OPACITY = { normal: 0.28, selected: 0.45, noRisk: 0.3 } as const;
+export const FILL_OPACITY = { normal: 0.42, selected: 0.62, noRisk: 0.35 } as const;
 
 /** The municipal polygons from GET /api/zones/boundaries; feature-state is keyed by zone id. */
 export function boundariesSource(boundaries: ZoneBoundaries): SourceSpecification {
@@ -43,9 +51,41 @@ export function boundariesSource(boundaries: ZoneBoundaries): SourceSpecificatio
 }
 
 /**
- * Fill by risk level, translucent so the terrain and the markers on top still read; the selected
- * zone is a bit stronger and gets a white outline on top of its neighbours'. Level and selection
- * live in feature-state (zoneStates), so a new score or a tap never re-uploads the polygons.
+ * The edge of the department: the polygon edges that only one municipality has (an edge between two
+ * neighbours appears in both). mapshaper keeps the shared edges vertex for vertex, so they match.
+ */
+export function departmentOutline(boundaries: ZoneBoundaries): FeatureCollection<MultiLineString> {
+  const edges = new Map<string, { segment: [Position, Position]; count: number }>();
+  for (const feature of boundaries.features) {
+    const { geometry } = feature;
+    const rings = geometry.type === 'Polygon' ? geometry.coordinates : geometry.coordinates.flat();
+    for (const ring of rings) {
+      for (let i = 0; i < ring.length - 1; i++) {
+        const a = ring[i]!;
+        const b = ring[i + 1]!;
+        const key = [String(a), String(b)].sort().join('|');
+        const edge = edges.get(key);
+        if (edge) edge.count++;
+        else edges.set(key, { segment: [a, b], count: 1 });
+      }
+    }
+  }
+  const outer = [...edges.values()].filter((edge) => edge.count === 1).map((edge) => edge.segment);
+  return {
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', properties: {}, geometry: { type: 'MultiLineString', coordinates: outer } }],
+  };
+}
+
+export function departmentSource(boundaries: ZoneBoundaries): SourceSpecification {
+  return { type: 'geojson', data: departmentOutline(boundaries) };
+}
+
+/**
+ * Fill by risk level, translucent so the terrain and the markers on top still read; a light 1 px
+ * outline between municipalities and a thicker one around the department. The selected zone is
+ * stronger and gets a white outline with a glow on top of everything. Level and selection live in
+ * feature-state (zoneStates), so a new score or a tap never re-uploads the polygons.
  */
 export function boundaryLayers(colors: MapColors): AddLayerObject[] {
   const fill: LayerOf<'fill'> = {
@@ -66,16 +106,32 @@ export function boundaryLayers(colors: MapColors): AddLayerObject[] {
     id: ZONE_OUTLINE_LAYER,
     type: 'line',
     source: BOUNDARIES_SOURCE,
-    paint: { 'line-color': OUTLINE, 'line-width': 0.8 },
+    paint: { 'line-color': OUTLINE, 'line-width': 1 },
+  };
+  const department: LayerOf<'line'> = {
+    id: DEPARTMENT_LAYER,
+    type: 'line',
+    source: DEPARTMENT_SOURCE,
+    // The edge comes as loose segments: round ends join them.
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': DEPARTMENT_OUTLINE, 'line-width': DEPARTMENT_WIDTH, 'line-opacity': 0.85 },
+  };
+  const selectedGlow: LayerOf<'line'> = {
+    id: ZONE_SELECTED_GLOW_LAYER,
+    type: 'line',
+    source: BOUNDARIES_SOURCE,
+    filter: selectedZoneFilter(null),
+    paint: { 'line-color': '#fff3ea', 'line-width': 9, 'line-opacity': 0.35, 'line-blur': 6 },
   };
   const selected: LayerOf<'line'> = {
     id: ZONE_SELECTED_LAYER,
     type: 'line',
     source: BOUNDARIES_SOURCE,
     filter: selectedZoneFilter(null),
-    paint: { 'line-color': '#fff3ea', 'line-width': 2, 'line-opacity': 0.9 },
+    layout: { 'line-join': 'round' },
+    paint: { 'line-color': '#fff3ea', 'line-width': 3 },
   };
-  return [fill, outline, selected];
+  return [fill, outline, department, selectedGlow, selected];
 }
 
 /** The zone's level from feature-state as text; '' when it has none (no score yet). */

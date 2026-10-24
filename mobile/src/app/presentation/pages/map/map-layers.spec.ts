@@ -1,7 +1,7 @@
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 import {
-  BOUNDARIES_ATTRIBUTION, FILL_OPACITY, NO_RISK_FILL, ZONE_FILL_LAYER, ZONE_SELECTED_LAYER, boundariesSource, boundaryLayers,
-  hotspotLayers, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
+  BOUNDARIES_ATTRIBUTION, DEPARTMENT_SOURCE, DEPARTMENT_WIDTH, FILL_OPACITY, NO_RISK_FILL, ZONE_FILL_LAYER, ZONE_SELECTED_LAYER,
+  ZONE_SELECTED_LAYERS, boundariesSource, boundaryLayers, departmentOutline, departmentSource, hotspotLayers, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
 } from './map-layers';
 
 const COLORS: MapColors = {
@@ -51,11 +51,38 @@ describe('map layers: municipal polygons', () => {
     ]);
   });
 
-  it('makes the selected zone stronger, with its own white outline', () => {
+  it('makes the selected zone stronger, with its own white outline and glow on top', () => {
     expect(FILL_OPACITY.selected).toBeGreaterThan(FILL_OPACITY.normal);
     expect(FILL_OPACITY.normal).toBeLessThan(0.5);
-    expect(layer(ZONE_SELECTED_LAYER)?.filter).toEqual(selectedZoneFilter(null));
+    for (const id of ZONE_SELECTED_LAYERS) expect(layer(id)?.filter).toEqual(selectedZoneFilter(null));
     expect(selectedZoneFilter('pasto')).toEqual(['==', ['get', 'id'], 'pasto']);
+    const ids = (boundaryLayers(COLORS) as readonly LayerData[]).map((candidate) => candidate.id);
+    expect(ids.at(-1)).toBe(ZONE_SELECTED_LAYER);
+  });
+
+  it('draws 1 px municipal edges and a thicker department edge', () => {
+    expect(layer('zone-outline')?.paint?.['line-width']).toBe(1);
+    expect(layer('department-outline')?.paint?.['line-width']).toBe(DEPARTMENT_WIDTH);
+    expect(DEPARTMENT_WIDTH).toBeGreaterThan(1);
+    expect(departmentSource(BOUNDARIES)).toMatchObject({ type: 'geojson' });
+    expect(DEPARTMENT_SOURCE).not.toBe('zone-boundaries');
+  });
+
+  it('keeps as the department edge only the edges that a single municipality has', () => {
+    // Two squares side by side share the edge x = 1: the outline is the 6 outer edges.
+    const box = (x: number) => [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]];
+    const pair: ZoneBoundaries = {
+      ...BOUNDARIES,
+      features: [
+        { ...BOUNDARIES.features[0]!, geometry: { type: 'Polygon', coordinates: box(0) } },
+        { ...BOUNDARIES.features[1]!, geometry: { type: 'MultiPolygon', coordinates: [box(1)] } },
+      ],
+    };
+    const [outline] = departmentOutline(pair).features;
+    const segments = outline!.geometry.coordinates;
+    expect(segments.length).toBe(6);
+    expect(segments).not.toContainEqual([[1, 0], [1, 1]]);
+    expect(segments).not.toContainEqual([[1, 1], [1, 0]]);
   });
 
   it('gives every polygon its level (null without a score) and the selection', () => {

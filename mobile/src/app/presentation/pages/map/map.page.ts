@@ -22,8 +22,8 @@ import {
   globeHalo, globeStart, hasWebGL, introPlan, prefersReducedMotion, spinCenter,
 } from './map-camera';
 import {
-  BOUNDARIES_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYER, boundariesSource, boundaryLayers,
-  hotspotLayers, hotspotPoints, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
+  BOUNDARIES_SOURCE, DEPARTMENT_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYERS, boundariesSource, boundaryLayers,
+  departmentSource, hotspotLayers, hotspotPoints, hotspotsSource, readMapColors, selectedZoneFilter, zoneStates, type MapColors,
 } from './map-layers';
 import { mapStyle } from './map-style';
 import { ZONES_SOURCE, diffMarkers, markerItems, zonePoints, zonesHitLayer, zonesSource, type MarkerItem } from './zone-clusters';
@@ -261,6 +261,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (!map || !this.colors) return;
     this.boundariesShown = true;
     map.addSource(BOUNDARIES_SOURCE, boundariesSource(boundaries));
+    map.addSource(DEPARTMENT_SOURCE, departmentSource(boundaries));
     for (const layer of boundaryLayers(this.colors)) map.addLayer(layer, 'hotspot-halo');
     this.styleSelection(this.store.zones(), this.store.selectedId(), boundaries);
   }
@@ -277,7 +278,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (!map) return;
     if (boundaries && this.boundariesShown) {
       for (const { id, state } of zoneStates(boundaries, zones, selectedId)) map.setFeatureState({ source: BOUNDARIES_SOURCE, id }, state);
-      map.setFilter(ZONE_SELECTED_LAYER, selectedZoneFilter(selectedId));
+      for (const layer of ZONE_SELECTED_LAYERS) map.setFilter(layer, selectedZoneFilter(selectedId));
     }
     // Markers already on screen take the new score, level or selection.
     for (const { marker, item } of this.markers.values()) {
