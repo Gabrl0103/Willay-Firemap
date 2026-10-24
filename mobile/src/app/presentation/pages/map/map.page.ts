@@ -19,7 +19,7 @@ import { MID_HEIGHT } from '../../components/zone-sheet/sheet-snap';
 import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
   FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, SPIN_MS, ZONE_FLY_MS, ZONE_ZOOM,
-  globeHalo, globeStart, hasWebGL, introPlan, prefersReducedMotion, spinCenter,
+  globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed, rememberIntroPlayed, spinCenter,
 } from './map-camera';
 import {
   BOUNDARIES_SOURCE, DEPARTMENT_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYERS, boundariesSource, boundaryLayers,
@@ -31,10 +31,13 @@ import { clusterLabel, clusterMarkerHtml, showsNames, visibleLabels, zoneMarkerH
 
 /** MapLibre's worker, copied next to the app by angular.json (it cannot come from a CDN). */
 const WORKER_PATH = 'maplibre/maplibre-gl-worker.mjs';
-/** The globe spins and flies once per app session; later visits open straight over Nariño. */
+/**
+ * The globe spins and flies once per session (sessionStorage, so a reload does not replay it);
+ * later visits open straight over Nariño. This flag covers a browser without storage.
+ */
 let introPlayed = false;
-/** Room for the header (top) when framing the department; the bottom adds the sheet's height. */
-const NARINO_PADDING = { top: 84, bottom: 12, left: 12, right: 12 };
+/** Any of these on the map during the intro skips it. */
+const SKIP_EVENTS = ['mousedown', 'touchstart', 'wheel'] as const;
 /** How far (px) the globe's orange halo reaches beyond its edge. */
 const GLOW_WIDTH = 44;
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
@@ -68,6 +71,10 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private userMarker?: Marker;
   private spinFrame?: number;
   private spinning = false;
+  /** Ends the intro (spin or flight to Nariño) and drops its skip listeners; false outside it. */
+  private endIntro: () => boolean = () => false;
+  /** Bumped by every camera move the page starts, so a flight that was cut short does not finish its work. */
+  private cameraMove = 0;
   private destroyed = false;
   private readonly mapReady = signal(false);
   private boundariesShown = false;
@@ -155,9 +162,10 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const plan = introPlan({
       hasSelection: this.store.selectedId() !== null,
       reducedMotion: prefersReducedMotion(window),
-      firstVisit: !introPlayed,
+      firstVisit: !introPlayed && !readIntroPlayed(window),
     });
     introPlayed = true;
+    rememberIntroPlayed(window);
 
     const map = new MapLibreMap({
       container: element,
@@ -204,6 +212,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.endIntro();
     this.stopSpin();
     this.map?.remove();
   }
@@ -409,19 +418,24 @@ export class MapPage implements AfterViewInit, OnDestroy {
     if (plan === 'zone' && selected) this.flyToSeat(selected.longitude, selected.latitude);
   }
 
-  /** The globe turns slowly, then flies to Nariño. Touching the map skips straight to Nariño. */
+  /** The globe turns slowly, then flies to Nariño. Touching the map, spinning or flying, skips to the end. */
   private spin(): void {
     const map = this.map;
     if (!map) return;
     const start = performance.now();
     this.spinning = true;
-    const interrupt = (): void => {
-      if (!this.stopSpin()) return;
+    const skip = (): void => {
+      this.endIntro();
+      this.stopSpin();
+      map.stop();
       this.jumpToNarino();
     };
-    map.once('mousedown', interrupt);
-    map.once('touchstart', interrupt);
-    map.once('wheel', interrupt);
+    this.endIntro = () => {
+      this.endIntro = () => false;
+      for (const type of SKIP_EVENTS) map.off(type, skip);
+      return true;
+    };
+    for (const type of SKIP_EVENTS) map.on(type, skip);
     const frame = (now: number): void => {
       if (!this.spinning) return;
       const elapsed = now - start;
@@ -475,8 +489,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   /** Nariño as large as fits between the header and the sheet, tilted. Same for the intro and the button. */
   private narinoCamera() {
-    const padding = { ...NARINO_PADDING, bottom: NARINO_PADDING.bottom + this.sheetHeight() };
-    const camera = this.map?.cameraForBounds(NARINO_BOUNDS, { padding, pitch: PITCH });
+    const camera = this.map?.cameraForBounds(NARINO_BOUNDS, { padding: narinoPadding(this.sheetHeight()), pitch: PITCH });
     return camera && { ...camera, pitch: PITCH, padding: NO_PADDING };
   }
 
@@ -486,7 +499,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const camera = this.narinoCamera();
     if (!map || !camera) return;
     this.framingNarino = false;
+    const move = ++this.cameraMove;
     map.once('moveend', () => {
+      // A skip or another flight took over: that one finishes the work.
+      if (move !== this.cameraMove) return;
+      this.endIntro();
       this.limitToNarino();
       this.framingNarino = true;
     });
@@ -503,6 +520,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const map = this.map;
     const camera = this.narinoCamera();
     if (!map || !camera) return;
+    this.cameraMove++;
     map.jumpTo(camera);
     this.limitToNarino();
     this.framingNarino = true;
@@ -519,11 +537,16 @@ export class MapPage implements AfterViewInit, OnDestroy {
    * picked during the spin wins over the flight to Nariño; the camera is limited once it lands.
    */
   private flyToSeat(longitude: number, latitude: number): void {
-    if (this.stopSpin()) this.map?.once('moveend', () => this.limitToNarino());
+    const fromIntro = this.endIntro();
+    this.stopSpin();
+    this.cameraMove++;
     this.framingNarino = false;
     this.map?.flyTo({
       center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, padding: NO_PADDING, duration: ZONE_FLY_MS,
     });
+    // Cut short, the intro never limited the camera: the seat's flight does it when it lands (registered
+    // after flyTo, which ends the intro's own flight with a moveend).
+    if (fromIntro) this.map?.once('moveend', () => this.limitToNarino());
   }
 
   private showUser(latitude: number, longitude: number): void {
