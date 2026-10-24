@@ -5,3 +5,9 @@ export function favoriteZones(ids: readonly string[], zones: readonly ZoneRiskSu
   const byId = new Map(zones.map((zone) => [zone.id, zone]));
   return ids.flatMap((id) => byId.get(id) ?? []);
 }
+
+/** The same zones with the favorites first; each group keeps its order. */
+export function favoritesFirst(zones: readonly ZoneRiskSummary[], ids: readonly string[]): ZoneRiskSummary[] {
+  const favorite = new Set(ids);
+  return [...zones.filter((zone) => favorite.has(zone.id)), ...zones.filter((zone) => !favorite.has(zone.id))];
+}

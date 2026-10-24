@@ -28,7 +28,7 @@
 @if (searchOpen()) {
   <div class="search-backdrop" (click)="closeSearch()"></div>
   <div class="search-layer anim-up" role="search">
-    <app-search-box [zones]="store.zones()" (selected)="pickFromSearch($event)" (cancelled)="closeSearch()" />
+    <app-search-box [zones]="store.zones()" [favoriteIds]="favorites.ids()" (selected)="pickFromSearch($event)" (cancelled)="closeSearch()" />
   </div>
 }
 

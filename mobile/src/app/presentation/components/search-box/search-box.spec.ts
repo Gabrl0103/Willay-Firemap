@@ -7,9 +7,10 @@ const ZONES: ZoneRiskSummary[] = [
   { id: 'chachagui', name: 'Chachagüí', latitude: 1.36, longitude: -77.28, score: 58, level: 'high' },
 ];
 
-async function setup() {
+async function setup(favoriteIds: string[] = []) {
   const fixture = TestBed.createComponent(SearchBox);
   fixture.componentRef.setInput('zones', ZONES);
+  fixture.componentRef.setInput('favoriteIds', favoriteIds);
   document.body.append(fixture.nativeElement);
   fixture.detectChanges();
   await fixture.whenStable();
@@ -42,6 +43,25 @@ describe('SearchBox', () => {
     expect(results.map((button) => button.querySelector('span')?.textContent)).toEqual(['Chachagüí']);
     results[0]!.click();
     expect(picked.map((zone) => zone.id)).toEqual(['chachagui']);
+  });
+
+  it('suggests «Mis municipios» before typing and lists them first, with the heart', async () => {
+    const { host, type } = await setup(['chachagui', 'borrado']);
+    const names = () => [...host.querySelectorAll('.result-name')].map((el) => el.textContent?.trim());
+    expect(host.querySelector('.results-title')?.textContent).toBe('Mis municipios');
+    expect(names()).toEqual(['Chachagüí']);
+
+    await type('a');
+    expect(host.querySelector('.results-title')).toBeNull();
+    expect(names()).toEqual(['Chachagüí', 'Pasto']);
+    const hearts = [...host.querySelectorAll('.result')].map((row) => row.querySelector('.favorite-mark') !== null);
+    expect(hearts).toEqual([true, false]);
+    expect(host.querySelectorAll('.result button').length).toBe(0); // the heart only marks it
+  });
+
+  it('suggests nothing before typing without favorites', async () => {
+    const { host } = await setup();
+    expect(host.querySelector('.results')).toBeNull();
   });
 
   it('says when nothing matches', async () => {
