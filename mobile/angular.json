@@ -100,6 +100,7 @@
           "options": {
             "tsConfig": "tsconfig.spec.json",
             "buildTarget": "::development",
+            "providersFile": "src/test-providers.ts",
             "runner": "vitest",
             "watch": false
           }

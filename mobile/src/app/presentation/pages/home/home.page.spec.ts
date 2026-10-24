@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import type { ZoneRiskSummary } from '../../../domain/model/risk';
 import { FavoritesStore } from '../../../state/favorites.store';
+import { SettingsStore } from '../../../state/settings.store';
 import { ZonesStore } from '../../../state/zones.store';
 import { HomePage } from './home.page';
 
@@ -30,7 +31,7 @@ function render(favoriteIds: string[] = []) {
   const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   const fixture = TestBed.createComponent(HomePage);
   fixture.detectChanges();
-  return { host: fixture.nativeElement as HTMLElement, store, navigate };
+  return { fixture, host: fixture.nativeElement as HTMLElement, store, navigate };
 }
 
 describe('HomePage', () => {
@@ -64,6 +65,18 @@ describe('HomePage', () => {
     const { host } = render(['borrado']);
     expect(host.querySelector('.favorites')).toBeNull();
     expect(host.textContent).not.toContain('Mis municipios');
+  });
+
+  it('switches to English at once when the language changes', async () => {
+    const { fixture, host } = render();
+    expect(host.querySelector('h1')?.textContent).toBe('Nariño hoy');
+    await TestBed.inject(SettingsStore).update({ language: 'en' });
+    fixture.detectChanges();
+    expect(host.querySelector('h1')?.textContent).toBe('Nariño today');
+    expect([...host.querySelectorAll('h2')].map((el) => el.textContent?.trim())).toEqual(['Highest-risk areas']);
+    expect(host.querySelector('.zone p')?.textContent).toBe('62 of 100');
+    expect(host.querySelector('.average strong')?.textContent).toBe('High'); // average 52
+    expect(host.querySelector('.zone .badge')?.textContent).toBe('High');
   });
 
   it('has no settings button', () => {
