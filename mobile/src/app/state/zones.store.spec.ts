@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import type { ZoneBoundaries, ZoneDetail, ZoneForecast } from '../domain/model/risk';
+import type { FireHistory, ZoneBoundaries, ZoneDetail, ZoneForecast } from '../domain/model/risk';
 import { FireRepository, ForecastRepository, HotspotRepository, ZoneRepository } from '../domain/repository/repositories';
 import { FORECAST_TTL_MS, ZonesStore } from './zones.store';
 
@@ -24,18 +24,26 @@ const BOUNDARIES: ZoneBoundaries = {
   }],
 };
 
-function setup(forecast: ForecastRepository['forecast'], boundaries: ZoneRepository['boundaries'] = () => of(BOUNDARIES)) {
+const FIRES = { events: [], summary: { count: 0, totalHectares: 0, lastDate: null } };
+
+function setup(
+  forecast: ForecastRepository['forecast'],
+  boundaries: ZoneRepository['boundaries'] = () => of(BOUNDARIES),
+  detail: ZoneRepository['detail'] = () => of(DETAIL),
+  history: FireRepository['history'] = () => of(FIRES),
+) {
   const repository = { forecast: vi.fn(forecast) };
-  const zoneRepository = { list: () => of([]), detail: () => of(DETAIL), boundaries: vi.fn(boundaries) };
+  const zoneRepository = { list: () => of([]), detail: vi.fn(detail), boundaries: vi.fn(boundaries) };
+  const fireRepository = { history: vi.fn(history) };
   TestBed.configureTestingModule({
     providers: [
       { provide: ZoneRepository, useValue: zoneRepository },
-      { provide: FireRepository, useValue: { history: () => of({ events: [], summary: { count: 0, totalHectares: 0, lastDate: null } }) } },
+      { provide: FireRepository, useValue: fireRepository },
       { provide: HotspotRepository, useValue: { list: () => of([]) } },
       { provide: ForecastRepository, useValue: repository },
     ],
   });
-  return { store: TestBed.inject(ZonesStore), repository, zoneRepository };
+  return { store: TestBed.inject(ZonesStore), repository, zoneRepository, fireRepository };
 }
 
 describe('ZonesStore selection', () => {
@@ -48,6 +56,62 @@ describe('ZonesStore selection', () => {
     expect(store.selected()).toEqual(pasto);
     store.clearSelection();
     expect(store.selected()).toBeNull();
+  });
+});
+
+describe('ZonesStore zone detail and fire records', () => {
+  it('reuses them for 10 minutes when the zone is tapped again', () => {
+    vi.useFakeTimers({ now: new Date('2026-10-24T12:00:00Z') });
+    const { store, zoneRepository, fireRepository } = setup(() => of(FORECAST));
+    store.select('pasto');
+    store.select('ipiales');
+    store.select('pasto');
+    expect(zoneRepository.detail.mock.calls.map(([zone]) => zone)).toEqual(['pasto', 'ipiales']);
+    expect(fireRepository.history.mock.calls.map(([zone]) => zone)).toEqual(['pasto', 'ipiales']);
+    expect(store.detail()).toEqual(DETAIL);
+    expect(store.firesStatus()).toBe('ready');
+
+    vi.advanceTimersByTime(FORECAST_TTL_MS);
+    store.select('pasto');
+    expect(zoneRepository.detail).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
+  });
+
+  it('cancels the requests of the zone tapped before and of a closed sheet', () => {
+    const details: Subject<ZoneDetail>[] = [];
+    const fires: Subject<FireHistory>[] = [];
+    const { store } = setup(
+      () => of(FORECAST),
+      undefined,
+      () => {
+        const request = new Subject<ZoneDetail>();
+        details.push(request);
+        return request;
+      },
+      () => {
+        const request = new Subject<FireHistory>();
+        fires.push(request);
+        return request;
+      },
+    );
+    store.select('pasto');
+    expect(store.firesStatus()).toBe('loading');
+    store.select('ipiales');
+    expect([details[0]!.observed, fires[0]!.observed]).toEqual([false, false]);
+    expect([details[1]!.observed, fires[1]!.observed]).toEqual([true, true]);
+
+    store.clearSelection();
+    expect([details[1]!.observed, fires[1]!.observed]).toEqual([false, false]);
+    expect(store.firesStatus()).toBe('idle');
+  });
+
+  it('marks the fire records as failed without touching the rest of the sheet', () => {
+    const { store } = setup(() => of(FORECAST), undefined, undefined, () => throwError(() => new Error('down')));
+    store.select('pasto');
+    expect(store.firesStatus()).toBe('error');
+    expect(store.detailFires()).toBeNull();
+    expect(store.detail()).toEqual(DETAIL);
+    expect(store.error()).toBeNull();
   });
 });
 
