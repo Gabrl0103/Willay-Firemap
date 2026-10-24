@@ -128,7 +128,10 @@ que la app nunca aparece en el idioma equivocado:
   5:07 PM»). Una prueba falla si un JSON tiene claves que el otro no. No se traducen los datos: municipios,
   lugares, UNGRD, Gobernación, NASA FIRMS, la cita literal del DANE ni los nombres de los tiles de OSM.
 - **Unidades:** °C / °F y km/h / mph para la fila «Clima ahora» de la hoja de zona (temperatura, humedad,
-  viento y días sin lluvia; lo que no llegue se omite). Solo cambia cómo se muestran.
+  viento y días sin lluvia; lo que no llegue se omite). Solo cambia cómo se muestran. El clima llega con la
+  lista de zonas, así que la fila sale al abrir la hoja; con un backend anterior se pide al tocar el
+  municipio. Mientras algo carga (clima, focos, incendios por año, pronóstico), su esqueleto ocupa la misma
+  altura final, así que nada se mueve cuando llega.
 - **Movimiento:** Automático (sigue al teléfono) o Reducido (sin entrada del mapa, partículas ni animaciones).
 - **Vibración**, **Datos** (borrar favoritos, con confirmación; borrar la caché de pronósticos y límites),
   **Ayuda** (ver la introducción otra vez) y **Acerca de** (versión 0.30.0, cómo se calcula el riesgo y las
@@ -166,7 +169,7 @@ Desde la v0.22 el backend lo usa en `GET /api/zones/:id/forecast` y la app lo mu
 Detalle, ajuste y limitaciones en `docs/ML.md` (sección 7); cómo reproducirlo en `ml/README.md`.
 
 ## Endpoints
-- `GET /api/zones` — municipios con puntaje, nivel de riesgo y, desde la v0.28, `factors` (campo opcional para la app: si falta, la hoja muestra los factores como esqueleto hasta que llega el detalle).
+- `GET /api/zones` — municipios con puntaje, nivel de riesgo y, desde la v0.28, `factors`; desde la v0.31, `weather` (el clima actual de «Clima ahora»). Los dos son opcionales para la app: si faltan, la hoja los espera del detalle como esqueleto.
 - `GET /api/zones/:id` — detalle: clima y factores.
 - `GET /api/zones/:id/forecast` — pronóstico de 72 h con el modelo de ML (filas de 24, 48 y 72 h), o respaldo con el puntaje actual.
 - `GET /api/zones/boundaries` — límites de los 64 municipios (GeoJSON, `feature.id` = id de la zona; caché de un día con ETag).
