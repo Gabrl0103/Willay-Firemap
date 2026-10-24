@@ -157,5 +157,20 @@
   "units.kmh": "km/h",
   "units.mph": "mph",
   "settings.haptics": "Vibration",
-  "settings.hapticsHint": "A light tap when you mark a favorite and when you switch tabs."
+  "settings.hapticsHint": "A light tap when you mark a favorite and when you switch tabs.",
+  "settings.motion": "Motion",
+  "settings.reduced": "Reduced",
+  "settings.motionAutoHint": "Follows the phone’s motion setting.",
+  "settings.motionReducedHint": "No map entry, no background particles and no entry animations.",
+  "settings.data": "Data",
+  "settings.clear": "Clear",
+  "settings.clearFavorites": "Clear favorites",
+  "settings.favoritesCount.zero": "No municipality saved",
+  "settings.favoritesCount.one": "{count} municipality saved",
+  "settings.favoritesCount.other": "{count} municipalities saved",
+  "settings.clearFavoritesConfirm.one": "Clear your favorite municipality?",
+  "settings.clearFavoritesConfirm.other": "Clear your {count} favorite municipalities?",
+  "settings.clearCache": "Clear data cache",
+  "settings.clearCacheHint": "Forecasts and map boundaries kept in memory.",
+  "settings.cacheCleared": "Done: they will be asked for again."
 }

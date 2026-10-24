@@ -143,6 +143,3 @@ export function hasWebGL(doc: Document): boolean {
   }
 }
 
-export function prefersReducedMotion(win: Window): boolean {
-  return win.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-}

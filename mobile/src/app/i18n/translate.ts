@@ -22,14 +22,17 @@ export function resolveLanguage(setting: LanguageSetting, deviceLanguages: reado
 
 /**
  * The text of `key` in `language`, with each `{name}` replaced by its param. With a numeric `count`
- * a plural key picks `<key>.one` or `<key>.other` by the language's plural rules.
+ * a plural key picks `<key>.one` or `<key>.other` by the language's plural rules (and `<key>.zero`,
+ * when it has one, for 0: «Ningún municipio» reads better than «0 municipios»).
  */
 export function translate(language: Language, key: MessageKey | PluralKey, params: MessageParams = {}): string {
   const dictionary = DICTIONARIES[language];
   const count = params['count'];
   const plural =
     typeof count === 'number'
-      ? (dictionary[`${key}.${new Intl.PluralRules(LOCALES[language]).select(count)}`] ?? dictionary[`${key}.other`])
+      ? ((count === 0 ? dictionary[`${key}.zero`] : undefined) ??
+        dictionary[`${key}.${new Intl.PluralRules(LOCALES[language]).select(count)}`] ??
+        dictionary[`${key}.other`])
       : undefined;
   const text = plural ?? dictionary[key] ?? key;
   return text.replace(/\{(\w+)\}/g, (match, name: string) => (name in params ? String(params[name]) : match));

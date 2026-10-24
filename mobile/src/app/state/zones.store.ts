@@ -136,6 +136,20 @@ export class ZonesStore {
     });
   }
 
+  /**
+   * «Borrar caché de datos» in Ajustes: forgets the forecasts and the boundaries kept in memory and asks
+   * for the boundaries again (a forecast is asked again the next time its zone is tapped).
+   */
+  clearCache(): void {
+    this.forecastRequest?.unsubscribe();
+    this.forecasts.clear();
+    this.boundaries.set(null);
+    this.boundariesStatus.set('idle');
+    this.loadBoundaries();
+    const zoneId = this.selectedId();
+    if (zoneId) this.loadForecast(zoneId);
+  }
+
   clearSelection(): void {
     this.forecastRequest?.unsubscribe();
     this.selectedId.set(null);

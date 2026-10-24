@@ -64,7 +64,24 @@
     </div>
   </section>
 
-  <section class="glass-card group anim-up" style="--i: 3" aria-labelledby="haptics-title">
+  <section class="glass-card group anim-up" style="--i: 3" aria-labelledby="motion-title">
+    <h2 id="motion-title" class="group-title">{{ 'settings.motion' | t }}</h2>
+    <div class="segmented" role="radiogroup" aria-labelledby="motion-title">
+      @for (choice of motions; track choice.value) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="settings.motion() === choice.value"
+          (click)="choose({ motion: choice.value })"
+        >
+          {{ choice.label | t }}
+        </button>
+      }
+    </div>
+    <p class="hint">{{ (settings.motion() === 'auto' ? 'settings.motionAutoHint' : 'settings.motionReducedHint') | t }}</p>
+  </section>
+
+  <section class="glass-card group anim-up" style="--i: 4" aria-labelledby="haptics-title">
     <div class="row">
       <div>
         <h2 id="haptics-title" class="group-title">{{ 'settings.haptics' | t }}</h2>
@@ -80,6 +97,35 @@
       >
         <span></span>
       </button>
+    </div>
+  </section>
+
+  <section class="glass-card group anim-up" style="--i: 5" aria-labelledby="data-title">
+    <h2 id="data-title" class="group-title">{{ 'settings.data' | t }}</h2>
+    <div class="row">
+      <div>
+        <span>{{ 'settings.clearFavorites' | t }}</span>
+        <p class="hint">{{ 'settings.favoritesCount' | t: { count: favorites.ids().length } }}</p>
+      </div>
+      @if (favorites.ids().length > 0 && !confirmingClear()) {
+        <button type="button" class="action" (click)="confirmingClear.set(true)">{{ 'settings.clear' | t }}</button>
+      }
+    </div>
+    @if (confirmingClear()) {
+      <div class="confirm" role="alertdialog" aria-labelledby="confirm-text">
+        <p id="confirm-text">{{ 'settings.clearFavoritesConfirm' | t: { count: favorites.ids().length } }}</p>
+        <div class="confirm-actions">
+          <button type="button" class="action" (click)="confirmingClear.set(false)">{{ 'search.cancel' | t }}</button>
+          <button type="button" class="action danger" (click)="clearFavorites()">{{ 'settings.clear' | t }}</button>
+        </div>
+      </div>
+    }
+    <div class="row">
+      <div>
+        <span>{{ 'settings.clearCache' | t }}</span>
+        <p class="hint" role="status">{{ (cacheCleared() ? 'settings.cacheCleared' : 'settings.clearCacheHint') | t }}</p>
+      </div>
+      <button type="button" class="action" (click)="clearCache()">{{ 'settings.clear' | t }}</button>
     </div>
   </section>
 </div>

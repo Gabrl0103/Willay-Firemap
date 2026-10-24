@@ -1,4 +1,5 @@
 import { Component, ElementRef, inject, output, signal, viewChild } from '@angular/core';
+import { Motion } from '../../../core/motion';
 import { OnboardingFlag } from '../../../core/onboarding-flag';
 import { TranslatePipe } from '../../../i18n/t.pipe';
 import { AppIcon } from '../app-icon/app-icon';
@@ -26,6 +27,7 @@ const FADE_OUT_MS = 400;
 })
 export class Onboarding {
   private readonly flag = inject(OnboardingFlag);
+  private readonly motion = inject(Motion);
   private readonly track = viewChild.required<ElementRef<HTMLElement>>('track');
 
   readonly finished = output<void>();
@@ -53,8 +55,7 @@ export class Onboarding {
 
   protected goTo(page: number): void {
     const el = this.track().nativeElement;
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    el.scrollTo({ left: page * el.clientWidth, behavior: reduceMotion ? 'auto' : 'smooth' });
+    el.scrollTo({ left: page * el.clientWidth, behavior: this.motion.reduced() ? 'auto' : 'smooth' });
     this.index.set(page);
   }
 

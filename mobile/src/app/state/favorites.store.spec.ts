@@ -35,6 +35,13 @@ describe('FavoritesStore', () => {
     expect(written).toEqual(['["pasto"]', '["pasto","ipiales"]', '["ipiales"]']);
   });
 
+  it('clears every favorite and saves the empty list', async () => {
+    const { store, written } = setup('["pasto","tumaco"]');
+    await store.clear();
+    expect(store.ids()).toEqual([]);
+    expect(written).toEqual(['[]']);
+  });
+
   it('keeps the saved list when the heart is tapped before it was read', async () => {
     const { store } = setup('["pasto"]');
     await store.toggle('tumaco');

@@ -157,5 +157,20 @@
   "units.kmh": "km/h",
   "units.mph": "mph",
   "settings.haptics": "Vibración",
-  "settings.hapticsHint": "Un toque ligero al marcar favoritos y al cambiar de pestaña."
+  "settings.hapticsHint": "Un toque ligero al marcar favoritos y al cambiar de pestaña.",
+  "settings.motion": "Movimiento",
+  "settings.reduced": "Reducido",
+  "settings.motionAutoHint": "Sigue el ajuste de movimiento del teléfono.",
+  "settings.motionReducedHint": "Sin la entrada del mapa, sin partículas de fondo y sin animaciones de entrada.",
+  "settings.data": "Datos",
+  "settings.clear": "Borrar",
+  "settings.clearFavorites": "Borrar favoritos",
+  "settings.favoritesCount.zero": "Ningún municipio guardado",
+  "settings.favoritesCount.one": "{count} municipio guardado",
+  "settings.favoritesCount.other": "{count} municipios guardados",
+  "settings.clearFavoritesConfirm.one": "¿Borrar tu municipio favorito?",
+  "settings.clearFavoritesConfirm.other": "¿Borrar tus {count} municipios favoritos?",
+  "settings.clearCache": "Borrar caché de datos",
+  "settings.clearCacheHint": "Pronósticos y límites del mapa guardados en memoria.",
+  "settings.cacheCleared": "Listo: se volverán a pedir."
 }

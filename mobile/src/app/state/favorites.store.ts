@@ -53,6 +53,13 @@ export class FavoritesStore {
     return this.ids().includes(zoneId);
   }
 
+  /** «Borrar favoritos» in Ajustes: «Mis municipios» is empty again. */
+  async clear(): Promise<void> {
+    await this.load();
+    this.ids.set([]);
+    await this.storage.write('[]').catch(() => undefined);
+  }
+
   /** Adds or removes the zone (after the saved list is read, so it is not lost); true if it is now a favorite. */
   async toggle(zoneId: string): Promise<boolean> {
     await this.load();

@@ -9,6 +9,7 @@ import { getUserLocation, locationMessage } from '../../../core/location/user-lo
 import { AppCurtain } from '../../../core/app-curtain';
 import { API_ERROR_KEYS } from '../../../core/error/api-error';
 import { Haptic } from '../../../core/haptics';
+import { Motion } from '../../../core/motion';
 import { ZoneSharer, type ShareOutcome } from '../../../core/share/share-zone';
 import { SearchRequest } from '../../../core/search-request';
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
@@ -29,7 +30,7 @@ import { ZoneSheet } from '../../components/zone-sheet/zone-sheet';
 import {
   FLY_MS, MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM_OVER_NARINO, NARINO_BOUNDS, NO_PADDING, PITCH, SPIN_MS, TAP_FLY_MS,
   ZONE_FLY_MS, ZONE_ZOOM,
-  globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed, rememberIntroPlayed, spinCenter,
+  globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, readIntroPlayed, rememberIntroPlayed, spinCenter,
 } from './map-camera';
 import {
   BOUNDARIES_SOURCE, DEPARTMENT_SOURCE, HOTSPOTS_SOURCE, ZONE_FILL_LAYER, ZONE_SELECTED_LAYERS, boundariesSource, boundaryLayers,
@@ -79,6 +80,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly sharer = inject(ZoneSharer);
   private readonly i18n = inject(I18n);
   private readonly haptic = inject(Haptic);
+  private readonly motion = inject(Motion);
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
@@ -199,7 +201,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.colors = colors;
     const plan = introPlan({
       hasSelection: this.store.selectedId() !== null,
-      reducedMotion: prefersReducedMotion(window),
+      reducedMotion: this.motion.reduced(),
       firstVisit: !introPlayed && !readIntroPlayed(window),
     });
     introPlayed = true;
@@ -566,13 +568,13 @@ export class MapPage implements AfterViewInit, OnDestroy {
       this.limitToNarino();
       this.framingNarino = true;
     });
-    map.flyTo({ ...camera, duration: FLY_MS, essential });
+    map.flyTo({ ...camera, duration: this.flightMs(FLY_MS), essential });
   }
 
   /** The sheet changed height while showing the department: frame it again above the sheet. */
   private reframeNarino(): void {
     const camera = this.narinoCamera();
-    if (camera) this.map?.easeTo({ ...camera, duration: 350 });
+    if (camera) this.map?.easeTo({ ...camera, duration: this.flightMs(350) });
   }
 
   private jumpToNarino(): void {
@@ -583,6 +585,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
     map.jumpTo(camera);
     this.limitToNarino();
     this.framingNarino = true;
+  }
+
+  /** «Reducido» in Ajustes: the camera jumps (MapLibre already does it when the phone asks for less motion). */
+  private flightMs(duration: number): number {
+    return this.motion.reduced() ? 0 : duration;
   }
 
   /** Once over Nariño the camera stays around it. */
@@ -601,7 +608,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
     this.cameraMove++;
     this.framingNarino = false;
     this.map?.flyTo({
-      center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, padding: NO_PADDING, duration,
+      center: [longitude, latitude], zoom: ZONE_ZOOM, pitch: PITCH, offset: SEAT_OFFSET, padding: NO_PADDING,
+      duration: this.flightMs(duration),
     });
     // Cut short, the intro never limited the camera: the seat's flight does it when it lands (registered
     // after flyTo, which ends the intro's own flight with a moveend).

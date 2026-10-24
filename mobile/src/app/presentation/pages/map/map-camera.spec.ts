@@ -1,6 +1,6 @@
 import {
   GLOBE_MARGIN, GLOBE_START_CENTER, GLOBE_TOP, GLOW_END_ZOOM, INTRO_KEY, MAX_BOUNDS, NARINO_BOUNDS, NARINO_PADDING, PITCH,
-  SPIN_DEGREES_PER_SECOND, globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed,
+  SPIN_DEGREES_PER_SECOND, globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, readIntroPlayed,
   TAP_FLY_MS, ZONE_FLY_MS, ZONE_ZOOM, rememberIntroPlayed, spinCenter,
 } from './map-camera';
 import { NAME_MIN_ZOOM } from './zone-marker';
@@ -107,12 +107,9 @@ describe('map camera: globe halo', () => {
 });
 
 describe('map camera: environment', () => {
-  it('detects WebGL and reduced motion', () => {
+  it('detects WebGL', () => {
     const canvas = { getContext: (kind: string) => (kind === 'webgl' ? {} : null) };
     expect(hasWebGL({ createElement: () => canvas } as unknown as Document)).toBe(true);
     expect(hasWebGL({ createElement: () => ({ getContext: () => null }) } as unknown as Document)).toBe(false);
-    const win = (matches: boolean) => ({ matchMedia: () => ({ matches }) }) as unknown as Window;
-    expect(prefersReducedMotion(win(true))).toBe(true);
-    expect(prefersReducedMotion(win(false))).toBe(false);
   });
 });
