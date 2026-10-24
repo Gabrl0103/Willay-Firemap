@@ -1,8 +1,9 @@
 import {
-  GLOBE_MARGIN, GLOBE_START_CENTER, GLOBE_TOP, GLOW_END_ZOOM, INTRO_KEY, MAX_BOUNDS, NARINO_BOUNDS, NARINO_PADDING, PITCH,
+  FLY_MS, GLOBE_MARGIN, GLOBE_START_CENTER, GLOBE_TOP, GLOW_END_ZOOM, INTRO_KEY, MAX_BOUNDS, NARINO_BOUNDS, NARINO_PADDING, PITCH,
   SPIN_DEGREES_PER_SECOND, globeHalo, globeStart, hasWebGL, introPlan, narinoPadding, prefersReducedMotion, readIntroPlayed,
-  rememberIntroPlayed, spinCenter,
+  RETURN_FLY_MS, TAP_FLY_MS, ZONE_FLY_MS, ZONE_ZOOM, rememberIntroPlayed, spinCenter,
 } from './map-camera';
+import { NAME_MIN_ZOOM } from './zone-marker';
 
 const globeRadius = (zoom: number): number => (512 * 2 ** zoom) / (2 * Math.PI);
 
@@ -68,6 +69,12 @@ describe('map camera: opening', () => {
     expect(PITCH).toBe(35);
     expect(narinoPadding(180)).toEqual({ ...NARINO_PADDING, bottom: NARINO_PADDING.bottom + 180 });
     expect(narinoPadding(0).top).toBe(NARINO_PADDING.top);
+  });
+
+  it('flies short to a tapped municipality, where the names already show, and back quickly', () => {
+    expect(TAP_FLY_MS).toBeLessThan(ZONE_FLY_MS);
+    expect(RETURN_FLY_MS).toBeLessThan(FLY_MS);
+    expect(ZONE_ZOOM).toBeGreaterThanOrEqual(NAME_MIN_ZOOM);
   });
 
   it('keeps Nariño inside the bounds the camera may move in', () => {

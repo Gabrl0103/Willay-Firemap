@@ -13,8 +13,8 @@ export const MAX_ZOOM = 14;
 export const PITCH = 35;
 /** Room around the department when framing it: the header on top; the sheet's height adds to the bottom. */
 export const NARINO_PADDING = { top: 84, bottom: 12, left: 8, right: 8 } as const;
-/** Zoom of the flight to a seat: names show from 10 (zone-marker.ts). */
-export const ZONE_ZOOM = 10;
+/** Zoom of the flight to a seat: past NAME_MIN_ZOOM (zone-marker.ts), so its neighbours' names show too. */
+export const ZONE_ZOOM = 9.5;
 
 /** Opening view: South America in front, east of Nariño so it spins into view (globeStart sizes it). */
 export const GLOBE_START_CENTER: [number, number] = [-50, -4];
@@ -27,8 +27,12 @@ export const SPIN_DEGREES_PER_SECOND = 8;
 /** ...for this long, then flies to Nariño. */
 export const SPIN_MS = 3000;
 export const FLY_MS = 2600;
-/** Flight to a seat (tap, search, coming from Inicio). */
+/** Flight to a seat from afar (search, «Mi ubicación», coming from Inicio)... */
 export const ZONE_FLY_MS = 1200;
+/** ...and the short one after tapping a municipality already on screen. */
+export const TAP_FLY_MS = 700;
+/** Back to the whole department when the zone sheet closes. */
+export const RETURN_FLY_MS = 900;
 /** Flights over Nariño frame with cameraForBounds, so the view itself keeps no padding. */
 export const NO_PADDING = { top: 0, bottom: 0, left: 0, right: 0 };
 
