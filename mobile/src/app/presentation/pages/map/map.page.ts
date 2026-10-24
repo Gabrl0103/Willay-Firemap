@@ -17,6 +17,7 @@ import { formatTime } from '../../../domain/util/format';
 import { shareText } from '../../../domain/util/share-text';
 import { I18n } from '../../../i18n/i18n';
 import { TranslatePipe } from '../../../i18n/t.pipe';
+import type { MessageKey } from '../../../i18n/translate';
 import { FavoritesStore } from '../../../state/favorites.store';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
@@ -56,7 +57,7 @@ const DOT_RADIUS = 4;
 /** How long (ms) the zone sheet shows «Copiado» or a failed share. */
 const NOTICE_MS = 2000;
 /** What the sheet says after sharing; the menu itself is the feedback when it opens. */
-const SHARE_NOTICES: Partial<Record<ShareOutcome, string>> = { copied: 'Copiado', failed: 'No se pudo compartir' };
+const SHARE_NOTICES: Partial<Record<ShareOutcome, MessageKey>> = { copied: 'share.copied', failed: 'share.failed' };
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
 const SEAT_OFFSET: [number, number] = [0, -150];
 
@@ -293,13 +294,13 @@ export class MapPage implements AfterViewInit, OnDestroy {
     const risk = this.store.detail() ?? zone;
     const forecast = this.store.forecastStatus() === 'ready' ? this.store.detailForecast() : null;
     const outcome = await this.sharer.share({
-      title: `Riesgo de incendio en ${risk.name}`,
-      text: shareText(risk, forecast, this.store.updatedAt()),
+      title: this.i18n.t('share.title', { name: risk.name }),
+      text: shareText(risk, forecast, this.store.updatedAt(), this.i18n.language()),
     });
     const notice = SHARE_NOTICES[outcome];
     if (!notice || this.destroyed) return;
     clearTimeout(this.noticeTimer);
-    this.shareNotice.set(notice);
+    this.shareNotice.set(this.i18n.t(notice));
     this.noticeTimer = setTimeout(() => this.shareNotice.set(null), NOTICE_MS);
   }
 

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import type { ZoneForecast } from '../../../domain/model/risk';
 import type { ForecastStatus } from '../../../state/zones.store';
-import { ForecastSection } from './forecast-section';
+import { ForecastSection, fallbackReasonKey } from './forecast-section';
 
 const MODEL: ZoneForecast = {
   zoneId: 'el-rosario',
@@ -69,6 +69,16 @@ describe('ForecastSection', () => {
     expect(text(host, '.is-error p')).toEqual(['No pudimos cargar el pronóstico.']);
     host.querySelector<HTMLButtonElement>('.is-error button')!.click();
     expect(retries).toHaveBeenCalledTimes(1);
+  });
+
+  it('names a fallback reason this app does not know, or a missing one, in general words', () => {
+    expect(fallbackReasonKey('model_error')).toBe('forecast.reason.modelError');
+    expect(fallbackReasonKey('new_backend_reason')).toBe('forecast.reason.unknown');
+    expect(fallbackReasonKey(undefined)).toBe('forecast.reason.unknown');
+    const unknown = { ...FALLBACK, reason: 'new_backend_reason' } as unknown as ZoneForecast;
+    expect(text(render(unknown, 'ready').host, '.is-fallback p')).toEqual([
+      'Pronóstico no disponible: el modelo no está disponible. Mostramos el riesgo actual.',
+    ]);
   });
 
   it('keeps the three rows as placeholders while it loads', () => {

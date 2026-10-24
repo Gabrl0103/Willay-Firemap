@@ -1,12 +1,10 @@
+import { translate, type Language, type MessageKey } from '../../i18n/translate';
 import type { RiskLevel, ZoneForecast } from '../model/risk';
 import { formatDateTime, percentLabel } from './format';
-import { RISK_LABELS } from './risk-labels';
+import { riskLabel } from './risk-labels';
 
 /** Day at whose end each forecast row starts its 72 h (as «Pronóstico 72 h» says it). */
-const WHEN: Record<24 | 48 | 72, string> = { 24: 'hoy', 48: 'mañana', 72: 'pasado mañana' };
-
-export const SHARE_DISCLAIMER = 'Estimación de riesgo, no predicción exacta.';
-export const SHARE_SIGNATURE = 'Atalaya · Riesgo de incendios en Nariño';
+const WHEN: Record<24 | 48 | 72, MessageKey> = { 24: 'when.today', 48: 'when.tomorrow', 72: 'when.dayAfter' };
 
 export interface ShareableZone {
   readonly name: string;
@@ -15,19 +13,26 @@ export interface ShareableZone {
 }
 
 /**
- * What «Compartir» sends for a zone, with the data on screen right now. The 72 h rows go only when
- * the model answered (not its fallback, not while loading or after a failure). Nothing about the
- * user nor links to the API.
+ * What «Compartir» sends for a zone, in the language of the app, with the data on screen right now.
+ * The 72 h rows go only when the model answered (not its fallback, not while loading or after a
+ * failure). Nothing about the user nor links to the API.
  */
-export function shareText(zone: ShareableZone, forecast: ZoneForecast | null, updatedAt: Date | null): string {
-  const lines = [`${zone.name}: riesgo de incendio ${RISK_LABELS[zone.level]} (${zone.score} de 100).`];
+export function shareText(
+  zone: ShareableZone,
+  forecast: ZoneForecast | null,
+  updatedAt: Date | null,
+  language: Language = 'es',
+): string {
+  const t = (key: MessageKey, params?: Readonly<Record<string, string | number>>) => translate(language, key, params);
+  const lines = [t('share.risk', { name: zone.name, level: riskLabel(zone.level, language), score: zone.score })];
   if (forecast?.source === 'model' && forecast.horizons.length > 0) {
-    lines.push('Pronóstico 72 h:');
+    lines.push(t('share.forecast'));
     for (const horizon of forecast.horizons) {
-      lines.push(`• ${horizon.hours} h (${WHEN[horizon.hours]}): ${RISK_LABELS[horizon.level]}, ${percentLabel(horizon.probability)}`);
+      const level = riskLabel(horizon.level, language);
+      lines.push(t('share.row', { hours: horizon.hours, when: t(WHEN[horizon.hours]), level, percent: percentLabel(horizon.probability, language) }));
     }
   }
-  if (updatedAt) lines.push(`Actualizado: ${formatDateTime(updatedAt)}`);
-  lines.push(SHARE_DISCLAIMER, '', SHARE_SIGNATURE);
+  if (updatedAt) lines.push(t('share.updated', { date: formatDateTime(updatedAt, language) }));
+  lines.push(t('share.disclaimer'), '', t('share.signature'));
   return lines.join('\n');
 }
