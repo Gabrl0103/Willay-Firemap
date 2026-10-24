@@ -178,6 +178,13 @@ describe('ZoneSheet', () => {
     expect(row()).toEqual(['64°F Temperature', '1 day without rain']);
   });
 
+  it('shows «Clima ahora» at once when the zone list brings the weather', () => {
+    const { host } = render(null, {}, { ...ZONE, weather: { temperatureC: 14.1, humidityPct: 97, windKmh: 3.9, daysWithoutRain: 0 } });
+    expect(host.querySelector('.weather-skeleton')).toBeNull();
+    const values = [...host.querySelectorAll('.weather-row b')].map((b) => b.textContent);
+    expect(values).toEqual(['14 °C', '97 %', '4 km/h', '0']);
+  });
+
   it('keeps the room of «Clima ahora» until the detail arrives', () => {
     const { host } = render(null);
     expect(host.querySelector('.weather-skeleton')).not.toBeNull();

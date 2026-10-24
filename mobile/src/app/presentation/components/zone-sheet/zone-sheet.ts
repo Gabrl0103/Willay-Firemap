@@ -336,13 +336,14 @@ export class ZoneSheet implements OnDestroy {
   });
   private readonly settings = inject(SettingsStore);
   /**
-   * «Clima ahora» from the detail, in the units of Ajustes (the API sends °C and km/h). A value the
-   * API did not send is left out; null while the detail has not arrived (a placeholder keeps its room).
+   * «Clima ahora» from the zone list (or the detail), in the units of Ajustes (the API sends °C and
+   * km/h). A value the API did not send is left out; null while neither has it (a placeholder keeps its room).
    */
   protected readonly weather = computed((): WeatherItem[] | null => {
-    const detail = this.detail();
-    if (!detail) return null;
-    const weather: Partial<ZoneDetail['weather']> = detail.weather ?? {};
+    // The zone list brings it (v0.31); an older backend only in the detail.
+    const source = this.detail()?.weather ?? this.zone().weather;
+    if (!source && !this.detail()) return null;
+    const weather: Partial<ZoneDetail['weather']> = source ?? {};
     const language = this.i18n.language();
     const items: WeatherItem[] = [];
     if (isNumber(weather.temperatureC)) {
