@@ -262,6 +262,23 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-24 (v0.26, rama `feat/map-globe`):** el mapa más legible y con un flujo más natural, tras probarlo en el navegador.
+  - Antes: sobre Nariño los grupos («40», «14») tapaban los municipios (se agrupaba hasta zoom 8 y el encuadre
+    queda en ~6,9); los polígonos casi no se distinguían (relleno 0,28, contorno de 0,8 px) y no había nombres
+    hasta zoom 10; el globo casi no se veía; la entrada se repetía en cada recarga y la hoja ocupaba mucho.
+  - Grupos solo hasta zoom 5, por debajo del mínimo sobre Nariño (6): ahí cada municipio tiene su marcador.
+  - Polígonos: relleno 0,42 (seleccionado 0,62), contorno claro de 1 px, borde del departamento de 2,5 px (los
+    bordes que tiene un solo municipio; mapshaper conserva los compartidos vértice a vértice) y el seleccionado
+    con contorno blanco de 3 px y resplandor.
+  - Etiquetas con nombre y puntaje en el color del nivel desde zoom 8,5; al detenerse la cámara se ubican de
+    mayor a menor prioridad (seleccionado, luego puntaje) y las que chocan quedan como punto con el puntaje.
+  - Globo: tiles más claros y con algo más de color hasta zoom 3, que pasan al estilo oscuro en zoom 5.
+  - Entrada una vez por sesión (`sessionStorage`, con la marca de la página de respaldo); un toque salta el giro
+    o el vuelo; `prefers-reduced-motion` abre directo en Nariño.
+  - Encuadre a 35° (antes 50°), con menos margen a los lados y el inferior según la altura de la hoja.
+  - Hoja baja por defecto (247 px en 390 × 844; con todo a la vista, ~350 px): título, niveles y «Acercar a Nariño»; arrastrando
+    o con el asa se sube con los conteos, rangos, clave de focos y nota.
+  - Tocar un municipio: vuelo de 0,7 s al zoom 9,5 y su hoja de zona; al cerrarla, vuelta de 0,9 s a Nariño.
 - **2026-10-21 (v0.25, rama `feat/map-globe`):** el mapa ajustado a la captura aprobada (`docs/design/4 · Mapa (globo)`).
   - Antes: abriendo directo en `/map`, el giro y el vuelo pasaban debajo de la splash (2,5 s + 0,45 s) y nadie los
     veía; el globo quedaba medio tapado por la hoja, que ocupaba el 52 % de la pantalla; Nariño salía chico.
