@@ -43,4 +43,8 @@ input::placeholder { color: var(--text-2); }
   text-align: left;
 }
 .result:last-child { border: 0; }
+.results-title { margin: 0; padding: 12px 16px 4px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.result-name { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+/* Solo indica que es favorito: se quita desde la hoja de la zona. */
+.favorite-mark { color: var(--orange); }
 .cancel { min-height: 44px; padding: 0 4px; color: var(--amber); font-size: 14px; font-weight: 700; }

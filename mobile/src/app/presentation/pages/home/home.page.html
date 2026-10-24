@@ -25,6 +25,20 @@
       </div>
     </section>
 
+    @if (myZones().length > 0) {
+      <h2 class="section-title anim-up" style="--i: 2">Mis municipios</h2>
+      <div class="carousel favorites">
+        @for (zone of myZones(); track zone.id; let i = $index) {
+          <button type="button" class="glass-card zone anim-up" [style.--i]="3 + i" (click)="openZone(zone.id)">
+            <app-icon class="favorite-mark" name="heart-filled" [size]="16" />
+            <app-risk-badge [level]="zone.level" />
+            <h3>{{ zone.name }}</h3>
+            <p class="mono">{{ zone.score }} de 100</p>
+          </button>
+        }
+      </div>
+    }
+
     <h2 class="section-title anim-up" style="--i: 2">Zonas con mayor riesgo</h2>
     <div class="carousel">
       @for (zone of topZones(); track zone.id; let i = $index) {

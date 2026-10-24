@@ -29,6 +29,9 @@ h2 { margin: 28px 0 12px; }
   transition: scale 0.2s var(--ease-out);
 }
 .zone:active { scale: 0.97; }
+/* Corazón de «Mis municipios»: solo indica; se quita desde la hoja de la zona. */
+.zone { position: relative; }
+.favorite-mark { position: absolute; top: 18px; right: 16px; color: var(--orange); }
 .zone h3 {
   margin: 12px 0 0;
   overflow: hidden;

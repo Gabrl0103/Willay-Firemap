@@ -262,6 +262,21 @@ Degradado del mapa: 165°, de `map` a `map-deep` (66 %). Cubierta de la hoja de 
 
 ## 13. Registro de cambios
 
+- **2026-10-24 (v0.29, rama `feat/favorites-share`):** municipios favoritos y compartir el riesgo de un municipio.
+  - Favoritos: corazón de 44 px en la hoja de zona (`aria-pressed`, «Agregar a mis municipios» / «Quitar de mis
+    municipios») con vibración ligera. Ids guardados con `@capacitor/preferences` (`favorites.zoneIds`), solo en
+    el teléfono; sin almacenamiento siguen en memoria mientras la app está abierta. Los que ya no existen se
+    ignoran.
+  - Inicio: «Mis municipios» arriba del carrusel, con las mismas tarjetas (badge, nombre, puntaje) en el orden en
+    que se agregaron; tocar una abre la zona en el mapa. Sin favoritos no hay sección.
+  - Buscador del mapa: sin texto sugiere «Mis municipios»; al escribir, los favoritos que coinciden van primero.
+    El corazón de Inicio y del buscador solo indica: se quita desde la hoja.
+  - Compartir: botón de 44 px («Compartir»). Texto con nombre, nivel y puntaje, filas de 24/48/72 h solo si
+    respondió el modelo, «Actualizado: 24 oct. 2026, 5:07 p. m.» (la hora en que la app cargó las zonas, la misma
+    del mapa: la API no trae la hora de ingesta), «Estimación de riesgo, no predicción exacta.» y «Atalaya · Riesgo
+    de incendios en Nariño». Android: `@capacitor/share` 8.0.3 (`cap sync android`). Navegador: `navigator.share`;
+    si no existe o lo rechaza, portapapeles y aviso «Copiado» (2 s). Cancelar el menú no muestra nada.
+  - `percentLabel` pasa de la sección del pronóstico a `domain/util/format.ts`, junto a `formatDateTime`.
 - **2026-10-24 (v0.28, rama `fix/map-flow`):** flujo de la hoja de zona y nombres desde el encuadre inicial.
   - Cerrar la hoja de un municipio («‹ Nariño», el fondo o arrastrarla abajo) ya no vuela de vuelta a Nariño:
     el mapa se queda en la misma posición y zoom, y el municipio pierde el resaltado. Solo «Acercar a Nariño»

@@ -2,15 +2,19 @@ import {
   AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, untracked, viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import {
   AttributionControl, Map as MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent,
 } from 'maplibre-gl';
 import { getUserLocation, locationMessage } from '../../../core/location/user-location';
 import { AppCurtain } from '../../../core/app-curtain';
+import { ZoneSharer, type ShareOutcome } from '../../../core/share/share-zone';
 import { SearchRequest } from '../../../core/search-request';
 import type { ZoneBoundaries, ZoneRiskSummary } from '../../../domain/model/risk';
 import { averagePerYear } from '../../../domain/util/fire-history';
 import { nearestZone } from '../../../domain/util/geo';
+import { shareText } from '../../../domain/util/share-text';
+import { FavoritesStore } from '../../../state/favorites.store';
 import { ZonesStore } from '../../../state/zones.store';
 import { AppIcon } from '../../components/app-icon/app-icon';
 import { MapOverviewSheet } from '../../components/map-overview-sheet/map-overview-sheet';
@@ -46,6 +50,10 @@ const GLOW_WIDTH = 44;
 const LABEL_MARGIN = 4;
 /** Half the size (px) of the dot of a municipality whose label does not fit (map-markers.css). */
 const DOT_RADIUS = 4;
+/** How long (ms) the zone sheet shows «Copiado» or a failed share. */
+const NOTICE_MS = 2000;
+/** What the sheet says after sharing; the menu itself is the feedback when it opens. */
+const SHARE_NOTICES: Partial<Record<ShareOutcome, string>> = { copied: 'Copiado', failed: 'No se pudo compartir' };
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
 const SEAT_OFFSET: [number, number] = [0, -150];
 
@@ -59,9 +67,11 @@ const SEAT_OFFSET: [number, number] = [0, -150];
 })
 export class MapPage implements AfterViewInit, OnDestroy {
   protected readonly store = inject(ZonesStore);
+  protected readonly favorites = inject(FavoritesStore);
   private readonly router = inject(Router);
   private readonly searchRequest = inject(SearchRequest);
   private readonly curtain = inject(AppCurtain);
+  private readonly sharer = inject(ZoneSharer);
 
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
@@ -91,6 +101,8 @@ export class MapPage implements AfterViewInit, OnDestroy {
   protected readonly locating = signal(false);
   /** Why «Mi ubicación» failed, in Spanish (kept apart from the store error, whose retry reloads zones). */
   protected readonly locationError = signal<string | null>(null);
+  protected readonly shareNotice = signal<string | null>(null);
+  private noticeTimer?: ReturnType<typeof setTimeout>;
 
   protected readonly updatedLabel = computed(() => {
     const date = this.store.updatedAt();
@@ -221,6 +233,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    clearTimeout(this.noticeTimer);
     this.endIntro();
     this.stopSpin();
     this.map?.remove();
@@ -251,6 +264,30 @@ export class MapPage implements AfterViewInit, OnDestroy {
    */
   protected closeSheet(): void {
     this.store.clearSelection();
+  }
+
+  /** The sheet's heart: adds or removes the zone from «Mis municipios», with a light tap on the phone. */
+  protected toggleFavorite(zoneId: string): void {
+    void this.favorites.toggle(zoneId);
+    void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined);
+  }
+
+  /**
+   * «Compartir»: the zone's risk as the sheet shows it now (the detail once it arrived), its 72 h
+   * forecast when the model answered, and when the data was loaded (the map's «Actualizado»).
+   */
+  protected async shareZone(zone: ZoneRiskSummary): Promise<void> {
+    const risk = this.store.detail() ?? zone;
+    const forecast = this.store.forecastStatus() === 'ready' ? this.store.detailForecast() : null;
+    const outcome = await this.sharer.share({
+      title: `Riesgo de incendio en ${risk.name}`,
+      text: shareText(risk, forecast, this.store.updatedAt()),
+    });
+    const notice = SHARE_NOTICES[outcome];
+    if (!notice || this.destroyed) return;
+    clearTimeout(this.noticeTimer);
+    this.shareNotice.set(notice);
+    this.noticeTimer = setTimeout(() => this.shareNotice.set(null), NOTICE_MS);
   }
 
   protected openHistory(zoneId: string): void {

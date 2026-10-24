@@ -106,6 +106,18 @@ Nada se baja de un CDN: el CSS y el worker de MapLibre (`maplibre/maplibre-gl-wo
 `angular.json`) van en la app; solo los tiles vienen de internet. El chunk del mapa (carga perezosa en
 `/map`) pesa 1,10 MB (247 KB con gzip).
 
+#### Mis municipios y Compartir
+La hoja de zona tiene dos botones junto al nivel, los únicos para marcar favoritos y compartir:
+- **Corazón:** agrega o quita el municipio de «Mis municipios», con una vibración ligera en el teléfono. Los
+  favoritos se guardan solo en el teléfono (`@capacitor/preferences`; `localStorage` en el navegador), sin
+  cuentas ni backend. Inicio los muestra arriba de «Zonas con mayor riesgo» (la sección no aparece si no hay
+  ninguno) y el buscador del mapa los sugiere antes de escribir y los pone primero. En esas listas el corazón
+  solo indica que es favorito. Un favorito que ya no está entre las zonas se ignora.
+- **Compartir:** envía nombre, nivel y puntaje, el pronóstico de 24/48/72 h si respondió el modelo (no el
+  respaldo), la hora de «Actualizado» del mapa (la API no expone la hora de ingesta), la aclaración y
+  «Atalaya · Riesgo de incendios en Nariño». Sin links ni ubicación. En Android usa `@capacitor/share`; en el
+  navegador, `navigator.share` o, si no existe, copia el texto y dice «Copiado». Cerrar el menú no es un error.
+
 ### 3. App en Android (emulador o celular)
 ```
 cd mobile

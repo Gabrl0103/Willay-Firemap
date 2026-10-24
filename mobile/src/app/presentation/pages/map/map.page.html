@@ -28,7 +28,7 @@
 @if (searchOpen()) {
   <div class="search-backdrop" (click)="closeSearch()"></div>
   <div class="search-layer anim-up" role="search">
-    <app-search-box [zones]="store.zones()" (selected)="pickFromSearch($event)" (cancelled)="closeSearch()" />
+    <app-search-box [zones]="store.zones()" [favoriteIds]="favorites.ids()" (selected)="pickFromSearch($event)" (cancelled)="closeSearch()" />
   </div>
 }
 
@@ -75,6 +75,10 @@
     [firesPerYear]="firesPerYear()"
     [forecast]="store.detailForecast()"
     [forecastStatus]="store.forecastStatus()"
+    [favorite]="favorites.ids().includes(zone.id)"
+    (favoriteToggled)="toggleFavorite(zone.id)"
+    [notice]="shareNotice()"
+    (shareRequested)="shareZone(zone)"
     (forecastRetry)="store.retryForecast()"
     (closed)="closeSheet()"
     (historyRequested)="openHistory(zone.id)"

@@ -1,5 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import type { ForecastFallbackReason, ZoneForecast } from '../../../domain/model/risk';
+import { percentLabel } from '../../../domain/util/format';
 import type { ForecastStatus } from '../../../state/zones.store';
 import { RiskBadge } from '../risk-badge/risk-badge';
 
@@ -13,12 +14,6 @@ export const FALLBACK_REASONS: Record<ForecastFallbackReason, string> = {
 
 /** Day at whose end each row starts its 72 h (the note under the rows explains it). */
 const WHEN: Record<24 | 48 | 72, string> = { 24: 'hoy', 48: 'mañana', 72: 'pasado mañana' };
-
-/** "24 %", or "<1 %" so a tiny probability does not read as zero. */
-export function percentLabel(probability: number): string {
-  const percent = Math.round(probability * 100);
-  return percent < 1 ? '<1 %' : `${percent} %`;
-}
 
 /** «Pronóstico 72 h» of the zone sheet: the ML model at 24, 48 and 72 h, or why it is not available. */
 @Component({

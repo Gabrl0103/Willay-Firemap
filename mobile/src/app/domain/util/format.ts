@@ -31,6 +31,20 @@ export function formatUpdatedDay(date: Date, now: Date = new Date()): string {
   return `${date.getDate()} ${MONTHS[date.getMonth()]}`;
 }
 
+/** Local date and time, 12 h: "24 oct. 2026, 5:07 p. m." (what «Compartir» says the data is from). */
+export function formatDateTime(date: Date): string {
+  const hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const period = hours < 12 ? 'a. m.' : 'p. m.';
+  return `${date.getDate()} ${MONTHS[date.getMonth()]}. ${date.getFullYear()}, ${hours % 12 || 12}:${minutes} ${period}`;
+}
+
+/** "24 %", or "<1 %" so a tiny probability does not read as zero. */
+export function percentLabel(probability: number): string {
+  const percent = Math.round(probability * 100);
+  return percent < 1 ? '<1 %' : `${percent} %`;
+}
+
 const HOUR_MS = 60 * 60 * 1000;
 
 /** "hace 5 h", "hace 1 día", "hace 3 días" (hours under a day, so "ayer" is never ambiguous). */
