@@ -44,6 +44,26 @@ describe('zone marker', () => {
     expect([...shown].sort()).toEqual(['selected', 'touching', 'tumaco']);
   });
 
+  it('only shows labels whole inside the free map area (not cut by the header, a side or the sheet)', () => {
+    const area = { left: 0, top: 70, right: 390, bottom: 597 };
+    const box = (key: string, priority: number, left: number, top: number): LabelBox => ({
+      key, priority, left, top, right: left + 60, bottom: top + 20,
+    });
+    const shown = visibleLabels(
+      [
+        box('inside', 10, 100, 300),
+        box('under-sheet', 90, 100, 590),
+        box('cut-left', 80, -20, 300),
+        box('under-header', 70, 200, 60),
+        box('cut-right', 60, 340, 300),
+        box('selected', Infinity, 200, 590), // always drawn, so it keeps its room
+        box('next-to-selected', 50, 230, 575), // inside, but under the selected one
+      ],
+      area,
+    );
+    expect([...shown].sort()).toEqual(['inside', 'selected']);
+  });
+
   it('drops the dots that fall under a shown label, so each municipality is one element', () => {
     const label = { left: 100, top: 100, right: 160, bottom: 120 };
     const dot = (key: string, x: number, y: number) => ({ key, left: x - 4, top: y - 4, right: x + 4, bottom: y + 4 });

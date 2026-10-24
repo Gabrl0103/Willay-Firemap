@@ -46,14 +46,20 @@ const LABEL_GAP = 2;
 const overlaps = (a: ScreenBox, b: ScreenBox): boolean =>
   a.left < b.right + LABEL_GAP && b.left < a.right + LABEL_GAP && a.top < b.bottom + LABEL_GAP && b.top < a.bottom + LABEL_GAP;
 
+const inside = (box: ScreenBox, area: ScreenBox): boolean =>
+  box.left >= area.left && box.right <= area.right && box.top >= area.top && box.bottom <= area.bottom;
+
 /**
  * The labels that fit without overlapping, from the highest priority down (the selected zone, then
- * the riskiest): a label that would run into one already placed stays hidden.
+ * the riskiest): a label that would run into one already placed stays hidden, and so does one not
+ * whole inside `area` (the map between the header, the sides and the sheet), so none shows cut.
+ * The selected one (priority Infinity) is always drawn, so it always takes its room.
  */
-export function visibleLabels(boxes: readonly LabelBox[]): Set<string> {
+export function visibleLabels(boxes: readonly LabelBox[], area?: ScreenBox): Set<string> {
   const placed: LabelBox[] = [];
   for (const box of [...boxes].sort((a, b) => b.priority - a.priority)) {
-    if (!placed.some((other) => overlaps(other, box))) placed.push(box);
+    const fits = box.priority === Infinity || !area || inside(box, area);
+    if (fits && !placed.some((other) => overlaps(other, box))) placed.push(box);
   }
   return new Set(placed.map((box) => box.key));
 }

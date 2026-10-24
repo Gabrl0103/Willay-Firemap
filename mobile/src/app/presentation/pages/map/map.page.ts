@@ -1,5 +1,5 @@
 import {
-  AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, viewChild,
+  AfterViewInit, Component, ElementRef, OnDestroy, computed, effect, inject, signal, untracked, viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
@@ -43,6 +43,8 @@ let introPlayed = false;
 const SKIP_EVENTS = ['mousedown', 'touchstart', 'wheel'] as const;
 /** How far (px) the globe's orange halo reaches beyond its edge. */
 const GLOW_WIDTH = 44;
+/** Room (px) a label keeps from the edges of the free map area. */
+const LABEL_MARGIN = 4;
 /** Half the size (px) of the dot of a municipality whose label does not fit (map-markers.css). */
 const DOT_RADIUS = 4;
 /** A flown-to seat sits this far above the center, clear of the zone sheet. */
@@ -70,6 +72,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
   private readonly mapElement = viewChild.required<ElementRef<HTMLDivElement>>('mapElement');
   private readonly overview = viewChild('overview', { read: ElementRef<HTMLElement> });
   private readonly glow = viewChild.required<ElementRef<HTMLDivElement>>('glow');
+  private readonly header = viewChild.required<ElementRef<HTMLElement>>('header');
   private map?: MapLibreMap;
   private colors?: MapColors;
   private readonly markers = new Map<string, ShownMarker>();
@@ -132,6 +135,11 @@ export class MapPage implements AfterViewInit, OnDestroy {
     effect(() => {
       if (!this.mapReady()) return;
       this.styleSelection(this.store.zones(), this.store.selectedId(), this.store.boundaries());
+    });
+    // A sheet that grows covers more map: the labels under it give way (and the ones it uncovers come back).
+    effect(() => {
+      this.sheetInset();
+      if (this.mapReady()) untracked(() => this.placeLabels());
     });
     // The overview sheet folds and unfolds: the credits follow it and Nariño is framed again above it.
     effect((onCleanup) => {
@@ -362,7 +370,7 @@ export class MapPage implements AfterViewInit, OnDestroy {
       const priority = item.zoneId === selectedId ? Infinity : (scores.get(item.zoneId) ?? 0);
       boxes.push({ key: item.key, priority, left, top, right, bottom });
     }
-    const shown = visibleLabels(boxes);
+    const shown = visibleLabels(boxes, this.labelArea());
     const dots: (ScreenBox & { readonly key: string })[] = [];
     for (const { marker, item } of this.markers.values()) {
       const element = marker.getElement();
@@ -376,6 +384,17 @@ export class MapPage implements AfterViewInit, OnDestroy {
     }
     const covered = coveredDots(dots, boxes.filter((box) => shown.has(box.key)));
     for (const { marker, item } of this.markers.values()) marker.getElement().classList.toggle('dot-hidden', covered.has(item.key));
+  }
+
+  /** Where a label can show whole: the map below the header and above the sheet, with a small margin. */
+  private labelArea(): ScreenBox {
+    const map = this.mapElement().nativeElement.getBoundingClientRect();
+    return {
+      left: map.left + LABEL_MARGIN,
+      right: map.right - LABEL_MARGIN,
+      top: this.header().nativeElement.getBoundingClientRect().bottom + LABEL_MARGIN,
+      bottom: map.bottom - this.sheetInset() - LABEL_MARGIN,
+    };
   }
 
   private hideLabels(): void {
