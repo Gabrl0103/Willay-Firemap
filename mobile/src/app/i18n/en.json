@@ -5,5 +5,11 @@
   "risk.extreme": "Extreme",
   "common.retry": "Retry",
   "common.close": "Close",
-  "common.loading": "Loading data…"
+  "common.loading": "Loading data…",
+  "time.today": "today",
+  "time.yesterday": "yesterday",
+  "time.lessThanHourAgo": "less than 1 h ago",
+  "time.hoursAgo": "{count} h ago",
+  "time.daysAgo.one": "{count} day ago",
+  "time.daysAgo.other": "{count} days ago"
 }
